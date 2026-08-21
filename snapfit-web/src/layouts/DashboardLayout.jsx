@@ -1,12 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Package, BarChart3, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
-  { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, end: true },
+  { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
+  { label: 'Subscription', to: '/dashboard/subscription', icon: CreditCard },
+  { label: 'API Key', to: '/dashboard/api-key', icon: KeyRound },
   { label: 'Size Charts', to: '/dashboard/size-charts', icon: Package },
   { label: 'Analytics', to: '/dashboard/analytics', icon: BarChart3 },
-  { label: 'Settings', to: '/dashboard/settings', icon: Settings },
 ];
 
 function DashboardLayout() {

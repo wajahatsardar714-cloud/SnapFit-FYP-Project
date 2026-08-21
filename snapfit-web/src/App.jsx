@@ -6,6 +6,9 @@ import PublicLayout from './layouts/PublicLayout';
 import DashboardLayout from './layouts/DashboardLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import SubscriptionStatusPage from './pages/dashboard/SubscriptionStatusPage';
+import PlanSelectionPage from './pages/dashboard/PlanSelectionPage';
+import ApiKeyPage from './pages/dashboard/ApiKeyPage';
 
 function App() {
   return (
@@ -28,7 +31,9 @@ function App() {
               </ProtectedRoute>
             }
           >
-            {/* nested dashboard routes go here */}
+            <Route path="subscription" element={<SubscriptionStatusPage />} />
+            <Route path="subscription/plans" element={<PlanSelectionPage />} />
+            <Route path="api-key" element={<ApiKeyPage />} />
           </Route>
         </Routes>
       </AuthProvider>
