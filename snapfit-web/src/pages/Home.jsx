@@ -6,7 +6,7 @@ function Home() {
 
   useEffect(() => {
     api
-      .get('/api/health')
+      .get('/health')
       .then((res) => setBackendStatus(res.data.status))
       .catch(() => setBackendStatus('unreachable'));
   }, []);

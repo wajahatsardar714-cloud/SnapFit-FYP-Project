@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'snapfit-backend' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 module.exports = app;
