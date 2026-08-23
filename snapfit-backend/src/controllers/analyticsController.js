@@ -28,6 +28,12 @@ function startOfMonth() {
   return d;
 }
 
+function startOfLastMonth() {
+  const d = startOfMonth();
+  d.setMonth(d.getMonth() - 1);
+  return d;
+}
+
 function toCsvValue(value) {
   if (value == null) return '';
   const str = String(value);
@@ -39,22 +45,30 @@ async function getDashboardStats(req, res) {
     const merchantId = req.merchant.merchantId;
     const merchantObjectId = new mongoose.Types.ObjectId(merchantId);
 
-    const [merchant, totalRecommendations, recommendationsThisMonth, successCount, avgConfidenceAgg, sizeAgg] =
-      await Promise.all([
-        Merchant.findById(merchantId),
-        Recommendation.countDocuments({ merchantId }),
-        Recommendation.countDocuments({ merchantId, createdAt: { $gte: startOfMonth() } }),
-        Recommendation.countDocuments({ merchantId, status: 'success' }),
-        Recommendation.aggregate([
-          { $match: { merchantId: merchantObjectId, confidence: { $ne: null } } },
-          { $group: { _id: null, avgConfidence: { $avg: '$confidence' } } },
-        ]),
-        Recommendation.aggregate([
-          { $match: { merchantId: merchantObjectId, recommendedSize: { $ne: null } } },
-          { $group: { _id: '$recommendedSize', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ]),
-      ]);
+    const [
+      merchant,
+      totalRecommendations,
+      recommendationsThisMonth,
+      recommendationsLastMonth,
+      successCount,
+      avgConfidenceAgg,
+      sizeAgg,
+    ] = await Promise.all([
+      Merchant.findById(merchantId),
+      Recommendation.countDocuments({ merchantId }),
+      Recommendation.countDocuments({ merchantId, createdAt: { $gte: startOfMonth() } }),
+      Recommendation.countDocuments({ merchantId, createdAt: { $gte: startOfLastMonth(), $lt: startOfMonth() } }),
+      Recommendation.countDocuments({ merchantId, status: 'success' }),
+      Recommendation.aggregate([
+        { $match: { merchantId: merchantObjectId, confidence: { $ne: null } } },
+        { $group: { _id: null, avgConfidence: { $avg: '$confidence' } } },
+      ]),
+      Recommendation.aggregate([
+        { $match: { merchantId: merchantObjectId, recommendedSize: { $ne: null } } },
+        { $group: { _id: '$recommendedSize', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+    ]);
 
     if (!merchant) {
       return res.status(404).json({ message: 'Merchant not found' });
@@ -69,6 +83,7 @@ async function getDashboardStats(req, res) {
     return res.status(200).json({
       totalRecommendations,
       recommendationsThisMonth,
+      recommendationsLastMonth,
       successRate,
       averageConfidence,
       mostRecommendedSizes: sizeAgg.map((s) => ({ size: s._id, count: s.count })),
@@ -156,6 +171,22 @@ async function getRecommendationBreakdown(req, res) {
   }
 }
 
+async function getRecentRecommendations(req, res) {
+  try {
+    const merchantId = req.merchant.merchantId;
+
+    const recommendations = await Recommendation.find({ merchantId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('productId recommendedSize confidence status createdAt')
+      .lean();
+
+    return res.status(200).json({ recommendations });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to fetch recent recommendations', error: err.message });
+  }
+}
+
 async function exportReport(req, res) {
   try {
     const merchantId = req.merchant.merchantId;
@@ -191,4 +222,10 @@ async function exportReport(req, res) {
   }
 }
 
-module.exports = { getDashboardStats, getUsageOverTime, getRecommendationBreakdown, exportReport };
+module.exports = {
+  getDashboardStats,
+  getUsageOverTime,
+  getRecommendationBreakdown,
+  getRecentRecommendations,
+  exportReport,
+};
