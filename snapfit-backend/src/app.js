@@ -6,6 +6,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const apiKeyRoutes = require('./routes/apiKeyRoutes');
 const sizeChartRoutes = require('./routes/sizeChartRoutes');
 const productMappingRoutes = require('./routes/productMappingRoutes');
+const recommendRoutes = require('./routes/recommendRoutes');
 
 const app = express();
 
@@ -21,5 +22,6 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/merchant/api-key', apiKeyRoutes);
 app.use('/api/charts', sizeChartRoutes);
 app.use('/api/products', productMappingRoutes);
+app.use('/api/recommend', recommendRoutes);
 
 module.exports = app;
