@@ -12,6 +12,7 @@ import ApiKeyPage from './pages/dashboard/ApiKeyPage';
 import SizeChartsPage from './pages/dashboard/SizeChartsPage';
 import CreateSizeChartPage from './pages/dashboard/CreateSizeChartPage';
 import ProductMappingPage from './pages/dashboard/ProductMappingPage';
+import SizeCheckDemo from './pages/demo/SizeCheckDemo';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Toaster position="top-right" />
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/demo/size-check" element={<SizeCheckDemo />} />
 
           <Route element={<PublicLayout />}>
             <Route path="/login" element={<LoginPage />} />
