@@ -9,6 +9,9 @@ import RegisterPage from './pages/auth/RegisterPage';
 import SubscriptionStatusPage from './pages/dashboard/SubscriptionStatusPage';
 import PlanSelectionPage from './pages/dashboard/PlanSelectionPage';
 import ApiKeyPage from './pages/dashboard/ApiKeyPage';
+import SizeChartsPage from './pages/dashboard/SizeChartsPage';
+import CreateSizeChartPage from './pages/dashboard/CreateSizeChartPage';
+import ProductMappingPage from './pages/dashboard/ProductMappingPage';
 
 function App() {
   return (
@@ -34,6 +37,10 @@ function App() {
             <Route path="subscription" element={<SubscriptionStatusPage />} />
             <Route path="subscription/plans" element={<PlanSelectionPage />} />
             <Route path="api-key" element={<ApiKeyPage />} />
+            <Route path="size-charts" element={<SizeChartsPage />} />
+            <Route path="size-charts/new" element={<CreateSizeChartPage />} />
+            <Route path="size-charts/:id/edit" element={<CreateSizeChartPage />} />
+            <Route path="product-mapping" element={<ProductMappingPage />} />
           </Route>
         </Routes>
       </AuthProvider>
