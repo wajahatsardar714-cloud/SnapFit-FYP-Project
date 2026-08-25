@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.10",
+    "@mediapipe/tasks-vision": "^1.0.1",
     "axios": "^1.7.2",
     "lucide-react": "^1.33.0",
     "react": "^18.3.1",
