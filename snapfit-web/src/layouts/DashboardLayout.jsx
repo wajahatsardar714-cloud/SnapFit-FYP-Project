@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, LogOut } from 'lucide-react';
+import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, BookOpen, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { label: 'API Key', to: '/dashboard/api-key', icon: KeyRound },
   { label: 'Size Charts', to: '/dashboard/size-charts', icon: Package },
   { label: 'Analytics', to: '/dashboard/analytics', icon: BarChart3 },
+  { label: 'Docs', to: '/dashboard/docs', icon: BookOpen },
 ];
 
 function DashboardLayout() {
