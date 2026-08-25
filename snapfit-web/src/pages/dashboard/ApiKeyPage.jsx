@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Copy, KeyRound, Loader2, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
@@ -140,50 +141,24 @@ function ApiKeyPage() {
       <div className="mt-8">
         <h2 className="text-sm font-semibold text-gray-900">Quick start</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Pass your key in the <code className="rounded bg-gray-100 px-1 py-0.5">x-api-key</code> header. (The
-          recommendations endpoint below is illustrative — it ships in a later phase.)
+          Pass your key in the <code className="rounded bg-gray-100 px-1 py-0.5">x-api-key</code> header when calling{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5">POST {API_BASE}/recommend</code>.
         </p>
 
-        <div className="mt-4 space-y-4">
-          <div>
-            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">cURL</p>
-            <CodeBlock>{`curl -X POST ${API_BASE}/recommendations \\
+        <div className="mt-4">
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">cURL</p>
+          <CodeBlock>{`curl -X POST ${API_BASE}/recommend \\
   -H "x-api-key: ${displayKey}" \\
-  -H "Content-Type: application/json" \\
-  -d '{"productId": "12345", "measurements": {"chest": 96}}'`}</CodeBlock>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">JavaScript (fetch)</p>
-            <CodeBlock>{`fetch('${API_BASE}/recommendations', {
-  method: 'POST',
-  headers: {
-    'x-api-key': '${displayKey}',
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ productId: '12345', measurements: { chest: 96 } }),
-});`}</CodeBlock>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">Python (requests)</p>
-            <CodeBlock>{`import requests
-
-response = requests.post(
-    "${API_BASE}/recommendations",
-    headers={"x-api-key": "${displayKey}"},
-    json={"productId": "12345", "measurements": {"chest": 96}},
-)`}</CodeBlock>
-          </div>
+  -F "image=@photo.jpg" \\
+  -F "productId=12345"`}</CodeBlock>
         </div>
 
-        <button
-          type="button"
-          onClick={() => toast('Full documentation is coming soon.')}
-          className="mt-4 text-sm font-medium text-gray-600 underline hover:text-gray-900"
+        <Link
+          to="/dashboard/docs"
+          className="mt-4 inline-block text-sm font-medium text-gray-600 underline hover:text-gray-900"
         >
-          View full documentation
-        </button>
+          View full documentation, code examples, and a live tester
+        </Link>
       </div>
 
       <ConfirmModal
