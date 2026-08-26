@@ -8,6 +8,7 @@ const apiKeyRoutes = require('./routes/apiKeyRoutes');
 const sizeChartRoutes = require('./routes/sizeChartRoutes');
 const productMappingRoutes = require('./routes/productMappingRoutes');
 const recommendRoutes = require('./routes/recommendRoutes');
+const tryOnRoutes = require('./routes/tryOnRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 
@@ -29,6 +30,7 @@ app.use('/api/merchant/api-key', apiKeyRoutes);
 app.use('/api/charts', sizeChartRoutes);
 app.use('/api/products', productMappingRoutes);
 app.use('/api/recommend', recommendRoutes);
+app.use('/api/try-on', tryOnRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
