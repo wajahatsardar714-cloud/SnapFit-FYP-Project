@@ -8,6 +8,7 @@ const {
   getProductMappings,
   removeMapping,
   saveAnchorPoints,
+  getAnchorPointsForProduct,
 } = require('../controllers/productMappingController');
 
 const router = express.Router();
@@ -42,6 +43,14 @@ function uploadProductImage(req, res, next) {
     next();
   });
 }
+
+// Internal, service-to-service lookup for the AI microservice's try-on endpoint
+// (Phase 12 / Prompt 30) -- no merchant credential exists in that context, so this
+// is deliberately not behind `protect`. It only discloses a product photo URL and
+// its click points, not merchant account data, which keeps the exposure low for an
+// FYP-scope deployment; a hardened production setup would put this behind a
+// shared internal secret or network-level isolation instead.
+router.get('/anchor-points', getAnchorPointsForProduct);
 
 router.use(protect);
 

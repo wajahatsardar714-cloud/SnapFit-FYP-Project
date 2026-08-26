@@ -4,3 +4,9 @@ mediapipe==1.0.1
 numpy>=1.26.4
 python-multipart==0.0.9
 Pillow==10.4.0
+# Already an indirect dependency of mediapipe; pinned explicitly since
+# pose_estimator.py, utils.py, and try_on.py all import cv2 directly.
+opencv-contrib-python==5.0.0.93
+# Async HTTP client used by try_on.py to call the Node backend for a product's
+# anchor points and flat-lay image (Phase 12 / Prompt 30).
+httpx==0.28.1
