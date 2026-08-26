@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ImagePlus, Loader2, Ruler, X } from 'lucide-react';
+import { AlertTriangle, Camera, ImagePlus, Loader2, Ruler, X } from 'lucide-react';
+import LiveCapture from './LiveCapture';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -19,9 +20,10 @@ function heightToCm(unit, cm, feet, inches) {
   return totalCm > 0 ? totalCm : undefined;
 }
 
-function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size' }) {
+function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size', autoCapture = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState('form'); // form | loading | result | error
+  const [inputMode, setInputMode] = useState(null); // null | 'camera' | 'upload'
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -49,6 +51,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
   function resetFlow() {
     setStep('form');
+    setInputMode(null);
     setFile(null);
     setFormError('');
     setResult(null);
@@ -151,105 +154,165 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
             {step === 'form' && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Find your size</h2>
-                <p className="mt-1 text-sm text-gray-500">Upload a full-body photo and we'll estimate your best fit.</p>
+                <p className="mt-1 text-sm text-gray-500">Take or upload a full-body photo and we'll estimate your best fit.</p>
 
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragActive(true);
-                  }}
-                  onDragLeave={() => setDragActive(false)}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition ${
-                    dragActive ? 'border-gray-900 bg-gray-50' : 'border-gray-300'
-                  }`}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => onFilesSelected(e.target.files)}
-                  />
-                  {previewUrl ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <img src={previewUrl} alt="Selected preview" className="h-32 w-32 rounded-md object-cover" />
-                      <span className="text-xs text-gray-500">{file.name} — click to change</span>
+                {!inputMode && (
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setInputMode('camera')}
+                      className="flex flex-col items-center gap-2 rounded-lg border border-gray-300 py-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <Camera size={22} className="text-gray-500" />
+                      Take a Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInputMode('upload')}
+                      className="flex flex-col items-center gap-2 rounded-lg border border-gray-300 py-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <ImagePlus size={22} className="text-gray-500" />
+                      Upload a Photo
+                    </button>
+                  </div>
+                )}
+
+                {inputMode === 'camera' && (
+                  <div className="mt-4">
+                    <LiveCapture
+                      file={file}
+                      previewUrl={previewUrl}
+                      onCapture={(capturedFile) => onFilesSelected([capturedFile])}
+                      onRetake={() => setFile(null)}
+                      onSwitchToUpload={() => {
+                        setFile(null);
+                        setFormError('');
+                        setInputMode('upload');
+                      }}
+                      autoCapture={autoCapture}
+                    />
+                  </div>
+                )}
+
+                {inputMode === 'upload' && (
+                  <div className="mt-4">
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragActive(true);
+                      }}
+                      onDragLeave={() => setDragActive(false)}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition ${
+                        dragActive ? 'border-gray-900 bg-gray-50' : 'border-gray-300'
+                      }`}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => onFilesSelected(e.target.files)}
+                      />
+                      {previewUrl ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <img src={previewUrl} alt="Selected preview" className="h-32 w-32 rounded-md object-cover" />
+                          <span className="text-xs text-gray-500">{file.name} — click to change</span>
+                        </div>
+                      ) : (
+                        <>
+                          <ImagePlus size={28} className="text-gray-400" />
+                          <p className="mt-2 text-sm text-gray-600">Drag & drop your photo here, or click to browse</p>
+                          <p className="mt-1 text-xs text-gray-400">JPG or PNG, up to 10MB</p>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <ImagePlus size={28} className="text-gray-400" />
-                      <p className="mt-2 text-sm text-gray-600">Drag & drop your photo here, or click to browse</p>
-                      <p className="mt-1 text-xs text-gray-400">JPG or PNG, up to 10MB</p>
-                    </>
-                  )}
-                </div>
+                    <div className="mt-2 text-center text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFile(null);
+                          setFormError('');
+                          setInputMode('camera');
+                        }}
+                        className="font-medium text-gray-600 underline hover:text-gray-900"
+                      >
+                        Or take a photo instead
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {formError && <p className="mt-2 text-sm text-red-600">{formError}</p>}
 
-                <div className="mt-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <Ruler size={16} />
-                    Height (optional, improves accuracy)
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="flex rounded-md border border-gray-300 p-0.5 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => setHeightUnit('cm')}
-                        className={`rounded px-2 py-1 ${heightUnit === 'cm' ? 'bg-gray-900 text-white' : 'text-gray-600'}`}
-                      >
-                        cm
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setHeightUnit('ft')}
-                        className={`rounded px-2 py-1 ${heightUnit === 'ft' ? 'bg-gray-900 text-white' : 'text-gray-600'}`}
-                      >
-                        ft/in
-                      </button>
+                {inputMode && (
+                  <>
+                    <div className="mt-4">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <Ruler size={16} />
+                        Height (optional, improves accuracy)
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex rounded-md border border-gray-300 p-0.5 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setHeightUnit('cm')}
+                            className={`rounded px-2 py-1 ${heightUnit === 'cm' ? 'bg-gray-900 text-white' : 'text-gray-600'}`}
+                          >
+                            cm
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHeightUnit('ft')}
+                            className={`rounded px-2 py-1 ${heightUnit === 'ft' ? 'bg-gray-900 text-white' : 'text-gray-600'}`}
+                          >
+                            ft/in
+                          </button>
+                        </div>
+
+                        {heightUnit === 'cm' ? (
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="e.g. 178"
+                            value={heightCm}
+                            onChange={(e) => setHeightCm(e.target.value)}
+                            className="w-24 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="ft"
+                              value={heightFeet}
+                              onChange={(e) => setHeightFeet(e.target.value)}
+                              className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="in"
+                              value={heightInches}
+                              onChange={(e) => setHeightInches(e.target.value)}
+                              className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {heightUnit === 'cm' ? (
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 178"
-                        value={heightCm}
-                        onChange={(e) => setHeightCm(e.target.value)}
-                        className="w-24 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                      />
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="ft"
-                          value={heightFeet}
-                          onChange={(e) => setHeightFeet(e.target.value)}
-                          className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="in"
-                          value={heightInches}
-                          onChange={(e) => setHeightInches(e.target.value)}
-                          className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!file}
-                  className="mt-5 w-full rounded-md bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Get My Size
-                </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!file}
+                      className="mt-5 w-full rounded-md bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Get My Size
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
