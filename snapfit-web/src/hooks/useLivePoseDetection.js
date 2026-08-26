@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 
 // Same package version on the client (WASM) and server (Python mediapipe==1.0.1, see
 // snapfit-ai/requirements.txt) so the two never drift apart.
@@ -12,7 +11,16 @@ const DEFAULT_THROTTLE_MS = 200;
 const VISIBILITY_THRESHOLD = 0.6;
 const EDGE_MARGIN = 0.04;
 const MIN_BODY_SPAN = 0.45;
-const MAX_BODY_SPAN = 0.98;
+// Must stay below (1 - 2*EDGE_MARGIN): once every required landmark is inside the
+// edge margin, the max possible span is 1 - 2*EDGE_MARGIN (0.92 here). A higher
+// value made this branch unreachable — "too close" always fell through to the
+// edge-crop check instead.
+const MAX_BODY_SPAN = 0.85;
+
+// A low-end device that's too slow to compile/run the WASM model will also be too
+// slow to load it promptly, so a single load timeout doubles as the "runs too
+// slowly" signal Prompt 28 asks for — see LiveCapture's poseError fallback.
+const MODEL_LOAD_TIMEOUT_MS = 6000;
 
 // Same landmarks the server-side confidence check requires (snapfit-ai/app/utils.py
 // REQUIRED_LANDMARKS) — a photo that fails this client-side gate would also score
@@ -72,6 +80,10 @@ export function evaluateFraming(landmarks) {
 let sharedLandmarkerPromise = null;
 
 async function createLandmarker() {
+  // Dynamic import so @mediapipe/tasks-vision (and its WASM) is code-split into its
+  // own chunk and only ever fetched once this function actually runs — i.e. once a
+  // shopper opens the camera tab, never on initial widget/page load.
+  const { FilesetResolver, PoseLandmarker } = await import('@mediapipe/tasks-vision');
   const vision = await FilesetResolver.forVisionTasks(WASM_BASE_URL);
   const baseOptions = { modelAssetPath: MODEL_ASSET_URL };
   try {
@@ -112,22 +124,34 @@ export function useLivePoseDetection(videoRef, { enabled = true, throttleMs = DE
   const landmarkerRef = useRef(null);
 
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (!enabled) {
+      setIsModelReady(false);
+      return undefined;
+    }
     let cancelled = false;
     setError(null);
+
+    const timeoutId = setTimeout(() => {
+      cancelled = true;
+      setError('The live pose guide is taking too long to load on this device.');
+    }, MODEL_LOAD_TIMEOUT_MS);
 
     getSharedLandmarker()
       .then((landmarker) => {
         if (cancelled) return;
+        clearTimeout(timeoutId);
         landmarkerRef.current = landmarker;
         setIsModelReady(true);
       })
       .catch((err) => {
-        if (!cancelled) setError(err?.message || 'Failed to load the live pose model');
+        if (cancelled) return;
+        clearTimeout(timeoutId);
+        setError(err?.message || 'Failed to load the live pose model');
       });
 
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [enabled]);
 
@@ -168,7 +192,14 @@ export function useLivePoseDetection(videoRef, { enabled = true, throttleMs = DE
     }
 
     rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    return () => {
+      cancelAnimationFrame(rafId);
+      // Drop stale results so a later re-enable (e.g. after Retake) starts from a
+      // clean slate instead of a frozen "framed correctly" from the prior session.
+      setIsFramedCorrectly(false);
+      setMissingLandmarks(REQUIRED_LANDMARKS);
+      setFramingReason(null);
+    };
     // videoRef is a stable ref object, not a reactive value — intentionally omitted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, isModelReady, throttleMs]);

@@ -543,7 +543,13 @@ else:
   productId="SKU-1029"
   apiUrl="${API_BASE}"
   buttonLabel="Check My Size"
+  autoCapture={false} // optional — auto-capture after a 1.5s stable hold instead of a manual button
 />`;
+
+  const iframeExample = `<iframe
+  src="https://your-storefront.com/product/123"
+  allow="camera"
+></iframe>`;
 
   const recommendSuccessExample = `{
   "success": true,
@@ -747,6 +753,12 @@ else:
                 { field: 'productId', type: 'string', required: true, description: 'The product being viewed.' },
                 { field: 'apiUrl', type: 'string', required: true, description: 'Base URL of the SnapFit API (no trailing /recommend).' },
                 { field: 'buttonLabel', type: 'string', required: false, description: 'Defaults to "Check My Size".' },
+                {
+                  field: 'autoCapture',
+                  type: 'boolean',
+                  required: false,
+                  description: 'Defaults to false (manual capture button). When true, the camera auto-captures after 1.5s of continuous valid framing.',
+                },
               ]}
             />
             <p>
@@ -760,6 +772,47 @@ else:
               A drop-in script-tag/iframe embed for non-React storefronts isn&apos;t published yet. Until then, any
               stack can integrate directly against the REST API using the snippets in Code Examples above.
             </Callout>
+
+            <div className="space-y-4 border-t border-gray-100 pt-5">
+              <h3 className="text-sm font-semibold text-gray-900">Live camera capture</h3>
+              <p>
+                Alongside file upload, the widget offers guided live camera capture: a client-side pose model gives
+                the shopper real-time framing feedback (a colored border and status text) before they take the
+                photo, so blurry, cropped, or badly-angled photos never reach your size-matching pipeline in the
+                first place.
+              </p>
+
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Performance</p>
+              <p>
+                The live pose model (
+                <code className="rounded bg-gray-100 px-1 py-0.5">@mediapipe/tasks-vision</code>, ~150KB gzipped of
+                JS plus a WASM binary) is dynamically imported only when a shopper opens the &quot;Take a Photo&quot;
+                tab — it is never fetched on initial widget load, so merchants whose shoppers only use file upload
+                pay nothing extra.
+              </p>
+
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">HTTPS &amp; iframe embeds</p>
+              <p>
+                Camera access requires a secure context — your storefront must be served over HTTPS (or{' '}
+                <code className="rounded bg-gray-100 px-1 py-0.5">localhost</code> during development).{' '}
+                <code className="rounded bg-gray-100 px-1 py-0.5">getUserMedia</code> is blocked outright on plain
+                HTTP, and the widget automatically falls back to the upload-only flow in that case. If your
+                storefront is itself embedded in an <code className="rounded bg-gray-100 px-1 py-0.5">&lt;iframe&gt;</code>{' '}
+                (for example inside a page builder or app store), that iframe also needs an explicit{' '}
+                <code className="rounded bg-gray-100 px-1 py-0.5">allow=&quot;camera&quot;</code> attribute — without
+                it, the browser blocks camera access inside the frame even on HTTPS, before the shopper is ever
+                asked for permission:
+              </p>
+              <CodeBlock code={iframeExample} lang="bash" label="HTML" />
+
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Low-end devices</p>
+              <p>
+                If the live pose model fails to load, or is still loading 6 seconds after the camera opens (a
+                reasonable proxy for a device too slow to run it smoothly), the widget automatically falls back to
+                ungated manual capture — a static frame guide with no live red/green validation — rather than
+                blocking camera use entirely. The Capture button stays enabled throughout this fallback.
+              </p>
+            </div>
           </Section>
 
           <Section id="error-codes" title="Error Codes">

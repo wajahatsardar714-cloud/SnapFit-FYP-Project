@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 
 // idle -> requesting -> granted, or requesting -> denied | unavailable
+// granted -> unavailable if a track ends unexpectedly (unplugged, OS revokes
+// permission, another app takes the device) mid-session.
 export function useCameraStream({ enabled }) {
   const [stream, setStream] = useState(null);
   const [status, setStatus] = useState('idle');
@@ -22,13 +24,24 @@ export function useCameraStream({ enabled }) {
     setStatus('requesting');
     setError(null);
 
+    function handleTrackEnded() {
+      if (cancelled) return;
+      cancelled = true;
+      setStream(null);
+      setStatus('unavailable');
+      setError('The camera connection was lost.');
+    }
+
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+      // Front camera by default so the shopper can see the live framing feedback
+      // (silhouette/border/status text) this feature exists to show them.
+      .getUserMedia({ video: { facingMode: { ideal: 'user' } }, audio: false })
       .then((mediaStream) => {
         if (cancelled) {
           mediaStream.getTracks().forEach((track) => track.stop());
           return;
         }
+        mediaStream.getTracks().forEach((track) => track.addEventListener('ended', handleTrackEnded));
         setStream(mediaStream);
         setStatus('granted');
       })
@@ -42,7 +55,10 @@ export function useCameraStream({ enabled }) {
     return () => {
       cancelled = true;
       setStream((current) => {
-        current?.getTracks().forEach((track) => track.stop());
+        current?.getTracks().forEach((track) => {
+          track.removeEventListener('ended', handleTrackEnded);
+          track.stop();
+        });
         return null;
       });
     };

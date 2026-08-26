@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Camera, RefreshCw } from 'lucide-react';
 import { useCameraStream } from '../../hooks/useCameraStream';
 import { useLivePoseDetection } from '../../hooks/useLivePoseDetection';
@@ -19,6 +19,15 @@ const LANDMARK_GROUP_LABEL = {
   RIGHT_ANKLE: 'feet',
 };
 
+const TONE_STYLES = {
+  good: { border: 'border-green-500', text: 'text-green-700' },
+  bad: { border: 'border-red-500', text: 'text-red-600' },
+  // Low-end-device fallback: pose model failed to load or is taking too long
+  // (useLivePoseDetection's load timeout). Capture is enabled but unvalidated.
+  degraded: { border: 'border-amber-500', text: 'text-amber-700' },
+  loading: { border: 'border-gray-300', text: 'text-gray-500' },
+};
+
 function describeMissing(missingLandmarks) {
   const labels = [...new Set(missingLandmarks.map((name) => LANDMARK_GROUP_LABEL[name] || 'body'))];
   if (labels.length === 0) return 'you';
@@ -28,10 +37,10 @@ function describeMissing(missingLandmarks) {
 
 function getStatus({ isModelReady, isFramedCorrectly, missingLandmarks, framingReason, poseError }) {
   if (poseError) {
-    return { tone: 'neutral', text: 'Live framing guide unavailable — line up a full-body shot and capture manually.' };
+    return { tone: 'degraded', text: 'Live framing guide unavailable on this device — line up a full-body shot and capture manually.' };
   }
   if (!isModelReady) {
-    return { tone: 'neutral', text: 'Loading pose guide…' };
+    return { tone: 'loading', text: 'Loading pose guide…' };
   }
   if (isFramedCorrectly) {
     return { tone: 'good', text: 'Hold still…' };
@@ -67,6 +76,16 @@ function SilhouetteOverlay({ good }) {
   );
 }
 
+function UploadInsteadLink({ onClick }) {
+  return (
+    <div className="mt-3 text-center text-xs">
+      <button type="button" onClick={onClick} className="font-medium text-gray-600 underline hover:text-gray-900">
+        Or upload a photo instead
+      </button>
+    </div>
+  );
+}
+
 // Required-landmark set comes straight from useLivePoseDetection (shoulders, hips,
 // knees, ankles). Confirmed against snapfit-ai/app/feature_engine.py: the ratios
 // that actually feed size_matcher.py (shoulder_to_hip_ratio, torso_length_ratio,
@@ -79,7 +98,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const stableSinceRef = useRef(null);
-  const capturedRef = useRef(false);
+  const capturingRef = useRef(false);
 
   const cameraEnabled = !file;
   const { stream, status: cameraStatus, error: cameraError } = useCameraStream({ enabled: cameraEnabled });
@@ -105,26 +124,27 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     }
   }, [cameraStatus, onSwitchToUpload]);
 
-  // Degraded mode (pose model failed to load): let the shopper capture manually
-  // rather than trap them behind a gate that can never turn green.
+  // Degraded mode (pose model failed to load or timed out): let the shopper
+  // capture manually rather than trap them behind a gate that can never turn green.
   const canCapture = isFramedCorrectly || Boolean(poseError);
 
   function handleCapture() {
-    if (!canCapture || capturedRef.current) return;
+    if (!canCapture || capturingRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas || !video.videoWidth || !video.videoHeight) return;
+    if (!video || !canvas || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
 
-    capturedRef.current = true;
+    capturingRef.current = true;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(
       (blob) => {
-        if (!blob) {
-          capturedRef.current = false;
-          return;
-        }
+        // Always release the guard once the async encode settles — if the parent
+        // rejects this file (e.g. over the 10MB limit) `file` never changes, so a
+        // reset keyed on the `file` prop would leave Capture permanently disabled.
+        capturingRef.current = false;
+        if (!blob) return;
         onCapture(new File([blob], `snapfit-capture-${Date.now()}.jpg`, { type: 'image/jpeg' }));
       },
       'image/jpeg',
@@ -133,11 +153,10 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   }
 
   useEffect(() => {
-    capturedRef.current = false;
-  }, [file]);
-
-  useEffect(() => {
-    if (!autoCapture || !cameraEnabled) return undefined;
+    if (!autoCapture || !cameraEnabled) {
+      stableSinceRef.current = null;
+      return undefined;
+    }
 
     if (!isFramedCorrectly) {
       stableSinceRef.current = null;
@@ -177,22 +196,31 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     );
   }
 
-  const status = getStatus({ isModelReady, isFramedCorrectly, missingLandmarks, framingReason, poseError });
-  const borderClass = status.tone === 'good' ? 'border-green-500' : status.tone === 'bad' ? 'border-red-500' : 'border-gray-300';
-  const textClass = status.tone === 'good' ? 'text-green-700' : status.tone === 'bad' ? 'text-red-600' : 'text-gray-500';
-
   if (cameraStatus === 'requesting' || cameraStatus === 'idle') {
-    return <p className="py-10 text-center text-sm text-gray-500">Requesting camera access…</p>;
+    return (
+      <div>
+        <p className="py-10 text-center text-sm text-gray-500">Requesting camera access…</p>
+        <UploadInsteadLink onClick={onSwitchToUpload} />
+      </div>
+    );
   }
   if (cameraStatus === 'denied' || cameraStatus === 'unavailable') {
-    return <p className="py-10 text-center text-sm text-gray-500">{cameraError || 'Camera unavailable.'}</p>;
+    return (
+      <div>
+        <p className="py-10 text-center text-sm text-gray-500">{cameraError || 'Camera unavailable.'}</p>
+        <UploadInsteadLink onClick={onSwitchToUpload} />
+      </div>
+    );
   }
+
+  const status = getStatus({ isModelReady, isFramedCorrectly, missingLandmarks, framingReason, poseError });
+  const { border: borderClass, text: textClass } = TONE_STYLES[status.tone];
 
   return (
     <div>
-      <div className={`relative overflow-hidden rounded-lg border-4 bg-gray-900 transition-colors ${borderClass}`}>
+      <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-lg border-4 bg-gray-900 transition-colors ${borderClass}`}>
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-        <video ref={videoRef} autoPlay playsInline muted className="h-64 w-full object-cover" />
+        <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-contain" />
         <SilhouetteOverlay good={status.tone === 'good'} />
       </div>
       <canvas ref={canvasRef} className="hidden" />
@@ -211,11 +239,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
         </button>
       )}
 
-      <div className="mt-3 text-center text-xs">
-        <button type="button" onClick={onSwitchToUpload} className="font-medium text-gray-600 underline hover:text-gray-900">
-          Or upload a photo instead
-        </button>
-      </div>
+      <UploadInsteadLink onClick={onSwitchToUpload} />
     </div>
   );
 }

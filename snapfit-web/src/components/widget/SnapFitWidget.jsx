@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Camera, ImagePlus, Loader2, Ruler, X } from 'lucide-react';
-import LiveCapture from './LiveCapture';
+
+// Code-split: LiveCapture pulls in @mediapipe/tasks-vision (WASM), which is only
+// needed once a shopper opens the camera tab. Merchants who only use the (default)
+// upload flow never pay for that bundle.
+const LiveCapture = lazy(() => import('./LiveCapture'));
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -179,18 +183,22 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
                 {inputMode === 'camera' && (
                   <div className="mt-4">
-                    <LiveCapture
-                      file={file}
-                      previewUrl={previewUrl}
-                      onCapture={(capturedFile) => onFilesSelected([capturedFile])}
-                      onRetake={() => setFile(null)}
-                      onSwitchToUpload={() => {
-                        setFile(null);
-                        setFormError('');
-                        setInputMode('upload');
-                      }}
-                      autoCapture={autoCapture}
-                    />
+                    <Suspense
+                      fallback={<p className="py-10 text-center text-sm text-gray-500">Loading camera…</p>}
+                    >
+                      <LiveCapture
+                        file={file}
+                        previewUrl={previewUrl}
+                        onCapture={(capturedFile) => onFilesSelected([capturedFile])}
+                        onRetake={() => setFile(null)}
+                        onSwitchToUpload={() => {
+                          setFile(null);
+                          setFormError('');
+                          setInputMode('upload');
+                        }}
+                        autoCapture={autoCapture}
+                      />
+                    </Suspense>
                   </div>
                 )}
 
