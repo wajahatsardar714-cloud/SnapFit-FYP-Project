@@ -140,4 +140,35 @@ async function saveAnchorPoints(req, res) {
   }
 }
 
-module.exports = { mapProduct, getProductMappings, removeMapping, getChartForProduct, saveAnchorPoints };
+async function getAnchorPointsForProduct(req, res) {
+  const { merchantId, productId } = req.query;
+  if (!merchantId || !productId) {
+    return res.status(400).json({ message: 'merchantId and productId are required' });
+  }
+
+  try {
+    const mapping = await ProductMapping.findOne({ merchantId, productId });
+    if (!mapping || !mapping.anchorPoints || !mapping.productImage) {
+      return res.status(404).json({ message: 'No anchor points configured for this product' });
+    }
+
+    return res.status(200).json({
+      anchorPoints: mapping.anchorPoints,
+      imageUrl: `${req.protocol}://${req.get('host')}${mapping.productImage}`,
+    });
+  } catch (err) {
+    if (err.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid merchantId' });
+    }
+    return res.status(500).json({ message: 'Failed to fetch anchor points', error: err.message });
+  }
+}
+
+module.exports = {
+  mapProduct,
+  getProductMappings,
+  removeMapping,
+  getChartForProduct,
+  saveAnchorPoints,
+  getAnchorPointsForProduct,
+};

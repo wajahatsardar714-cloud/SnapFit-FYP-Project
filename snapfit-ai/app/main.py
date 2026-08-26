@@ -1,14 +1,17 @@
+import base64
 import json
 import logging
 import time
 from typing import Optional
 
+import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.feature_engine import calculate_features
 from app.pose_estimator import PoseEstimationError, extract_landmarks
 from app.size_matcher import SizeMatchError, recommend_size
+from app.try_on import TryOnError, fetch_image_bytes, fetch_product_anchor_data, generate_try_on
 from app.utils import calculate_confidence, validate_image
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -99,3 +102,42 @@ async def landmarks_only(image: UploadFile = File(...)):
         raise HTTPException(status_code=422, detail=str(e))
 
     return {"landmarks": pose["landmarks"], "image_dimensions": pose["image_dimensions"]}
+
+
+# Independently callable virtual try-on (Phase 12) -- deliberately not coupled to
+# /analyze's response shape or size-recommendation flow. Reuses extract_landmarks,
+# the same BlazePose extraction /analyze uses, via app.try_on rather than
+# duplicating it.
+@app.post("/try-on")
+async def try_on(
+    image: UploadFile = File(...),
+    product_id: str = Form(...),
+    merchant_id: str = Form(...),
+):
+    image_bytes = await image.read()
+
+    validation = validate_image(image_bytes)
+    if not validation["valid"]:
+        raise HTTPException(status_code=400, detail=validation["error"])
+
+    try:
+        anchor_points, product_image_url = await fetch_product_anchor_data(merchant_id, product_id)
+    except TryOnError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="BACKEND_UNREACHABLE")
+
+    try:
+        product_image_bytes = await fetch_image_bytes(product_image_url)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="PRODUCT_IMAGE_UNREACHABLE")
+
+    try:
+        result_bytes = generate_try_on(image_bytes, product_image_bytes, anchor_points)
+    except PoseEstimationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except TryOnError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    encoded = base64.b64encode(result_bytes).decode("ascii")
+    return {"image": f"data:image/jpeg;base64,{encoded}"}
