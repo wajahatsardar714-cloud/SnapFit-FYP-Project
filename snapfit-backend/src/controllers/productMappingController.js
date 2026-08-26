@@ -1,5 +1,35 @@
+const fs = require('fs/promises');
+const path = require('path');
 const ProductMapping = require('../models/ProductMapping');
 const SizeChart = require('../models/SizeChart');
+
+const REQUIRED_ANCHOR_POINTS = ['shoulderLeft', 'shoulderRight', 'hipLeft', 'hipRight'];
+
+function parseAnchorPoints(raw) {
+  let points;
+  try {
+    points = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    return { error: 'anchorPoints must be valid JSON' };
+  }
+
+  if (!points || typeof points !== 'object') {
+    return { error: 'anchorPoints is required' };
+  }
+
+  const parsed = {};
+  for (const key of REQUIRED_ANCHOR_POINTS) {
+    const point = points[key];
+    const x = Number(point?.x);
+    const y = Number(point?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1) {
+      return { error: `anchorPoints.${key} must have x and y between 0 and 1` };
+    }
+    parsed[key] = { x, y };
+  }
+
+  return { points: parsed };
+}
 
 async function mapProduct(req, res) {
   const { productId, productName, sizeChartId } = req.body;
@@ -70,4 +100,44 @@ async function getChartForProduct(merchantId, productId) {
   return mapping ? mapping.sizeChartId : null;
 }
 
-module.exports = { mapProduct, getProductMappings, removeMapping, getChartForProduct };
+async function saveAnchorPoints(req, res) {
+  const { error, points } = parseAnchorPoints(req.body.anchorPoints);
+  if (error) {
+    if (req.file) await fs.unlink(req.file.path).catch(() => {});
+    return res.status(400).json({ message: error });
+  }
+
+  try {
+    const mapping = await ProductMapping.findOne({ _id: req.params.id, merchantId: req.merchant.merchantId });
+    if (!mapping) {
+      if (req.file) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(404).json({ message: 'Product mapping not found' });
+    }
+
+    if (!req.file && !mapping.productImage) {
+      return res.status(400).json({ message: 'A product image is required' });
+    }
+
+    const previousImagePath = mapping.productImage;
+    if (req.file) {
+      mapping.productImage = `/uploads/products/${req.file.filename}`;
+    }
+    mapping.anchorPoints = points;
+    await mapping.save();
+
+    if (req.file && previousImagePath) {
+      const absolutePrevious = path.join(__dirname, '..', '..', previousImagePath);
+      await fs.unlink(absolutePrevious).catch(() => {});
+    }
+
+    return res.status(200).json({ mapping });
+  } catch (err) {
+    if (req.file) await fs.unlink(req.file.path).catch(() => {});
+    if (err.name === 'CastError') {
+      return res.status(404).json({ message: 'Product mapping not found' });
+    }
+    return res.status(500).json({ message: 'Failed to save anchor points', error: err.message });
+  }
+}
+
+module.exports = { mapProduct, getProductMappings, removeMapping, getChartForProduct, saveAnchorPoints };

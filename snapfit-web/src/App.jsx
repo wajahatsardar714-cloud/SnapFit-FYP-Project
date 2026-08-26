@@ -13,6 +13,7 @@ import ApiKeyPage from './pages/dashboard/ApiKeyPage';
 import SizeChartsPage from './pages/dashboard/SizeChartsPage';
 import CreateSizeChartPage from './pages/dashboard/CreateSizeChartPage';
 import ProductMappingPage from './pages/dashboard/ProductMappingPage';
+import AnchorPointsPage from './pages/dashboard/AnchorPointsPage';
 import AnalyticsDashboardPage from './pages/dashboard/AnalyticsDashboardPage';
 import IntegrationDocsPage from './pages/dashboard/IntegrationDocsPage';
 import SizeCheckDemo from './pages/demo/SizeCheckDemo';
@@ -47,6 +48,7 @@ function App() {
             <Route path="size-charts/new" element={<CreateSizeChartPage />} />
             <Route path="size-charts/:id/edit" element={<CreateSizeChartPage />} />
             <Route path="product-mapping" element={<ProductMappingPage />} />
+            <Route path="product-mapping/:id/anchor-points" element={<AnchorPointsPage />} />
             <Route path="analytics" element={<AnalyticsDashboardPage />} />
             <Route path="docs" element={<IntegrationDocsPage />} />
           </Route>

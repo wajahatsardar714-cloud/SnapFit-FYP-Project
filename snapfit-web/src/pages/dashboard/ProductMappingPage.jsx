@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Loader2, Trash2 } from 'lucide-react';
+import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 import Badge from '../../components/Badge';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -172,6 +172,7 @@ function ProductMappingPage() {
                       <th className="px-6 py-3 font-medium">Product ID</th>
                       <th className="px-6 py-3 font-medium">Product Name</th>
                       <th className="px-6 py-3 font-medium">Size Chart</th>
+                      <th className="px-6 py-3 font-medium">Try-On</th>
                       <th className="px-6 py-3 font-medium" aria-hidden="true"></th>
                     </tr>
                   </thead>
@@ -182,6 +183,15 @@ function ProductMappingPage() {
                         <td className="px-6 py-3 text-gray-700">{mapping.productName || '—'}</td>
                         <td className="px-6 py-3 text-gray-700">
                           {mapping.sizeChartId?.name || <span className="text-gray-400">Chart deleted</span>}
+                        </td>
+                        <td className="px-6 py-3">
+                          <Link
+                            to={`/dashboard/product-mapping/${mapping._id}/anchor-points`}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 underline hover:text-gray-900"
+                          >
+                            <ImagePlus size={13} />
+                            {mapping.anchorPoints ? 'Edit points' : 'Set up'}
+                          </Link>
                         </td>
                         <td className="px-6 py-3 text-right">
                           <button
