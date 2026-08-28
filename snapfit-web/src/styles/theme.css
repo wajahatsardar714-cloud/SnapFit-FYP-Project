@@ -1,0 +1,50 @@
+/**
+ * SaaS Indigo theme tokens, mirroring tailwind.config.js theme.extend.colors
+ * for any place that needs raw CSS instead of Tailwind utility classes.
+ *
+ * Flat design only: no gradients, no box-shadow beyond --shadow-card /
+ * Tailwind's shadow-sm, no blur/backdrop effects.
+ */
+:root {
+  --color-primary-50: #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-primary-500: #6366F1;
+  --color-primary-600: #4F46E5;
+  --color-primary-700: #4338CA;
+  --color-primary: #4F46E5;
+
+  --color-accent: #8B5CF6;
+  --color-accent-hover: #7C3AED;
+
+  --color-success: #10B981;
+  --color-success-bg: #ECFDF5;
+  --color-success-border: #A7F3D0;
+  --color-success-text: #047857;
+
+  --color-danger: #EF4444;
+  --color-danger-bg: #FEF2F2;
+  --color-danger-border: #FECACA;
+  --color-danger-text: #B91C1C;
+
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FFFBEB;
+  --color-warning-border: #FDE68A;
+  --color-warning-text: #92400E;
+
+  --color-info: #3B82F6;
+  --color-info-bg: #EFF6FF;
+  --color-info-border: #BFDBFE;
+  --color-info-text: #1D4ED8;
+
+  --color-ink-900: #111827;
+  --color-ink-700: #374151;
+  --color-ink-500: #6B7280;
+  --color-ink-300: #D1D5DB;
+
+  --color-surface-page: #F9FAFB;
+  --color-surface-card: #FFFFFF;
+  --color-surface-border: #E5E7EB;
+
+  --radius-xl: 0.875rem;
+  --shadow-card: 0 1px 2px 0 rgba(16, 24, 40, 0.05);
+}
