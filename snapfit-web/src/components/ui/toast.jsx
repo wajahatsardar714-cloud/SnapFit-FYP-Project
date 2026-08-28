@@ -23,10 +23,12 @@ function CustomToast({ variant, message }) {
   );
 }
 
+// A stable id per variant so repeated triggers (e.g. double-clicking a bell
+// icon) replace the existing toast instead of stacking duplicates.
 export function notifyWarning(message) {
-  return toast.custom(<CustomToast variant="warning" message={message} />);
+  return toast.custom(<CustomToast variant="warning" message={message} />, { id: 'notify-warning' });
 }
 
 export function notifyInfo(message) {
-  return toast.custom(<CustomToast variant="info" message={message} />);
+  return toast.custom(<CustomToast variant="info" message={message} />, { id: 'notify-info' });
 }
