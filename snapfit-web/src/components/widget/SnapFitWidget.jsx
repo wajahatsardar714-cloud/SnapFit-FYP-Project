@@ -1,12 +1,26 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Camera, ImagePlus, Loader2, Ruler, X } from 'lucide-react';
+import { AlertTriangle, Camera, ImagePlus, Loader2, Ruler, Smartphone, X } from 'lucide-react';
 
 // Code-split: LiveCapture pulls in @mediapipe/tasks-vision (WASM), which is only
 // needed once a shopper opens the camera tab. Merchants who only use the (default)
 // upload flow never pay for that bundle.
 const LiveCapture = lazy(() => import('./LiveCapture'));
+// Same idea for the QR-handoff view -- it pulls in the `qrcode` package, needed
+// only if a desktop shopper chooses to continue on their phone.
+const MobileHandoff = lazy(() => import('./MobileHandoff'));
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+// A laptop's built-in camera is front-facing and awkward for a full-body shot --
+// on a non-touch device, offer a QR handoff to the shopper's phone instead of (or
+// alongside) the local camera. Combines UA sniffing with a pointer-type check
+// since either alone is an unreliable signal (e.g. UA spoofing, some tablets).
+function isLikelyDesktop() {
+  if (typeof navigator === 'undefined') return false;
+  const isMobileUA = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent || '');
+  const hasCoarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  return !isMobileUA && !hasCoarsePointer;
+}
 
 function confidenceTone(confidence) {
   const pct = confidence * 100;
@@ -25,6 +39,7 @@ function heightToCm(unit, cm, feet, inches) {
 }
 
 function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size', autoCapture = false }) {
+  const [isDesktop] = useState(isLikelyDesktop);
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState('form'); // form | loading | result | error
   const [inputMode, setInputMode] = useState(null); // null | 'camera' | 'upload'
@@ -199,7 +214,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                 <p className="mt-1 text-sm text-gray-500">Take or upload a full-body photo and we'll estimate your best fit.</p>
 
                 {!inputMode && (
-                  <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className={`mt-5 grid gap-3 ${isDesktop ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     <button
                       type="button"
                       onClick={() => setInputMode('camera')}
@@ -216,6 +231,61 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                       <ImagePlus size={22} className="text-gray-500" />
                       Upload a Photo
                     </button>
+                    {isDesktop && (
+                      <button
+                        type="button"
+                        onClick={() => setInputMode('phone')}
+                        className="flex flex-col items-center gap-2 rounded-lg border border-gray-300 py-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        <Smartphone size={22} className="text-gray-500" />
+                        Use My Phone
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {inputMode === 'phone' && !file && (
+                  <div className="mt-4">
+                    <Suspense fallback={<p className="py-10 text-center text-sm text-gray-500">Loading…</p>}>
+                      <MobileHandoff
+                        apiKey={apiKey}
+                        apiUrl={apiUrl}
+                        onCapture={(capturedFile) => onFilesSelected([capturedFile])}
+                        onSwitchToUpload={() => {
+                          setFormError('');
+                          setInputMode('upload');
+                        }}
+                      />
+                    </Suspense>
+                  </div>
+                )}
+
+                {inputMode === 'phone' && file && (
+                  <div className="mt-4">
+                    <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-3">
+                      <img src={previewUrl} alt="Photo from your phone" className="h-48 w-48 rounded-md object-cover" />
+                      <span className="text-xs text-gray-500">Received from your phone</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-center gap-4 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setFile(null)}
+                        className="font-medium text-gray-600 underline hover:text-gray-900"
+                      >
+                        Retake
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFile(null);
+                          setFormError('');
+                          setInputMode('upload');
+                        }}
+                        className="font-medium text-gray-600 underline hover:text-gray-900"
+                      >
+                        Or upload a photo instead
+                      </button>
+                    </div>
                   </div>
                 )}
 

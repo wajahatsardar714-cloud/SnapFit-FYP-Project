@@ -17,6 +17,7 @@ import AnchorPointsPage from './pages/dashboard/AnchorPointsPage';
 import AnalyticsDashboardPage from './pages/dashboard/AnalyticsDashboardPage';
 import IntegrationDocsPage from './pages/dashboard/IntegrationDocsPage';
 import SizeCheckDemo from './pages/demo/SizeCheckDemo';
+import MobileCapturePage from './pages/mobile/MobileCapturePage';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/demo/size-check" element={<SizeCheckDemo />} />
+          <Route path="/mobile-capture/:sessionId" element={<MobileCapturePage />} />
 
           <Route element={<PublicLayout />}>
             <Route path="/login" element={<LoginPage />} />
