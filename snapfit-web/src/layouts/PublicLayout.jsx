@@ -2,30 +2,34 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 
 function PublicLayout() {
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      <header className="border-b bg-white">
+    <div className="flex min-h-screen flex-col bg-white">
+      <header className="border-b border-surface-border bg-white">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/login" className="text-lg font-bold text-gray-800">
+          <Link to="/login" className="text-lg font-bold text-primary-600">
             SnapFit
           </Link>
-          <div className="flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-4 text-sm">
             <NavLink
               to="/login"
-              className={({ isActive }) => (isActive ? 'font-medium text-gray-900' : 'text-gray-600 hover:text-gray-900')}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-2 transition-colors duration-150 ${
+                  isActive ? 'font-medium text-ink-900' : 'text-ink-700 hover:text-ink-900'
+                }`
+              }
             >
               Sign in
             </NavLink>
-            <NavLink
+            <Link
               to="/register"
-              className={({ isActive }) => (isActive ? 'font-medium text-gray-900' : 'text-gray-600 hover:text-gray-900')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-150 hover:bg-primary-700"
             >
-              Register
-            </NavLink>
+              Get Started
+            </Link>
           </div>
         </nav>
       </header>
 
-      <main className="flex-1">
+      <main className="flex-1 bg-surface-page">
         <Outlet />
       </main>
     </div>
