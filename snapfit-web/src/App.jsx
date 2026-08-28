@@ -23,7 +23,21 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Toaster position="top-right" />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            className: 'rounded-lg border border-surface-border bg-surface-card text-ink-700 shadow-card',
+            duration: 4000,
+            success: {
+              className: 'rounded-lg border border-success-border bg-surface-card text-ink-700 shadow-card',
+              iconTheme: { primary: '#10B981', secondary: '#FFFFFF' },
+            },
+            error: {
+              className: 'rounded-lg border border-danger-border bg-surface-card text-ink-700 shadow-card',
+              iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+            },
+          }}
+        />
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/demo/size-check" element={<SizeCheckDemo />} />
