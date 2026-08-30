@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, BookOpen, LogOut, Bell, Settings, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Badge from '../components/ui/Badge';
@@ -28,6 +28,7 @@ function getInitials(name) {
 // matches "Subscription" rather than falling through to the exact-match-only
 // Dashboard item.
 function getPageTitle(pathname) {
+  if (pathname.startsWith('/dashboard/settings')) return 'Settings';
   const match = [...navItems]
     .sort((a, b) => b.to.length - a.to.length)
     .find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)));
@@ -37,6 +38,7 @@ function getPageTitle(pathname) {
 function DashboardLayout() {
   const { merchant, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const pageTitle = getPageTitle(location.pathname);
@@ -50,10 +52,7 @@ function DashboardLayout() {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  function openPlaceholder(label) {
-    setMenuOpen(false);
-    notifyInfo(`${label} is coming soon.`);
-  }
+  const isSettingsActive = location.pathname.startsWith('/dashboard/settings');
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -87,8 +86,10 @@ function DashboardLayout() {
           </div>
           <button
             type="button"
-            onClick={() => openPlaceholder('Settings')}
-            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-700 transition-colors duration-150 hover:bg-gray-50"
+            onClick={() => navigate('/dashboard/settings')}
+            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+              isSettingsActive ? 'bg-primary-50 font-medium text-primary-700' : 'text-ink-700 hover:bg-gray-50'
+            }`}
           >
             <Settings size={18} />
             Settings
@@ -135,7 +136,10 @@ function DashboardLayout() {
                     <div className="my-1 border-t border-surface-border" />
                     <button
                       type="button"
-                      onClick={() => openPlaceholder('Settings')}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        navigate('/dashboard/settings');
+                      }}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-700 transition-colors duration-150 hover:bg-gray-50"
                     >
                       <Settings size={16} />

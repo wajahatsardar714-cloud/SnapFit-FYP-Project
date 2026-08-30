@@ -51,6 +51,10 @@ export function AuthProvider({ children }) {
     navigate('/login');
   }, [navigate]);
 
+  const updateMerchant = useCallback((patch) => {
+    setMerchant((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
   const value = {
     merchant,
     token,
@@ -59,6 +63,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    updateMerchant,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

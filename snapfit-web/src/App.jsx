@@ -15,6 +15,7 @@ import ProductMappingPage from './pages/dashboard/ProductMappingPage';
 import AnchorPointsPage from './pages/dashboard/AnchorPointsPage';
 import AnalyticsDashboardPage from './pages/dashboard/AnalyticsDashboardPage';
 import IntegrationDocsPage from './pages/dashboard/IntegrationDocsPage';
+import SettingsPage from './pages/dashboard/SettingsPage';
 import SizeCheckDemo from './pages/demo/SizeCheckDemo';
 import MobileCapturePage from './pages/mobile/MobileCapturePage';
 
@@ -72,6 +73,7 @@ function App() {
             <Route path="product-mapping/:id/anchor-points" element={<AnchorPointsPage />} />
             <Route path="analytics" element={<AnalyticsDashboardPage />} />
             <Route path="docs" element={<IntegrationDocsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </AuthProvider>
