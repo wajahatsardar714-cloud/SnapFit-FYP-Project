@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import PublicLayout from './layouts/PublicLayout';
 import DashboardLayout from './layouts/DashboardLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -43,10 +42,16 @@ function App() {
           <Route path="/demo/size-check" element={<SizeCheckDemo />} />
           <Route path="/mobile-capture/:sessionId" element={<MobileCapturePage />} />
 
-          <Route element={<PublicLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
+          {/*
+            Login/Register are full-viewport split-screen pages (Theme F.4) --
+            they render their own logo and have no room for a wrapping top
+            nav, so they're standalone routes rather than nested under
+            PublicLayout. PublicLayout (added in F.3) is kept for a future
+            landing/marketing page, matching its own "if any exist" framing;
+            it has no route using it right now.
+          */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
           <Route
             path="/dashboard/*"

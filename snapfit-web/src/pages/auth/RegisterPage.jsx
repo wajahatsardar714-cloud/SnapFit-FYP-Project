@@ -1,14 +1,27 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import Input from '../../components/ui/Input';
+import Select from '../../components/ui/Select';
+import Button from '../../components/ui/Button';
+import Alert from '../../components/ui/Alert';
+import AuthSidePanel from './AuthSidePanel';
 
 const BUSINESS_TYPES = [
   { value: '', label: 'Select a business type' },
   { value: 'clothing', label: 'Clothing' },
   { value: 'footwear', label: 'Footwear' },
   { value: 'accessories', label: 'Accessories' },
+];
+
+// Purely a client-side strength hint, not an extra submission gate -- the
+// backend only enforces the 8-character minimum today (see authController.js),
+// so these are shown as guidance rather than blocking validation errors.
+const PASSWORD_RULES = [
+  { label: 'At least 8 characters', test: (pw) => pw.length >= 8 },
+  { label: 'At least 1 number', test: (pw) => /\d/.test(pw) },
+  { label: 'At least 1 uppercase letter', test: (pw) => /[A-Z]/.test(pw) },
 ];
 
 const initialForm = {
@@ -31,36 +44,13 @@ function validate(form) {
   return errors;
 }
 
-function Field({ label, name, type = 'text', value, onChange, error, autoComplete }) {
-  return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
-        {label}
-      </label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        autoComplete={autoComplete}
-        value={value}
-        onChange={onChange}
-        className={`mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
-          error
-            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
-            : 'border-gray-300 focus:border-gray-900 focus:ring-gray-900'
-        }`}
-      />
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
-}
-
 function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -70,6 +60,7 @@ function RegisterPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setFormError('');
 
     const validationErrors = validate(form);
     if (Object.keys(validationErrors).length > 0) {
@@ -83,95 +74,137 @@ function RegisterPage() {
       if (!payload.phone) delete payload.phone;
       if (!payload.businessType) delete payload.businessType;
       await register(payload);
-      toast.success('Account created!');
+      // Existing backend has no email-verification gate (isVerified is just a
+      // static flag, never checked before allowing dashboard access) -- so the
+      // existing "register -> already authenticated -> go straight to the
+      // dashboard" behavior is the correct, real success path, not a stand-in
+      // for a verification flow that doesn't exist.
       navigate('/dashboard');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
+      setFormError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-57px)] items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm ring-1 ring-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-        <p className="mt-1 text-sm text-gray-500">Start integrating SnapFit into your store</p>
+    <div className="flex min-h-screen">
+      <div className="flex w-full flex-col justify-center px-6 py-12 sm:w-[58%] sm:px-12 lg:px-20">
+        <div className="mx-auto w-full max-w-md">
+          <Link to="/login" className="text-lg font-bold text-primary-600">
+            SnapFit
+          </Link>
 
-        <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
-          <Field label="Full name" name="name" value={form.name} onChange={handleChange} error={errors.name} autoComplete="name" />
-          <Field
-            label="Email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            error={errors.email}
-            autoComplete="email"
-          />
-          <Field
-            label="Password"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            error={errors.password}
-            autoComplete="new-password"
-          />
-          <Field
-            label="Confirm password"
-            name="confirmPassword"
-            type="password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            error={errors.confirmPassword}
-            autoComplete="new-password"
-          />
-          <Field
-            label="Business name"
-            name="businessName"
-            value={form.businessName}
-            onChange={handleChange}
-            error={errors.businessName}
-          />
-          <Field label="Phone (optional)" name="phone" value={form.phone} onChange={handleChange} autoComplete="tel" />
+          <h1 className="mt-8 text-2xl font-semibold text-ink-900">Create your merchant account</h1>
+          <p className="mt-1 text-sm text-ink-500">Start integrating SnapFit into your store</p>
 
-          <div>
-            <label htmlFor="businessType" className="block text-sm font-medium text-gray-700">
-              Business type
-            </label>
-            <select
-              id="businessType"
+          {formError && (
+            <div className="mt-6">
+              <Alert variant="danger" title={formError} />
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
+            <Input
+              label="Full name"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              error={errors.name}
+              autoComplete="name"
+              disabled={submitting}
+            />
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              error={errors.email}
+              autoComplete="email"
+              disabled={submitting}
+            />
+
+            <div>
+              <Input
+                label="Password"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                error={errors.password}
+                autoComplete="new-password"
+                disabled={submitting}
+              />
+              <ul className="mt-2 space-y-1">
+                {PASSWORD_RULES.map((rule) => {
+                  const met = rule.test(form.password);
+                  return (
+                    <li key={rule.label} className={`flex items-center gap-1.5 text-xs ${met ? 'text-success' : 'text-ink-500'}`}>
+                      <Check size={12} className={met ? 'text-success' : 'text-ink-300'} />
+                      {rule.label}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <Input
+              label="Confirm password"
+              name="confirmPassword"
+              type="password"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              error={errors.confirmPassword}
+              autoComplete="new-password"
+              disabled={submitting}
+            />
+            <Input
+              label="Business name"
+              name="businessName"
+              value={form.businessName}
+              onChange={handleChange}
+              error={errors.businessName}
+              disabled={submitting}
+            />
+            <Input
+              label="Phone (optional)"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              autoComplete="tel"
+              disabled={submitting}
+            />
+
+            <Select
+              label="Business type"
               name="businessType"
               value={form.businessType}
               onChange={handleChange}
-              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              disabled={submitting}
             >
               {BUSINESS_TYPES.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting && <Loader2 size={16} className="animate-spin" />}
-            {submitting ? 'Creating account...' : 'Create account'}
-          </button>
-        </form>
+            <Button type="submit" loading={submitting} disabled={submitting} className="w-full">
+              {submitting ? 'Creating account...' : 'Create account'}
+            </Button>
+          </form>
 
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium text-gray-900 hover:underline">
-            Sign in
-          </Link>
-        </p>
+          <p className="mt-6 text-center text-sm text-ink-500">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-primary hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
+
+      <AuthSidePanel />
     </div>
   );
 }
