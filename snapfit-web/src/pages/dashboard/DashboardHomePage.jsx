@@ -12,15 +12,9 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import Badge from '../../components/Badge';
-
-const STATUS_BADGE = {
-  success: 'green',
-  low_confidence: 'amber',
-  failed: 'red',
-};
-
-const STATUS_COLORS = { active: 'green', inactive: 'gray', expired: 'red' };
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
 
 function formatDateTime(value) {
   return new Date(value).toLocaleString(undefined, {
@@ -31,45 +25,64 @@ function formatDateTime(value) {
   });
 }
 
-function StatCard({ label, value, sub }) {
+// Same "no comparison base" guard AnalyticsDashboardPage's calcTrend uses --
+// division by a zero previous-month count would otherwise produce Infinity/NaN.
+function calcMonthTrend(current, previous) {
+  if (previous === 0) {
+    return current > 0 ? { pct: 100, up: true } : null;
+  }
+  const pct = Math.round(((current - previous) / previous) * 1000) / 10;
+  return { pct: Math.abs(pct), up: pct >= 0 };
+}
+
+// Restores the 3-way distinction the pre-restyle STATUS_COLORS map had
+// (active/inactive/expired) -- a plain success/neutral split would collapse an
+// expired subscription into the same gray as "no plan selected," losing the
+// warning cue that the merchant's plan has actually lapsed.
+const PLAN_STATUS_BADGE_VARIANT = { active: 'success', expired: 'danger', inactive: 'neutral' };
+
+function confidenceTextColor(confidence) {
+  if (confidence == null) return 'text-ink-500';
+  const pct = confidence * 100;
+  if (pct > 75) return 'text-success';
+  if (pct >= 50) return 'text-warning';
+  return 'text-danger';
+}
+
+function StatCard({ label, value, sub, badge }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="mt-1 text-xs text-gray-400">{sub}</p>}
-    </div>
+    <Card className="relative">
+      {badge && <div className="absolute right-4 top-4">{badge}</div>}
+      <p className="text-sm text-ink-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-ink-900">{value}</p>
+      {sub && <p className="mt-1 text-xs text-ink-500">{sub}</p>}
+    </Card>
   );
 }
 
 function QuickActionCard({ to, icon: Icon, label, description }) {
   return (
-    <Link
-      to={to}
-      className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
-    >
-      <div className="rounded-lg bg-gray-100 p-2 text-gray-700">
-        <Icon size={18} />
-      </div>
-      <div>
-        <p className="text-sm font-semibold text-gray-900">{label}</p>
-        <p className="mt-0.5 text-xs text-gray-500">{description}</p>
-      </div>
+    <Link to={to} className="block">
+      <Card className="flex items-start gap-3 transition-colors hover:border-primary-200">
+        <Icon size={18} className="mt-0.5 shrink-0 text-primary-600" />
+        <div>
+          <p className="text-sm font-medium text-ink-700">{label}</p>
+          <p className="mt-0.5 text-xs text-ink-500">{description}</p>
+        </div>
+      </Card>
     </Link>
   );
 }
 
 function ChecklistItem({ done, label, to }) {
   return (
-    <Link
-      to={to}
-      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-gray-50"
-    >
+    <Link to={to} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 hover:bg-gray-50">
       {done ? (
-        <CheckCircle2 size={18} className="shrink-0 text-green-600" />
+        <CheckCircle2 size={18} className="shrink-0 text-success" />
       ) : (
-        <Circle size={18} className="shrink-0 text-gray-300" />
+        <Circle size={18} className="shrink-0 text-ink-300" />
       )}
-      <span className={done ? 'text-gray-400 line-through' : 'text-gray-700'}>{label}</span>
+      <span className={done ? 'text-ink-500 line-through' : 'text-ink-700'}>{label}</span>
     </Link>
   );
 }
@@ -116,7 +129,7 @@ function DashboardHomePage() {
   if (loading || !dashboard) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-gray-400" size={28} />
+        <Loader2 className="animate-spin text-ink-300" size={28} />
       </div>
     );
   }
@@ -126,8 +139,10 @@ function DashboardHomePage() {
   const hasSelectedPlan = Boolean(subscription?.startDate);
   const pct =
     usage.requestsLimit == null ? 0 : Math.min(100, Math.round((usage.requestsUsed / usage.requestsLimit) * 100));
-  const nearLimit = usage.requestsLimit != null && pct >= 80;
-  const barColor = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-gray-900';
+  const nearLimit = usage.requestsLimit != null && pct > 80;
+
+  const monthTrend = calcMonthTrend(dashboard.recommendationsThisMonth, dashboard.recommendationsLastMonth);
+  const confidencePct = dashboard.averageConfidence != null ? Math.round(dashboard.averageConfidence * 100) : null;
 
   const checklist = [
     { label: 'Create your first size chart', done: hasChart, to: '/dashboard/size-charts/new' },
@@ -139,11 +154,23 @@ function DashboardHomePage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-gray-900">Welcome back, {merchant.businessName}</h1>
-      <p className="mt-1 text-sm text-gray-500">Here&apos;s what&apos;s happening with your SnapFit integration.</p>
+      <h1 className="text-xl font-semibold text-ink-900">Welcome back, {merchant.businessName}</h1>
+      <p className="mt-1 text-sm text-ink-500">Here&apos;s what&apos;s happening with your SnapFit integration.</p>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Requests Today" value={requestsToday.toLocaleString()} sub="Recommendations served" />
+        <StatCard
+          label="This Month"
+          value={dashboard.recommendationsThisMonth.toLocaleString()}
+          sub="vs last month"
+          badge={
+            monthTrend && (
+              <Badge variant={monthTrend.up ? 'success' : 'danger'}>
+                {monthTrend.up ? '↑' : '↓'} {monthTrend.pct}%
+              </Badge>
+            )
+          }
+        />
         <StatCard
           label="Active Plan"
           value={hasSelectedPlan ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1) : 'None'}
@@ -151,14 +178,14 @@ function DashboardHomePage() {
         />
         <StatCard
           label="Confidence Avg"
-          value={dashboard.averageConfidence != null ? `${Math.round(dashboard.averageConfidence * 100)}%` : '—'}
+          value={confidencePct != null ? `${confidencePct}%` : '—'}
           sub="Across successful recommendations"
         />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-gray-900">Quick actions</h2>
+          <h2 className="text-sm font-semibold text-ink-900">Quick actions</h2>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <QuickActionCard
               to="/dashboard/size-charts"
@@ -186,54 +213,44 @@ function DashboardHomePage() {
             />
           </div>
 
-          <div className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-4">
-              <h2 className="text-sm font-semibold text-gray-900">Recent Activity</h2>
-            </div>
-            {recent.length === 0 ? (
-              <p className="px-6 py-8 text-center text-sm text-gray-500">No recommendations yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                      <th className="px-6 py-3 font-medium">Product</th>
-                      <th className="px-6 py-3 font-medium">Size</th>
-                      <th className="px-6 py-3 font-medium">Confidence</th>
-                      <th className="px-6 py-3 font-medium">Status</th>
-                      <th className="px-6 py-3 font-medium">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+          <div className="mt-6">
+            <Card>
+              <Card.Header>
+                <h2 className="text-sm font-semibold text-ink-900">Recent Activity</h2>
+              </Card.Header>
+              <Card.Body padding="sm">
+                {recent.length === 0 ? (
+                  <p className="px-2 py-6 text-center text-sm text-ink-500">No recommendations yet.</p>
+                ) : (
+                  <ul className="divide-y divide-surface-border">
                     {recent.map((r) => (
-                      <tr key={r._id} className="border-b border-gray-50 last:border-0">
-                        <td className="px-6 py-3 font-mono text-xs text-gray-700">{r.productId}</td>
-                        <td className="px-6 py-3 font-medium text-gray-900">{r.recommendedSize || '—'}</td>
-                        <td className="px-6 py-3 text-gray-700">
+                      <li key={r._id} className="flex items-center justify-between gap-4 px-2 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-mono text-xs text-ink-700">{r.productId}</p>
+                          <p className="mt-0.5 text-xs text-ink-500">{formatDateTime(r.createdAt)}</p>
+                        </div>
+                        <Badge variant="neutral">{r.recommendedSize || '—'}</Badge>
+                        <span className={`w-12 shrink-0 text-right text-sm font-medium ${confidenceTextColor(r.confidence)}`}>
                           {r.confidence != null ? `${Math.round(r.confidence * 100)}%` : '—'}
-                        </td>
-                        <td className="px-6 py-3">
-                          <Badge color={STATUS_BADGE[r.status] || 'gray'}>{r.status.replace('_', ' ')}</Badge>
-                        </td>
-                        <td className="px-6 py-3 text-gray-500">{formatDateTime(r.createdAt)}</td>
-                      </tr>
+                        </span>
+                      </li>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  </ul>
+                )}
+              </Card.Body>
+            </Card>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <Card>
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-gray-900">Plan Usage</span>
-              <Badge color={STATUS_COLORS[subscription?.status] || 'gray'}>
+              <span className="font-semibold text-ink-900">Plan Usage</span>
+              <Badge variant={hasSelectedPlan ? PLAN_STATUS_BADGE_VARIANT[subscription.status] || 'neutral' : 'neutral'}>
                 {hasSelectedPlan ? subscription.status : 'inactive'}
               </Badge>
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+            <div className="mt-3 flex items-center justify-between text-xs text-ink-500">
               <span>
                 {usage.requestsUsed} / {usage.requestsLimit ?? 'Unlimited'} requests
               </span>
@@ -241,23 +258,22 @@ function DashboardHomePage() {
             </div>
             {usage.requestsLimit != null && (
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
               </div>
             )}
             {(nearLimit || !hasSelectedPlan) && (
-              <Link
-                to="/dashboard/subscription/plans"
-                className="mt-3 block rounded-md bg-gray-900 px-3 py-2 text-center text-xs font-medium text-white hover:bg-gray-800"
-              >
-                {hasSelectedPlan ? "You're nearing your plan limit — Upgrade" : 'Choose a Plan'}
+              <Link to="/dashboard/subscription/plans" className="mt-3 block">
+                <Button variant="secondary" size="sm" className="w-full">
+                  {hasSelectedPlan ? "You're nearing your plan limit — Upgrade" : 'Choose a Plan'}
+                </Button>
               </Link>
             )}
-          </div>
+          </Card>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-gray-900">Getting Started</h2>
+          <Card>
+            <h2 className="text-sm font-semibold text-ink-900">Getting Started</h2>
             {checklistDone ? (
-              <p className="mt-3 text-xs text-gray-500">You&apos;re all set up.</p>
+              <p className="mt-3 text-xs text-ink-500">You&apos;re all set up.</p>
             ) : (
               <div className="mt-2 -mx-1">
                 {checklist.map((item) => (
@@ -265,7 +281,7 @@ function DashboardHomePage() {
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>
