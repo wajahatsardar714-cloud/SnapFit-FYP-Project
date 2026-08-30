@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import StatCard from '../../components/ui/StatCard';
 
 function formatDateTime(value) {
   return new Date(value).toLocaleString(undefined, {
@@ -47,17 +48,6 @@ function confidenceTextColor(confidence) {
   if (pct > 75) return 'text-success';
   if (pct >= 50) return 'text-warning';
   return 'text-danger';
-}
-
-function StatCard({ label, value, sub, badge }) {
-  return (
-    <Card className="relative">
-      {badge && <div className="absolute right-4 top-4">{badge}</div>}
-      <p className="text-sm text-ink-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-ink-900">{value}</p>
-      {sub && <p className="mt-1 text-xs text-ink-500">{sub}</p>}
-    </Card>
-  );
 }
 
 function QuickActionCard({ to, icon: Icon, label, description }) {
