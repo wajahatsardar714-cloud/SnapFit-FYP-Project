@@ -1,18 +1,41 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Copy, KeyRound, Loader2, RefreshCw } from 'lucide-react';
+import { Check, Copy, KeyRound, Loader2, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
-import ConfirmModal from '../../components/ConfirmModal';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import Alert from '../../components/ui/Alert';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://your-api-domain.com/api';
 const PLACEHOLDER_KEY = 'sk_live_a1b2c3d4...x9y0';
 
-function CodeBlock({ children }) {
+function CodeBlock({ children, copyText }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(copyText ?? children);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   return (
-    <pre className="overflow-x-auto rounded-lg bg-gray-900 p-4 text-xs leading-relaxed text-gray-100">
-      <code>{children}</code>
-    </pre>
+    <div className="relative">
+      <pre className="overflow-x-auto rounded-lg bg-ink-900 p-4 text-sm leading-relaxed text-gray-100">
+        <code className="font-mono">{children}</code>
+      </pre>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={copied ? <Check size={13} /> : <Copy size={13} />}
+        onClick={handleCopy}
+        className="absolute right-2 top-2 !bg-white/10 !text-gray-100 hover:!bg-white/20"
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </Button>
+    </div>
   );
 }
 
@@ -83,80 +106,74 @@ function ApiKeyPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-xl font-bold text-gray-900">API Key</h1>
-      <p className="mt-1 text-sm text-gray-500">Use this key to authenticate requests to the SnapFit API.</p>
+      <h1 className="text-xl font-semibold text-ink-900">API Key</h1>
+      <p className="mt-1 text-sm text-ink-500">Use this key to authenticate requests to the SnapFit API.</p>
 
-      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <Card className="mt-6">
         {loading ? (
           <div className="flex justify-center py-4">
-            <Loader2 className="animate-spin text-gray-400" size={24} />
+            <Loader2 className="animate-spin text-ink-300" size={24} />
           </div>
         ) : !apiKey ? (
           <div className="flex flex-col items-center py-6 text-center">
-            <KeyRound className="text-gray-300" size={32} />
-            <p className="mt-3 text-sm text-gray-500">You haven&apos;t generated an API key yet.</p>
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={working}
-              className="mt-4 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {working ? 'Generating...' : 'Generate API Key'}
-            </button>
+            <KeyRound className="text-ink-300" size={32} />
+            <p className="mt-3 text-sm text-ink-500">You haven&apos;t generated an API key yet.</p>
+            <Button className="mt-4" loading={working} onClick={handleGenerate}>
+              Generate API Key
+            </Button>
           </div>
         ) : (
           <div>
             {isFullKey && (
-              <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                Copy this key now — you won&apos;t be able to see the full key again.
-              </p>
+              <Alert
+                variant="warning"
+                description="Copy this key now — you won't be able to see the full key again."
+                className="mb-3"
+              />
             )}
-            <div className="flex items-center gap-2">
-              <code className="flex-1 overflow-x-auto rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-800">
-                {apiKey}
-              </code>
-              <button
-                type="button"
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input label="Live API Key" value={apiKey} readOnly className="font-mono" />
+              </div>
+              <Button
+                variant="ghost"
+                icon={<Copy size={16} />}
                 onClick={() => copyToClipboard(apiKey)}
-                className="flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <Copy size={14} />
-                Copy
-              </button>
+                aria-label="Copy API key"
+              />
             </div>
 
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<RefreshCw size={14} />}
               onClick={() => setRegenerateOpen(true)}
               disabled={working}
-              className="mt-4 flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-4"
             >
-              <RefreshCw size={14} />
               Regenerate key
-            </button>
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
 
       <div className="mt-8">
-        <h2 className="text-sm font-semibold text-gray-900">Quick start</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Pass your key in the <code className="rounded bg-gray-100 px-1 py-0.5">x-api-key</code> header when calling{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5">POST {API_BASE}/recommend</code>.
+        <h2 className="text-sm font-semibold text-ink-900">Quick start</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Pass your key in the <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">x-api-key</code>{' '}
+          header when calling{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">POST {API_BASE}/recommend</code>.
         </p>
 
         <div className="mt-4">
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">cURL</p>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-500">cURL</p>
           <CodeBlock>{`curl -X POST ${API_BASE}/recommend \\
   -H "x-api-key: ${displayKey}" \\
   -F "image=@photo.jpg" \\
   -F "productId=12345"`}</CodeBlock>
         </div>
 
-        <Link
-          to="/dashboard/docs"
-          className="mt-4 inline-block text-sm font-medium text-gray-600 underline hover:text-gray-900"
-        >
+        <Link to="/dashboard/docs" className="mt-4 inline-block text-sm font-medium text-primary underline">
           View full documentation, code examples, and a live tester
         </Link>
       </div>
@@ -164,7 +181,7 @@ function ApiKeyPage() {
       <ConfirmModal
         open={regenerateOpen}
         title="Regenerate API key?"
-        description="This will invalidate your current key. Any integrations using it will stop working until you update them."
+        description="Regenerating creates a brand new key and immediately invalidates your current one. Any integrations using the old key will stop working until you update them."
         confirmLabel="Yes, regenerate"
         tone="danger"
         loading={working}

@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Copy, Eye, EyeOff, Info, Loader2, UploadCloud } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, UploadCloud } from 'lucide-react';
 import api from '../../services/api';
-import Badge from '../../components/Badge';
+import Badge from '../../components/ui/Badge';
+import Card from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
+import Button from '../../components/ui/Button';
+import Alert from '../../components/ui/Alert';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://your-api-domain.com/api';
 
@@ -20,6 +24,9 @@ const SECTIONS = [
 
 // ---------------------------------------------------------------------------
 // Lightweight syntax highlighting — no external dependency, just tagged spans.
+// Colors here are deliberately raw (not F.1 tokens): they're calibrated for
+// readability against the bg-ink-900 code-block background, which the
+// light-surface success/danger/warning/info tokens are not.
 // ---------------------------------------------------------------------------
 
 const TOKEN_RULES = {
@@ -81,26 +88,20 @@ function highlight(code, lang) {
 }
 
 function CodeBlock({ code, lang = 'text', label }) {
+  const [copied, setCopied] = useState(false);
+
   async function handleCopy() {
     await navigator.clipboard.writeText(code);
+    setCopied(true);
     toast.success('Copied to clipboard');
+    setTimeout(() => setCopied(false), 1500);
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-800 bg-gray-900">
-      <div className="flex items-center justify-between border-b border-gray-800 px-4 py-2">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{label || lang}</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="flex items-center gap-1 text-[11px] font-medium text-gray-400 hover:text-gray-200"
-        >
-          <Copy size={12} />
-          Copy
-        </button>
-      </div>
-      <pre className="overflow-x-auto px-4 py-3 text-xs leading-relaxed">
-        <code>
+    <div className="relative rounded-lg bg-ink-900 p-4">
+      <span className="mb-2 block text-[11px] font-medium uppercase tracking-wide text-gray-400">{label || lang}</span>
+      <pre className="overflow-x-auto pr-16 text-sm leading-relaxed">
+        <code className="font-mono text-gray-100">
           {highlight(code, lang).map((t, i) => (
             // eslint-disable-next-line react/no-array-index-key
             <span key={i} className={t.cls}>
@@ -109,6 +110,15 @@ function CodeBlock({ code, lang = 'text', label }) {
           ))}
         </code>
       </pre>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={copied ? <Check size={12} /> : <Copy size={12} />}
+        onClick={handleCopy}
+        className="absolute right-2 top-2 !bg-white/10 !text-gray-100 hover:!bg-white/20"
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </Button>
     </div>
   );
 }
@@ -120,8 +130,8 @@ function CodeBlock({ code, lang = 'text', label }) {
 function Section({ id, title, children }) {
   return (
     <section id={id} className="scroll-mt-6">
-      <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-      <div className="mt-3 space-y-4 text-sm leading-relaxed text-gray-600">{children}</div>
+      <h2 className="text-lg font-semibold text-ink-900">{title}</h2>
+      <div className="mt-3 space-y-4 text-sm leading-relaxed text-ink-700">{children}</div>
     </section>
   );
 }
@@ -129,78 +139,35 @@ function Section({ id, title, children }) {
 function EndpointHeader({ method, path }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-emerald-700">
+      <Badge variant="success" className="font-bold uppercase">
         {method}
-      </span>
-      <code className="text-sm font-semibold text-gray-900">{path}</code>
+      </Badge>
+      <code className="text-sm font-semibold text-ink-900">{path}</code>
     </div>
   );
 }
 
 function ParamsTable({ rows }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
-            <th className="px-4 py-2 font-medium">Field</th>
-            <th className="px-4 py-2 font-medium">Type</th>
-            <th className="px-4 py-2 font-medium">Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.field} className="border-b border-gray-50 align-top last:border-0">
-              <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-gray-800">
-                {r.field}
-                {r.required && <span className="ml-1 text-red-500">*</span>}
-              </td>
-              <td className="whitespace-nowrap px-4 py-2 text-gray-500">{r.type}</td>
-              <td className="px-4 py-2 text-gray-600">{r.description}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function statusTone(status) {
-  if (status < 300) return 'green';
-  if (status < 500) return 'amber';
-  return 'red';
-}
-
-function ErrorTable({ caption, rows }) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-gray-200">
-      <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {caption}
-      </div>
+    <div className="overflow-hidden rounded-xl border border-surface-border bg-surface-card">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium">Message</th>
-              <th className="px-4 py-2 font-medium">Meaning</th>
+            <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-ink-500">
+              <th className="px-4 py-2">Field</th>
+              <th className="px-4 py-2">Type</th>
+              <th className="px-4 py-2">Description</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-surface-border">
             {rows.map((r) => (
-              <tr key={r.internalCode || r.code} className="border-b border-gray-50 last:border-0">
-                <td className="px-4 py-2">
-                  <Badge color={statusTone(r.status)}>{r.status}</Badge>
+              <tr key={r.field} className="text-sm text-ink-700">
+                <td className="whitespace-nowrap px-4 py-2 align-top font-mono text-xs text-ink-900">
+                  {r.field}
+                  {r.required && <span className="ml-1 text-danger">*</span>}
                 </td>
-                <td className="px-4 py-2 font-mono text-xs text-gray-800">
-                  {r.code}
-                  {r.internalCode && (
-                    <div className="mt-0.5 font-sans text-[10px] normal-case tracking-normal text-gray-400">
-                      internal code: {r.internalCode}
-                    </div>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-gray-600">{r.meaning}</td>
+                <td className="whitespace-nowrap px-4 py-2 align-top text-ink-500">{r.type}</td>
+                <td className="px-4 py-2 align-top">{r.description}</td>
               </tr>
             ))}
           </tbody>
@@ -210,11 +177,47 @@ function ErrorTable({ caption, rows }) {
   );
 }
 
-function Callout({ children }) {
+function statusVariant(status) {
+  if (status < 300) return 'success';
+  if (status < 500) return 'warning';
+  return 'danger';
+}
+
+function ErrorTable({ caption, rows }) {
   return (
-    <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-      <Info size={16} className="mt-0.5 shrink-0" />
-      <div>{children}</div>
+    <div className="overflow-hidden rounded-xl border border-surface-border bg-surface-card">
+      <div className="border-b border-surface-border bg-gray-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-500">
+        {caption}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-ink-500">
+              <th className="px-4 py-2">Status</th>
+              <th className="px-4 py-2">Message</th>
+              <th className="px-4 py-2">Meaning</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-surface-border">
+            {rows.map((r) => (
+              <tr key={r.internalCode || r.code} className="text-sm text-ink-700">
+                <td className="px-4 py-2 align-top">
+                  <Badge variant={statusVariant(r.status)}>{r.status}</Badge>
+                </td>
+                <td className="px-4 py-2 align-top font-mono text-xs text-ink-900">
+                  {r.code}
+                  {r.internalCode && (
+                    <div className="mt-0.5 font-sans text-[10px] normal-case tracking-normal text-ink-500">
+                      internal code: {r.internalCode}
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-2 align-top">{r.meaning}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -346,30 +349,28 @@ function TryItOut() {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <Card className="space-y-4">
         <div>
-          <label htmlFor="tryitout-key" className="block text-xs font-medium uppercase tracking-wide text-gray-500">
-            API Key
-          </label>
-          <div className="mt-1 flex items-center gap-2">
-            <input
-              id="tryitout-key"
-              type={showKey ? 'text' : 'password'}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk_live_..."
-              className="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            />
-            <button
-              type="button"
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Input
+                id="tryitout-key"
+                type={showKey ? 'text' : 'password'}
+                label="API Key"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk_live_..."
+                className="font-mono"
+              />
+            </div>
+            <Button
+              variant="ghost"
+              icon={showKey ? <EyeOff size={16} /> : <Eye size={16} />}
               onClick={() => setShowKey((v) => !v)}
-              className="shrink-0 rounded-md border border-gray-300 p-2 text-gray-500 hover:bg-gray-50"
               aria-label={showKey ? 'Hide key' : 'Show key'}
-            >
-              {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+            />
           </div>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-ink-500">
             From your{' '}
             <Link to="/dashboard/api-key" className="underline">
               API Key page
@@ -379,18 +380,16 @@ function TryItOut() {
         </div>
 
         <div>
-          <label htmlFor="tryitout-product" className="block text-xs font-medium uppercase tracking-wide text-gray-500">
-            Product ID
-          </label>
-          <input
+          <Input
             id="tryitout-product"
             type="text"
+            label="Product ID"
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
             placeholder="e.g. SKU-1029"
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="font-mono"
           />
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-ink-500">
             Must already be{' '}
             <Link to="/dashboard/product-mapping" className="underline">
               mapped to a size chart
@@ -400,14 +399,14 @@ function TryItOut() {
         </div>
 
         <div>
-          <label htmlFor="tryitout-image" className="block text-xs font-medium uppercase tracking-wide text-gray-500">
+          <label htmlFor="tryitout-image" className="mb-1 block text-sm font-medium text-ink-700">
             Photo
           </label>
           <label
             htmlFor="tryitout-image"
-            className="mt-1 flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-gray-300 px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-50"
+            className="flex cursor-pointer items-center gap-2 rounded-lg border-2 border-dashed border-surface-border px-3 py-2.5 text-sm text-ink-500 transition-colors duration-150 hover:border-primary"
           >
-            <UploadCloud size={16} className="shrink-0 text-gray-400" />
+            <UploadCloud size={16} className="shrink-0 text-ink-300" />
             {file ? file.name : 'Choose a full-body JPG or PNG'}
           </label>
           <input
@@ -419,25 +418,22 @@ function TryItOut() {
           />
         </div>
 
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={!canSend}
-          className="flex w-full items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {sending && <Loader2 size={14} className="animate-spin" />}
-          {sending ? 'Sending...' : 'Send Test Request'}
-        </button>
-      </div>
+        <Button className="w-full" loading={sending} disabled={!canSend} onClick={handleSend}>
+          Send Test Request
+        </Button>
+      </Card>
 
       <div>
-        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
-          Response {response && <span className={response.ok ? 'text-green-600' : 'text-red-600'}>({response.status})</span>}
+        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-500">
+          Response{' '}
+          {response && (
+            <span className={response.ok ? 'text-success' : 'text-danger'}>({response.status})</span>
+          )}
         </p>
         {response ? (
           <CodeBlock code={JSON.stringify(response.body, null, 2)} lang="json" label={`${response.status} response`} />
         ) : (
-          <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-gray-300 text-sm text-gray-400">
+          <div className="flex h-40 items-center justify-center rounded-lg border-2 border-dashed border-surface-border text-sm text-ink-500">
             Send a request to see the response here
           </div>
         )}
@@ -587,8 +583,8 @@ else:
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-gray-900">Integration Docs</h1>
-      <p className="mt-1 text-sm text-gray-500">Everything you need to call the SnapFit API from your storefront.</p>
+      <h1 className="text-xl font-semibold text-ink-900">Integration Docs</h1>
+      <p className="mt-1 text-sm text-ink-500">Everything you need to call the SnapFit API from your storefront.</p>
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[200px_1fr]">
         <aside className="hidden lg:block">
@@ -597,8 +593,8 @@ else:
               <a
                 key={s.id}
                 href={`#${s.id}`}
-                className={`block rounded-md px-3 py-1.5 transition ${
-                  activeId === s.id ? 'bg-gray-900 font-medium text-white' : 'text-gray-600 hover:bg-gray-100'
+                className={`block rounded-lg px-3 py-2 transition-colors duration-150 ${
+                  activeId === s.id ? 'bg-primary-50 font-medium text-primary-700' : 'text-ink-700 hover:bg-gray-50'
                 }`}
               >
                 {s.label}
@@ -615,35 +611,38 @@ else:
             </p>
             <ol className="list-decimal space-y-1.5 pl-5">
               <li>
-                <Link to="/dashboard/size-charts/new" className="font-medium text-gray-900 underline">
+                <Link to="/dashboard/size-charts/new" className="font-medium text-primary underline">
                   Create a size chart
                 </Link>{' '}
                 with the measurement ranges for each size you sell.
               </li>
               <li>
-                <Link to="/dashboard/product-mapping" className="font-medium text-gray-900 underline">
+                <Link to="/dashboard/product-mapping" className="font-medium text-primary underline">
                   Map a product
                 </Link>{' '}
                 (your own product ID) to that size chart.
               </li>
               <li>
-                <Link to="/dashboard/api-key" className="font-medium text-gray-900 underline">
+                <Link to="/dashboard/api-key" className="font-medium text-primary underline">
                   Generate an API key
                 </Link>{' '}
                 to authenticate requests.
               </li>
               <li>
-                Call <code className="rounded bg-gray-100 px-1 py-0.5">POST /api/recommend</code> from your storefront —
-                either with the <a href="#widget-integration" className="font-medium text-gray-900 underline">
+                Call <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">POST /api/recommend</code>{' '}
+                from your storefront — either with the{' '}
+                <a href="#widget-integration" className="font-medium text-primary underline">
                   embeddable widget
                 </a>{' '}
-                or your own code (see <a href="#code-examples" className="font-medium text-gray-900 underline">
+                or your own code (see{' '}
+                <a href="#code-examples" className="font-medium text-primary underline">
                   Code Examples
                 </a>
                 ).
               </li>
               <li>
-                Optionally, submit <code className="rounded bg-gray-100 px-1 py-0.5">POST /api/feedback</code> to
+                Optionally, submit{' '}
+                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">POST /api/feedback</code> to
                 track fit accuracy over time.
               </li>
             </ol>
@@ -651,25 +650,28 @@ else:
 
           <Section id="authentication" title="Authentication">
             <p>
-              Customer-facing endpoints (<code className="rounded bg-gray-100 px-1 py-0.5">/api/recommend</code> and{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5">/api/feedback</code>) are authenticated with a single
-              API key sent in the <code className="rounded bg-gray-100 px-1 py-0.5">x-api-key</code> header. This is
+              Customer-facing endpoints (
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">/api/recommend</code> and{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">/api/feedback</code>) are
+              authenticated with a single API key sent in the{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">x-api-key</code> header. This is
               separate from the session token your dashboard login uses.
             </p>
             <CodeBlock code={`x-api-key: sk_live_a1b2c3d4e5f6...`} lang="bash" label="Header" />
-            <Callout>
-              Because this key is called directly from the shopper&apos;s browser (for example, by the embeddable
-              widget), treat it as a storefront-scoped key rather than a secret — SnapFit doesn&apos;t yet support a
-              separate publishable/secret key pair. Every accepted call counts against your plan&apos;s request limit.
-            </Callout>
+            <Alert
+              variant="warning"
+              description="Because this key is called directly from the shopper's browser (for example, by the embeddable widget), treat it as a storefront-scoped key rather than a secret — SnapFit doesn't yet support a separate publishable/secret key pair. Every accepted call counts against your plan's request limit."
+            />
             <p>
               Get your key from the{' '}
-              <Link to="/dashboard/api-key" className="font-medium text-gray-900 underline">
+              <Link to="/dashboard/api-key" className="font-medium text-primary underline">
                 API Key page
               </Link>
-              . A missing or invalid key returns <code className="rounded bg-gray-100 px-1 py-0.5">401</code>; an
-              inactive or expired plan returns <code className="rounded bg-gray-100 px-1 py-0.5">403</code> — see{' '}
-              <a href="#error-codes" className="font-medium text-gray-900 underline">
+              . A missing or invalid key returns{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">401</code>; an inactive or
+              expired plan returns <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">403</code>{' '}
+              — see{' '}
+              <a href="#error-codes" className="font-medium text-primary underline">
                 Error Codes
               </a>
               .
@@ -681,7 +683,7 @@ else:
               <div className="space-y-3">
                 <EndpointHeader method="POST" path="/api/recommend" />
                 <p>Analyzes a shopper&apos;s photo against a product&apos;s size chart and returns a recommended size.</p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Request body (multipart/form-data)</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Request body (multipart/form-data)</p>
                 <ParamsTable
                   rows={[
                     { field: 'image', type: 'file', required: true, description: 'JPG or PNG photo, up to 10MB.' },
@@ -694,22 +696,27 @@ else:
                     },
                   ]}
                 />
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Success response — 200</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Success response — 200</p>
                 <CodeBlock code={recommendSuccessExample} lang="json" />
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Error response — 4xx/5xx</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Error response — 4xx/5xx</p>
                 <CodeBlock code={recommendErrorExample} lang="json" />
-                <Callout>
-                  The success response does not currently include the created recommendation&apos;s id, so there is no
-                  way for the storefront to reference it in a later{' '}
-                  <code className="rounded bg-amber-100 px-1 py-0.5">/api/feedback</code> call yet — this is a known
-                  gap, not something to build around.
-                </Callout>
+                <Alert
+                  variant="warning"
+                  description={
+                    <>
+                      The success response does not currently include the created recommendation&apos;s id, so there
+                      is no way for the storefront to reference it in a later{' '}
+                      <code className="rounded bg-warning-border/50 px-1 py-0.5 font-mono">/api/feedback</code> call
+                      yet — this is a known gap, not something to build around.
+                    </>
+                  }
+                />
               </div>
 
-              <div className="space-y-3 border-t border-gray-100 pt-6">
+              <div className="space-y-3 border-t border-surface-border pt-6">
                 <EndpointHeader method="POST" path="/api/feedback" />
                 <p>Records how a size recommendation actually fit, for accuracy reporting on the Analytics page.</p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Request body (application/json)</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Request body (application/json)</p>
                 <ParamsTable
                   rows={[
                     { field: 'recommendationId', type: 'string', required: true, description: 'Id of the recommendation this feedback is about.' },
@@ -722,9 +729,9 @@ else:
                     { field: 'comment', type: 'string', required: false, description: 'Optional free-text note from the shopper.' },
                   ]}
                 />
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Example request</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Example request</p>
                 <CodeBlock code={feedbackRequestExample} lang="json" />
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Success response — 201</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Success response — 201</p>
                 <CodeBlock code={feedbackResponseExample} lang="json" />
               </div>
             </div>
@@ -732,19 +739,20 @@ else:
 
           <Section id="code-examples" title="Code Examples">
             <p>All three examples send the same request: a photo, a product ID, and your API key.</p>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">JavaScript</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">JavaScript</p>
             <CodeBlock code={jsExample} lang="javascript" />
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Python</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Python</p>
             <CodeBlock code={pythonExample} lang="python" />
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">cURL</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">cURL</p>
             <CodeBlock code={curlExample} lang="bash" />
           </Section>
 
           <Section id="widget-integration" title="Widget Integration">
             <p>
-              The fastest way to add SnapFit to a React storefront is the <code className="rounded bg-gray-100 px-1 py-0.5">SnapFitWidget</code> component
-              — it handles the upload UI, loading/result/error states, and calls{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5">/api/recommend</code> for you.
+              The fastest way to add SnapFit to a React storefront is the{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">SnapFitWidget</code> component —
+              it handles the upload UI, loading/result/error states, and calls{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">/api/recommend</code> for you.
             </p>
             <CodeBlock code={widgetExample} lang="javascript" label="React" />
             <ParamsTable
@@ -763,18 +771,18 @@ else:
             />
             <p>
               See it running on the{' '}
-              <Link to="/demo/size-check" className="font-medium text-gray-900 underline">
+              <Link to="/demo/size-check" className="font-medium text-primary underline">
                 live demo page
               </Link>
               , which renders the widget the same way a real product page would.
             </p>
-            <Callout>
-              A drop-in script-tag/iframe embed for non-React storefronts isn&apos;t published yet. Until then, any
-              stack can integrate directly against the REST API using the snippets in Code Examples above.
-            </Callout>
+            <Alert
+              variant="warning"
+              description="A drop-in script-tag/iframe embed for non-React storefronts isn't published yet. Until then, any stack can integrate directly against the REST API using the snippets in Code Examples above."
+            />
 
-            <div className="space-y-4 border-t border-gray-100 pt-5">
-              <h3 className="text-sm font-semibold text-gray-900">Live camera capture</h3>
+            <div className="space-y-4 border-t border-surface-border pt-5">
+              <h3 className="text-sm font-semibold text-ink-900">Live camera capture</h3>
               <p>
                 Alongside file upload, the widget offers guided live camera capture: a client-side pose model gives
                 the shopper real-time framing feedback (a colored border and status text) before they take the
@@ -782,30 +790,32 @@ else:
                 first place.
               </p>
 
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Performance</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Performance</p>
               <p>
                 The live pose model (
-                <code className="rounded bg-gray-100 px-1 py-0.5">@mediapipe/tasks-vision</code>, ~150KB gzipped of
-                JS plus a WASM binary) is dynamically imported only when a shopper opens the &quot;Take a Photo&quot;
-                tab — it is never fetched on initial widget load, so merchants whose shoppers only use file upload
-                pay nothing extra.
+                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">@mediapipe/tasks-vision</code>
+                , ~150KB gzipped of JS plus a WASM binary) is dynamically imported only when a shopper opens the
+                &quot;Take a Photo&quot; tab — it is never fetched on initial widget load, so merchants whose shoppers
+                only use file upload pay nothing extra.
               </p>
 
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">HTTPS &amp; iframe embeds</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">HTTPS &amp; iframe embeds</p>
               <p>
                 Camera access requires a secure context — your storefront must be served over HTTPS (or{' '}
-                <code className="rounded bg-gray-100 px-1 py-0.5">localhost</code> during development).{' '}
-                <code className="rounded bg-gray-100 px-1 py-0.5">getUserMedia</code> is blocked outright on plain
-                HTTP, and the widget automatically falls back to the upload-only flow in that case. If your
-                storefront is itself embedded in an <code className="rounded bg-gray-100 px-1 py-0.5">&lt;iframe&gt;</code>{' '}
-                (for example inside a page builder or app store), that iframe also needs an explicit{' '}
-                <code className="rounded bg-gray-100 px-1 py-0.5">allow=&quot;camera&quot;</code> attribute — without
-                it, the browser blocks camera access inside the frame even on HTTPS, before the shopper is ever
-                asked for permission:
+                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">localhost</code> during
+                development).{' '}
+                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">getUserMedia</code> is
+                blocked outright on plain HTTP, and the widget automatically falls back to the upload-only flow in
+                that case. If your storefront is itself embedded in an{' '}
+                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">&lt;iframe&gt;</code> (for
+                example inside a page builder or app store), that iframe also needs an explicit{' '}
+                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">allow=&quot;camera&quot;</code>{' '}
+                attribute — without it, the browser blocks camera access inside the frame even on HTTPS, before the
+                shopper is ever asked for permission:
               </p>
               <CodeBlock code={iframeExample} lang="bash" label="HTML" />
 
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Low-end devices</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Low-end devices</p>
               <p>
                 If the live pose model fails to load, or is still loading 6 seconds after the camera opens (a
                 reasonable proxy for a device too slow to run it smoothly), the widget automatically falls back to
@@ -817,25 +827,29 @@ else:
 
           <Section id="error-codes" title="Error Codes">
             <p>
-              <code className="rounded bg-gray-100 px-1 py-0.5">/api/recommend</code> errors include{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5">success: false</code> alongside{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5">message</code>. Auth-layer errors (the x-api-key check)
-              and every <code className="rounded bg-gray-100 px-1 py-0.5">/api/feedback</code> error return just{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5">{'{ "message": "..." }'}</code>, with no{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5">success</code> field.
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">/api/recommend</code> errors
+              include <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">success: false</code>{' '}
+              alongside <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">message</code>.
+              Auth-layer errors (the x-api-key check) and every{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">/api/feedback</code> error
+              return just{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">{'{ "message": "..." }'}</code>,
+              with no <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">success</code> field.
             </p>
             <ErrorTable caption="Authentication & Quota" rows={AUTH_ERRORS} />
             <ErrorTable caption="Request Validation — /api/recommend" rows={RECOMMEND_VALIDATION_ERRORS} />
             <ErrorTable caption="Photo Validation" rows={PHOTO_VALIDATION_ERRORS} />
 
-            <div className="overflow-hidden rounded-xl border border-gray-200">
-              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <div className="overflow-hidden rounded-xl border border-surface-border bg-surface-card">
+              <div className="border-b border-surface-border bg-gray-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-500">
                 AI Service & Size-Matching Failures
               </div>
               <div className="px-4 pt-3">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-ink-700">
                   Several distinct backend-side conditions all return the same message —{' '}
-                  <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">&quot;{AI_SERVICE_GENERIC_MESSAGE}&quot;</code>{' '}
+                  <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs text-ink-700">
+                    &quot;{AI_SERVICE_GENERIC_MESSAGE}&quot;
+                  </code>{' '}
                   — so use the HTTP status (and, if you&apos;re inspecting your own recommendation logs, the internal
                   cause below) to tell them apart.
                 </p>
@@ -843,20 +857,20 @@ else:
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                      <th className="px-4 py-2 font-medium">Status</th>
-                      <th className="px-4 py-2 font-medium">Internal Cause</th>
-                      <th className="px-4 py-2 font-medium">Meaning</th>
+                    <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-ink-500">
+                      <th className="px-4 py-2">Status</th>
+                      <th className="px-4 py-2">Internal Cause</th>
+                      <th className="px-4 py-2">Meaning</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-surface-border">
                     {AI_SERVICE_FAILURE_CAUSES.map((c) => (
-                      <tr key={c.cause} className="border-b border-gray-50 last:border-0">
-                        <td className="px-4 py-2">
-                          <Badge color={statusTone(c.status)}>{c.status}</Badge>
+                      <tr key={c.cause} className="text-sm text-ink-700">
+                        <td className="px-4 py-2 align-top">
+                          <Badge variant={statusVariant(c.status)}>{c.status}</Badge>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-gray-800">{c.cause}</td>
-                        <td className="px-4 py-2 text-gray-600">{c.meaning}</td>
+                        <td className="whitespace-nowrap px-4 py-2 align-top font-mono text-xs text-ink-900">{c.cause}</td>
+                        <td className="px-4 py-2 align-top">{c.meaning}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -869,37 +883,43 @@ else:
 
           <Section id="rate-limits" title="Rate Limits">
             <p>
-              Every request that passes API key validation counts against your plan&apos;s monthly limit — once it&apos;s
-              reached, <code className="rounded bg-gray-100 px-1 py-0.5">/api/recommend</code> and{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5">/api/feedback</code> return{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5">403 Monthly request limit reached</code> until you{' '}
-              <Link to="/dashboard/subscription/plans" className="font-medium text-gray-900 underline">
+              Every request that passes API key validation counts against your plan&apos;s monthly limit — once
+              it&apos;s reached,{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">/api/recommend</code> and{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">/api/feedback</code> return{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">
+                403 Monthly request limit reached
+              </code>{' '}
+              until you{' '}
+              <Link to="/dashboard/subscription/plans" className="font-medium text-primary underline">
                 upgrade your plan
               </Link>
               .
             </p>
             {plans.length > 0 && (
-              <div className="overflow-hidden rounded-xl border border-gray-200">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
-                      <th className="px-4 py-2 font-medium">Plan</th>
-                      <th className="px-4 py-2 font-medium">Price</th>
-                      <th className="px-4 py-2 font-medium">Requests / mo</th>
-                      <th className="px-4 py-2 font-medium">Size Charts</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {plans.map((p) => (
-                      <tr key={p.plan} className="border-b border-gray-50 last:border-0">
-                        <td className="px-4 py-2 font-medium capitalize text-gray-900">{p.name}</td>
-                        <td className="px-4 py-2 text-gray-600">{formatPrice(p)}</td>
-                        <td className="px-4 py-2 text-gray-600">{formatRequests(p.requestsLimit)}</td>
-                        <td className="px-4 py-2 text-gray-600">{formatCharts(p.chartsLimit)}</td>
+              <div className="overflow-hidden rounded-xl border border-surface-border bg-surface-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-ink-500">
+                        <th className="px-4 py-2">Plan</th>
+                        <th className="px-4 py-2">Price</th>
+                        <th className="px-4 py-2">Requests / mo</th>
+                        <th className="px-4 py-2">Size Charts</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-surface-border">
+                      {plans.map((p) => (
+                        <tr key={p.plan} className="text-sm text-ink-700">
+                          <td className="px-4 py-2 font-medium capitalize text-ink-900">{p.name}</td>
+                          <td className="px-4 py-2">{formatPrice(p)}</td>
+                          <td className="px-4 py-2">{formatRequests(p.requestsLimit)}</td>
+                          <td className="px-4 py-2">{formatCharts(p.chartsLimit)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </Section>

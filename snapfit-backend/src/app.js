@@ -6,6 +6,7 @@ const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const apiKeyRoutes = require('./routes/apiKeyRoutes');
+const merchantRoutes = require('./routes/merchantRoutes');
 const sizeChartRoutes = require('./routes/sizeChartRoutes');
 const productMappingRoutes = require('./routes/productMappingRoutes');
 const recommendRoutes = require('./routes/recommendRoutes');
@@ -40,6 +41,7 @@ app.get('/api/network-info', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/merchant/api-key', apiKeyRoutes);
+app.use('/api/merchant', merchantRoutes);
 app.use('/api/charts', sizeChartRoutes);
 app.use('/api/products', productMappingRoutes);
 app.use('/api/recommend', recommendRoutes);
