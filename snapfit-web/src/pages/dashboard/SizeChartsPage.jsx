@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Loader2, Pencil, Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Ruler, Trash2 } from 'lucide-react';
 import api from '../../services/api';
-import Badge from '../../components/Badge';
-import ConfirmModal from '../../components/ConfirmModal';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import Select from '../../components/ui/Select';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const CATEGORY_OPTIONS = ['tops', 'bottoms', 'dresses', 'footwear', 'outerwear'];
 const PAGE_SIZE = 10;
@@ -55,35 +57,25 @@ function SizeChartsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Size Charts</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage the size charts used for fit recommendations.</p>
+          <h1 className="text-xl font-semibold text-ink-900">Size Charts</h1>
+          <p className="mt-1 text-sm text-ink-500">Manage the size charts used for fit recommendations.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            to="/dashboard/product-mapping"
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Product Mapping
+          <Link to="/dashboard/product-mapping">
+            <Button variant="secondary">Product Mapping</Button>
           </Link>
-          <Link
-            to="/dashboard/size-charts/new"
-            className="flex items-center gap-1.5 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-          >
-            <Plus size={16} />
-            Create New Chart
+          <Link to="/dashboard/size-charts/new">
+            <Button icon={<Plus size={16} />}>Create New Chart</Button>
           </Link>
         </div>
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
-        <label htmlFor="category-filter" className="text-sm text-gray-600">
-          Category
-        </label>
-        <select
+      <div className="mt-6 max-w-xs">
+        <Select
           id="category-filter"
+          label="Category"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
         >
           <option value="">All categories</option>
           {CATEGORY_OPTIONS.map((opt) => (
@@ -91,58 +83,76 @@ function SizeChartsPage() {
               {opt.charAt(0).toUpperCase() + opt.slice(1)}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="mt-4 overflow-hidden rounded-xl border border-surface-border bg-surface-card shadow-card">
         {loading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-gray-400" size={28} />
+            <Loader2 className="animate-spin text-ink-300" size={28} />
           </div>
         ) : charts.length === 0 ? (
-          <p className="px-6 py-12 text-center text-sm text-gray-500">No size charts yet.</p>
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <Ruler size={36} className="text-ink-300" />
+            {category ? (
+              <>
+                <p className="text-sm text-ink-500">No charts match this category.</p>
+                <Button variant="secondary" size="sm" onClick={() => setCategory('')}>
+                  Clear filter
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-ink-500">No size charts yet.</p>
+                <Link to="/dashboard/size-charts/new">
+                  <Button icon={<Plus size={16} />}>Create your first size chart</Button>
+                </Link>
+              </>
+            )}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                  <th className="px-6 py-3 font-medium">Name</th>
-                  <th className="px-6 py-3 font-medium">Category</th>
-                  <th className="px-6 py-3 font-medium">Gender</th>
-                  <th className="px-6 py-3 font-medium"># of Sizes</th>
-                  <th className="px-6 py-3 font-medium">Status</th>
-                  <th className="px-6 py-3 font-medium" aria-hidden="true"></th>
+                <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-ink-500">
+                  <th className="px-6 py-3">Name</th>
+                  <th className="px-6 py-3">Category</th>
+                  <th className="px-6 py-3">Gender</th>
+                  <th className="px-6 py-3"># of Sizes</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3" aria-hidden="true"></th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-surface-border">
                 {charts.map((chart) => (
-                  <tr key={chart._id} className="border-b border-gray-50 last:border-0">
-                    <td className="px-6 py-3 font-medium text-gray-900">{chart.name}</td>
-                    <td className="px-6 py-3 capitalize text-gray-700">{chart.category}</td>
-                    <td className="px-6 py-3 capitalize text-gray-700">{chart.gender || '—'}</td>
-                    <td className="px-6 py-3 text-gray-700">{chart.sizes.length}</td>
+                  <tr key={chart._id} className="text-sm text-ink-700 transition-colors duration-150 hover:bg-gray-50">
+                    <td className="px-6 py-3 font-medium text-ink-900">{chart.name}</td>
+                    <td className="px-6 py-3 capitalize">{chart.category}</td>
+                    <td className="px-6 py-3 capitalize">{chart.gender || '—'}</td>
+                    <td className="px-6 py-3">{chart.sizes.length}</td>
                     <td className="px-6 py-3">
-                      <Badge color={chart.isActive ? 'green' : 'gray'}>{chart.isActive ? 'Active' : 'Inactive'}</Badge>
+                      <Badge variant={chart.isActive ? 'success' : 'neutral'}>
+                        {chart.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex justify-end gap-1">
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Pencil size={15} />}
                           onClick={() => navigate(`/dashboard/size-charts/${chart._id}/edit`)}
-                          className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
                           aria-label={`Edit ${chart.name}`}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Trash2 size={15} />}
                           onClick={() => setDeleteTarget(chart)}
                           disabled={!chart.isActive}
-                          className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="hover:!bg-danger-bg hover:!text-danger"
                           aria-label={`Delete ${chart.name}`}
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        />
                       </div>
                     </td>
                   </tr>
@@ -154,29 +164,29 @@ function SizeChartsPage() {
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="mt-4 flex items-center justify-between text-sm text-ink-500">
           <span>
             Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
           </span>
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<ChevronLeft size={14} />}
               disabled={pagination.page <= 1}
               onClick={() => load(pagination.page - 1, category)}
-              className="flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <ChevronLeft size={14} />
               Prev
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => load(pagination.page + 1, category)}
-              className="flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
               <ChevronRight size={14} />
-            </button>
+            </Button>
           </div>
         </div>
       )}

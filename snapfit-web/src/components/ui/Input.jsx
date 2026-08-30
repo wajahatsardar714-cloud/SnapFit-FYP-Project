@@ -11,7 +11,7 @@ function Input({ label, error, id, className = '', ...rest }) {
         </label>
       )}
       <input id={inputId} className={getFieldClasses(error, className)} {...rest} />
-      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+      {typeof error === 'string' && error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   );
 }
