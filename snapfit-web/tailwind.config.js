@@ -7,6 +7,9 @@ export default {
         primary: {
           50: '#EEF2FF',
           100: '#E0E7FF',
+          // Fills a gap in F.1's original scale (100 jumped straight to 500) --
+          // needed by F.5's hover:border-primary-200. Standard indigo-200.
+          200: '#C7D2FE',
           500: '#6366F1',
           600: '#4F46E5',
           700: '#4338CA',
