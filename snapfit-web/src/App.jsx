@@ -30,11 +30,11 @@ function App() {
             duration: 4000,
             success: {
               className: 'rounded-lg border border-success-border bg-surface-card text-ink-700 shadow-card',
-              iconTheme: { primary: '#10B981', secondary: '#FFFFFF' },
+              iconTheme: { primary: 'var(--color-success)', secondary: 'var(--color-surface-card)' },
             },
             error: {
               className: 'rounded-lg border border-danger-border bg-surface-card text-ink-700 shadow-card',
-              iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' },
+              iconTheme: { primary: 'var(--color-danger)', secondary: 'var(--color-surface-card)' },
             },
           }}
         />

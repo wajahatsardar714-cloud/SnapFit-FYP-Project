@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, Loader2 } from 'lucide-react';
 import api from '../../services/api';
-import ConfirmModal from '../../components/ConfirmModal';
-import Badge from '../../components/Badge';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 function formatPrice(plan) {
   if (plan.price === 0) return 'Free';
@@ -58,52 +60,42 @@ function PlanSelectionPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-gray-400" size={28} />
+        <Loader2 className="animate-spin text-ink-300" size={28} />
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-gray-900">Choose a plan</h1>
-      <p className="mt-1 text-sm text-gray-500">Pick the plan that fits your store&apos;s volume.</p>
+      <h1 className="text-xl font-semibold text-ink-900">Choose a plan</h1>
+      <p className="mt-1 text-sm text-ink-500">Pick the plan that fits your store&apos;s volume.</p>
 
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan) => {
           const isCurrent = plan.plan === currentPlan;
           return (
-            <div
-              key={plan.plan}
-              className={`flex flex-col rounded-xl border bg-white p-6 shadow-sm ${
-                isCurrent ? 'border-gray-900 ring-1 ring-gray-900' : 'border-gray-200'
-              }`}
-            >
+            <Card key={plan.plan} className={`flex flex-col ${isCurrent ? '!border-primary' : ''}`}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold capitalize text-gray-900">{plan.name}</h2>
-                {isCurrent && <Badge color="blue">Current</Badge>}
+                <h2 className="text-lg font-semibold capitalize text-ink-900">{plan.name}</h2>
+                {isCurrent && <Badge variant="info">Current</Badge>}
               </div>
-              <p className="mt-2 text-2xl font-bold text-gray-900">{formatPrice(plan)}</p>
+              <p className="mt-2 text-2xl font-semibold text-ink-900">{formatPrice(plan)}</p>
 
-              <ul className="mt-4 flex-1 space-y-2 text-sm text-gray-600">
+              <ul className="mt-4 flex-1 space-y-2 text-sm text-ink-700">
                 <li className="flex items-center gap-2">
-                  <Check size={16} className="shrink-0 text-gray-400" />
+                  <Check size={16} className="shrink-0 text-success" />
                   {formatRequests(plan.requestsLimit)}
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check size={16} className="shrink-0 text-gray-400" />
+                  <Check size={16} className="shrink-0 text-success" />
                   {formatCharts(plan.chartsLimit)}
                 </li>
               </ul>
 
-              <button
-                type="button"
-                disabled={isCurrent}
-                onClick={() => setSelectedPlan(plan)}
-                className="mt-6 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
+              <Button className="mt-6" disabled={isCurrent} onClick={() => setSelectedPlan(plan)}>
                 {isCurrent ? 'Current Plan' : 'Select Plan'}
-              </button>
-            </div>
+              </Button>
+            </Card>
           );
         })}
       </div>
