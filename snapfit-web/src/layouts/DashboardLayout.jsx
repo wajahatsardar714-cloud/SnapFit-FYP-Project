@@ -66,7 +66,7 @@ function DashboardLayout() {
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
                   isActive ? 'bg-primary-50 font-medium text-primary-700' : 'text-ink-700 hover:bg-gray-50'
                 }`
               }
@@ -87,7 +87,7 @@ function DashboardLayout() {
           <button
             type="button"
             onClick={() => navigate('/dashboard/settings')}
-            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
               isSettingsActive ? 'bg-primary-50 font-medium text-primary-700' : 'text-ink-700 hover:bg-gray-50'
             }`}
           >
@@ -105,7 +105,7 @@ function DashboardLayout() {
             <button
               type="button"
               onClick={() => notifyInfo("You're all caught up — no new notifications.")}
-              className="rounded-lg p-2 text-ink-500 transition-colors duration-150 hover:bg-gray-50"
+              className="rounded-lg p-2 text-ink-500 transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
               aria-label="Notifications"
             >
               <Bell size={18} />
@@ -115,7 +115,7 @@ function DashboardLayout() {
               <button
                 type="button"
                 onClick={() => setMenuOpen((open) => !open)}
-                className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 transition-colors duration-150 hover:bg-gray-50"
+                className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                 aria-haspopup="true"
                 aria-expanded={menuOpen}
               >
@@ -140,7 +140,7 @@ function DashboardLayout() {
                         setMenuOpen(false);
                         navigate('/dashboard/settings');
                       }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-700 transition-colors duration-150 hover:bg-gray-50"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-700 transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
                     >
                       <Settings size={16} />
                       Settings
@@ -148,7 +148,7 @@ function DashboardLayout() {
                     <button
                       type="button"
                       onClick={logout}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-danger transition-colors duration-150 hover:bg-danger-bg"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-danger transition-colors duration-150 hover:bg-danger-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
                     >
                       <LogOut size={16} />
                       Log out

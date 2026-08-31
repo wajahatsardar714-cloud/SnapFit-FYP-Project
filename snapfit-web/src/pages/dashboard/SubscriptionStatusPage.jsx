@@ -3,10 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import api from '../../services/api';
-import ConfirmModal from '../../components/ConfirmModal';
-import Badge from '../../components/Badge';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
-const STATUS_COLORS = { active: 'green', inactive: 'gray', expired: 'red' };
+// Same 3-way mapping as DashboardHomePage's PLAN_STATUS_BADGE_VARIANT -- keeps
+// "expired" visually distinct (danger) from a merchant who never picked a plan
+// (neutral), rather than collapsing both into one gray state.
+const STATUS_BADGE_VARIANT = { active: 'success', expired: 'danger', inactive: 'neutral' };
 
 function formatDate(value) {
   if (!value) return '—';
@@ -16,6 +21,12 @@ function formatDate(value) {
 function formatCharts(limit) {
   if (limit == null) return 'Unlimited size charts';
   return `${limit} size chart${limit === 1 ? '' : 's'}`;
+}
+
+function usageBarColor(pct) {
+  if (pct >= 100) return 'bg-danger';
+  if (pct >= 80) return 'bg-warning';
+  return 'bg-primary';
 }
 
 function SubscriptionStatusPage() {
@@ -59,7 +70,7 @@ function SubscriptionStatusPage() {
   if (loading || !data) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-gray-400" size={28} />
+        <Loader2 className="animate-spin text-ink-300" size={28} />
       </div>
     );
   }
@@ -70,84 +81,68 @@ function SubscriptionStatusPage() {
   if (!hasSelectedPlan) {
     return (
       <div className="max-w-2xl">
-        <h1 className="text-xl font-bold text-gray-900">Subscription</h1>
-        <div className="mt-6 rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-sm text-gray-500">You haven&apos;t selected a plan yet.</p>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/subscription/plans')}
-            className="mt-4 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-          >
+        <h1 className="text-xl font-semibold text-ink-900">Subscription</h1>
+        <Card className="mt-6 border-dashed text-center">
+          <p className="text-sm text-ink-500">You haven&apos;t selected a plan yet.</p>
+          <Button className="mt-4" onClick={() => navigate('/dashboard/subscription/plans')}>
             Choose a Plan
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
 
   const pct =
     usage.requestsLimit == null ? 0 : Math.min(100, Math.round((usage.requestsUsed / usage.requestsLimit) * 100));
-  const barColor = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-gray-900';
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-bold text-gray-900">Subscription</h1>
+      <h1 className="text-xl font-semibold text-ink-900">Subscription</h1>
 
-      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <Card className="mt-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold capitalize text-gray-900">{subscription.plan} plan</h2>
-          <Badge color={STATUS_COLORS[subscription.status] || 'gray'}>
+          <h2 className="text-lg font-semibold capitalize text-ink-900">{subscription.plan} plan</h2>
+          <Badge variant={STATUS_BADGE_VARIANT[subscription.status] || 'neutral'}>
             {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
           </Badge>
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
           <div>
-            <dt className="text-gray-500">Start date</dt>
-            <dd className="mt-0.5 font-medium text-gray-900">{formatDate(subscription.startDate)}</dd>
+            <dt className="text-ink-500">Start date</dt>
+            <dd className="mt-0.5 font-medium text-ink-900">{formatDate(subscription.startDate)}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Renews / ends</dt>
-            <dd className="mt-0.5 font-medium text-gray-900">{formatDate(subscription.endDate)}</dd>
+            <dt className="text-ink-500">Renews / ends</dt>
+            <dd className="mt-0.5 font-medium text-ink-900">{formatDate(subscription.endDate)}</dd>
           </div>
         </dl>
 
         <div className="mt-6">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Usage this month</span>
-            <span className="font-medium text-gray-900">
+            <span className="text-ink-500">Usage this month</span>
+            <span className="font-medium text-ink-900">
               {usage.requestsUsed} / {usage.requestsLimit ?? 'Unlimited'} requests
             </span>
           </div>
           {usage.requestsLimit != null && (
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
-              <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+              <div className={`h-full rounded-full transition-all ${usageBarColor(pct)}`} style={{ width: `${pct}%` }} />
             </div>
           )}
         </div>
 
-        <div className="mt-4 text-sm text-gray-500">
-          Size chart limit: <span className="font-medium text-gray-900">{formatCharts(chartsLimit)}</span>
+        <div className="mt-4 text-sm text-ink-500">
+          Size chart limit: <span className="font-medium text-ink-900">{formatCharts(chartsLimit)}</span>
         </div>
 
         <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/subscription/plans')}
-            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-          >
-            Change Plan
-          </button>
-          <button
-            type="button"
-            onClick={() => setCancelOpen(true)}
-            disabled={subscription.status !== 'active'}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button onClick={() => navigate('/dashboard/subscription/plans')}>Change Plan</Button>
+          <Button variant="secondary" disabled={subscription.status !== 'active'} onClick={() => setCancelOpen(true)}>
             Cancel Subscription
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       <ConfirmModal
         open={cancelOpen}

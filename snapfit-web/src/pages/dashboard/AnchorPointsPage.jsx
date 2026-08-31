@@ -3,14 +3,19 @@ import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ImagePlus, Loader2 } from 'lucide-react';
 import api from '../../services/api';
+import Button from '../../components/ui/Button';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 
+// Four visually-distinct dots are needed to tell the draggable landmarks apart
+// on the photo -- reuses the theme's existing primary/warning/success/danger
+// tokens (rather than new one-off hex values) since together they already give
+// four well-separated hues.
 const ANCHOR_POINTS = [
-  { key: 'shoulderLeft', label: 'Left shoulder', color: '#2a78d6' },
-  { key: 'shoulderRight', label: 'Right shoulder', color: '#eb6834' },
-  { key: 'hipLeft', label: 'Left hip', color: '#1baf7a' },
-  { key: 'hipRight', label: 'Right hip', color: '#e34948' },
+  { key: 'shoulderLeft', label: 'Left shoulder', color: '#4F46E5' },
+  { key: 'shoulderRight', label: 'Right shoulder', color: '#F59E0B' },
+  { key: 'hipLeft', label: 'Left hip', color: '#10B981' },
+  { key: 'hipRight', label: 'Right hip', color: '#EF4444' },
 ];
 
 const DEFAULT_POINTS = {
@@ -50,7 +55,7 @@ function AnchorMarker({ point, label, color, containerRef, onDrag }) {
       onPointerMove={handlePointerMove}
       title={label}
       style={{ left: `${point.x * 100}%`, top: `${point.y * 100}%`, backgroundColor: color }}
-      className="absolute z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-full border-2 border-white shadow-md ring-1 ring-black/10"
+      className="absolute z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-full border-2 border-white shadow-card ring-1 ring-black/10"
     />
   );
 }
@@ -142,29 +147,32 @@ function AnchorPointsPage() {
   if (loading || !mapping) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-gray-400" size={28} />
+        <Loader2 className="animate-spin text-ink-300" size={28} />
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-bold text-gray-900">Anchor Points</h1>
-      <p className="mt-1 text-sm text-gray-500">
+      <h1 className="text-xl font-semibold text-ink-900">Anchor Points</h1>
+      <p className="mt-1 text-sm text-ink-500">
         {mapping.productName || mapping.productId} — place the 4 points where they land on this product&apos;s flat-lay
         photo. These are used to warp the product image onto a customer&apos;s photo for the size-preview overlay.
       </p>
 
       {!imagePreviewUrl ? (
-        <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-10 text-center hover:bg-gray-50">
-          <ImagePlus size={28} className="text-gray-400" />
-          <p className="mt-2 text-sm text-gray-600">Click to upload a product flat-lay photo</p>
-          <p className="mt-1 text-xs text-gray-400">JPG or PNG, up to 10MB</p>
+        <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-surface-border p-10 text-center transition-colors duration-150 hover:border-primary">
+          <ImagePlus size={28} className="text-ink-300" />
+          <p className="mt-2 text-sm text-ink-700">Click to upload a product flat-lay photo</p>
+          <p className="mt-1 text-xs text-ink-500">JPG or PNG, up to 10MB</p>
           <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
         </label>
       ) : (
         <>
-          <div ref={containerRef} className="relative mt-6 select-none overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+          <div
+            ref={containerRef}
+            className="relative mt-6 select-none overflow-hidden rounded-lg border border-surface-border bg-gray-50"
+          >
             <img src={imagePreviewUrl} alt="Product flat-lay" className="pointer-events-none block w-full" draggable={false} />
             {ANCHOR_POINTS.map(({ key, label, color }) => (
               <AnchorMarker
@@ -178,7 +186,7 @@ function AnchorPointsPage() {
             ))}
           </div>
 
-          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-500">
+          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-500">
             {ANCHOR_POINTS.map(({ key, label, color }) => (
               <li key={key} className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
@@ -187,7 +195,7 @@ function AnchorPointsPage() {
             ))}
           </ul>
 
-          <label className="mt-4 inline-block cursor-pointer text-sm font-medium text-gray-600 underline hover:text-gray-900">
+          <label className="mt-4 inline-block cursor-pointer text-sm font-medium text-primary underline">
             Replace photo
             <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
           </label>
@@ -195,21 +203,12 @@ function AnchorPointsPage() {
       )}
 
       <div className="mt-6 flex gap-3">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving || !imagePreviewUrl}
-          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? 'Saving...' : 'Save anchor points'}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/product-mapping')}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
+        <Button loading={saving} disabled={!imagePreviewUrl} onClick={handleSave}>
+          Save anchor points
+        </Button>
+        <Button variant="secondary" onClick={() => navigate('/dashboard/product-mapping')}>
           Back
-        </button>
+        </Button>
       </div>
     </div>
   );
