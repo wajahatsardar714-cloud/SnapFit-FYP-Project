@@ -20,6 +20,8 @@ function setupTestEnv() {
   });
   afterEach(async () => {
     await Promise.all(Object.values(mongoose.connection.collections).map((c) => c.deleteMany({})));
+    // Each test checks only its own files.
+    fs.readdirSync(uploadDir).forEach((name) => fs.rmSync(path.join(uploadDir, name), { force: true }));
   });
   afterAll(async () => {
     await mongoose.disconnect();
