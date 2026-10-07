@@ -51,12 +51,18 @@ async function postForm(path, form) {
   }
 }
 
-async function analyzeImage(imageBuffer, sizeChart, userHeight) {
+// tryOn: optional { merchantId, productId } -- also renders the virtual try-on
+// from the same photo and pose in this one call (result in response.tryOn).
+async function analyzeImage(imageBuffer, sizeChart, userHeight, tryOn = null) {
   const form = new FormData();
   form.append('image', imageBuffer, { filename: 'upload.jpg' });
   form.append('size_chart', JSON.stringify(sizeChart));
   if (userHeight != null) {
     form.append('user_height', String(userHeight));
+  }
+  if (tryOn) {
+    form.append('try_on_product_id', tryOn.productId);
+    form.append('merchant_id', String(tryOn.merchantId));
   }
   return postForm('/analyze', form);
 }

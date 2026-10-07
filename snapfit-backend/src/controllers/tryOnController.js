@@ -1,12 +1,6 @@
 const fs = require('fs/promises');
 const { tryOnImage } = require('../services/aiService');
-const { aiErrorResponse } = require('../utils/aiErrors');
-
-const TRY_ON_ERROR_MESSAGES = {
-  PRODUCT_ANCHOR_POINTS_NOT_FOUND: 'A photo preview is not set up for this product yet.',
-  INVALID_PRODUCT_IMAGE: 'This product does not have a usable preview photo yet.',
-};
-const TRY_ON_FALLBACK_MESSAGE = 'We could not generate a photo preview right now. Please try again in a moment.';
+const { aiErrorResponse, TRY_ON_ERROR_MESSAGES, TRY_ON_FALLBACK_MESSAGE } = require('../utils/aiErrors');
 
 async function cleanupUpload(file) {
   if (file) {

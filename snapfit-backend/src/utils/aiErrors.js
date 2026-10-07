@@ -1,5 +1,11 @@
 const { AiServiceError } = require('../services/aiService');
 
+const TRY_ON_ERROR_MESSAGES = {
+  TRYON_NOT_AVAILABLE: 'A photo preview is not set up for this product yet.',
+  INVALID_PRODUCT_IMAGE: 'This product does not have a usable preview photo yet.',
+};
+const TRY_ON_FALLBACK_MESSAGE = 'We could not generate a photo preview right now. Please try again in a moment.';
+
 const AI_ERROR_MESSAGES = {
   NO_BODY_DETECTED: 'We could not detect a person in this photo. Please upload a clear, full-body photo.',
   INVALID_IMAGE: 'This file could not be read as an image. Please upload a JPG or PNG photo.',
@@ -33,4 +39,4 @@ function aiErrorResponse(err, { messages = {}, fallback }) {
   return { status: statusCode, body: { success: false, message } };
 }
 
-module.exports = { aiErrorResponse };
+module.exports = { aiErrorResponse, TRY_ON_ERROR_MESSAGES, TRY_ON_FALLBACK_MESSAGE };

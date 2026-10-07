@@ -2,12 +2,22 @@ const fs = require('fs/promises');
 const Recommendation = require('../models/Recommendation');
 const { getMappingForProduct, widgetProductInfo } = require('./productMappingController');
 const { analyzeImage } = require('../services/aiService');
-const { aiErrorResponse } = require('../utils/aiErrors');
+const { aiErrorResponse, TRY_ON_ERROR_MESSAGES, TRY_ON_FALLBACK_MESSAGE } = require('../utils/aiErrors');
 
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
 const RECOMMEND_FALLBACK_MESSAGE =
   'We could not process your photo right now. Please try again with a clear, front-facing full-body photo.';
+
+// The try-on part of a combined recommend + try-on response. Never an error
+// status: a try-on problem must not hide the size result.
+function tryOnResult(aiTryOn, requested) {
+  if (!requested) return { status: 'unavailable' };
+  if (aiTryOn?.image) return { status: 'success', image: aiTryOn.image };
+  const code = aiTryOn?.error;
+  if (code === 'TRYON_NOT_AVAILABLE') return { status: 'unavailable' };
+  return { status: 'failed', message: TRY_ON_ERROR_MESSAGES[code] || TRY_ON_FALLBACK_MESSAGE };
+}
 
 async function cleanupUpload(file) {
   if (file) {
@@ -19,6 +29,9 @@ async function recommend(req, res) {
   const merchant = req.merchant;
   const { productId } = req.body;
   const rawUserHeight = req.body.userHeight;
+  // Optional: also render the virtual try-on in the same call -- one upload,
+  // one pose detection, and one request against the plan's quota.
+  const includeTryOn = String(req.body.includeTryOn) === 'true';
 
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'An image file is required' });
@@ -55,10 +68,18 @@ async function recommend(req, res) {
     });
   }
 
+  const product = widgetProductInfo(mapping, req);
+  const requestTryOn = includeTryOn && product.tryOnReady;
+
   let aiResult;
   try {
     const imageBuffer = await fs.readFile(req.file.path);
-    aiResult = await analyzeImage(imageBuffer, sizeChart.toObject(), userHeight);
+    aiResult = await analyzeImage(
+      imageBuffer,
+      sizeChart.toObject(),
+      userHeight,
+      requestTryOn ? { merchantId: merchant._id, productId } : null
+    );
   } catch (err) {
     await cleanupUpload(req.file);
 
@@ -132,7 +153,8 @@ async function recommend(req, res) {
       sizeComparison,
       fitNotes: aiResult.fitNotes || [],
     },
-    product: widgetProductInfo(mapping, req),
+    product,
+    ...(includeTryOn && { tryOn: tryOnResult(aiResult.tryOn, requestTryOn) }),
   });
 }
 
