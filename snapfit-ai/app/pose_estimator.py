@@ -2,9 +2,10 @@ import os
 
 import cv2
 import mediapipe as mp
-import numpy as np
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python import vision
+
+from app.utils import decode_image, mean_brightness
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "pose_landmarker_heavy.task")
 
@@ -42,8 +43,7 @@ def _make_landmarker():
 
 
 def extract_landmarks(image_bytes):
-    image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-    image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+    image = decode_image(image_bytes)
 
     if image is None:
         raise PoseEstimationError("INVALID_IMAGE")
@@ -76,4 +76,5 @@ def extract_landmarks(image_bytes):
         "landmarks": landmarks,
         "key_landmarks": key_landmarks,
         "image_dimensions": {"height": height, "width": width},
+        "brightness": mean_brightness(image),
     }
