@@ -310,6 +310,7 @@ function AiTestPage() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [tryOnImage, setTryOnImage] = useState(null);
+  const [tryOnView, setTryOnView] = useState('tryOn');
 
   const checkHealth = useCallback(async () => {
     setHealth({ status: 'checking' });
@@ -533,7 +534,33 @@ function AiTestPage() {
                   Generate try-on
                 </Button>
                 {error?.kind === 'try-on' && <Alert variant="danger" title="Try-on failed" description={error.message} />}
-                {tryOnImage && <img src={tryOnImage} alt="Try-on result" className="w-full rounded-lg border border-surface-border" />}
+                {tryOnImage && (
+                  <div className="space-y-2">
+                    <div className="flex gap-1 rounded-lg bg-gray-100 p-1" role="group" aria-label="Try-on view">
+                      {[
+                        ['tryOn', 'Try-on'],
+                        ['original', 'Original'],
+                      ].map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          aria-pressed={tryOnView === key}
+                          onClick={() => setTryOnView(key)}
+                          className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${
+                            tryOnView === key ? 'bg-white text-primary shadow-sm' : 'text-ink-500 hover:text-ink-700'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <img
+                      src={tryOnView === 'tryOn' ? tryOnImage : previewUrl}
+                      alt={tryOnView === 'tryOn' ? 'Try-on result' : 'Original photo'}
+                      className="w-full rounded-lg border border-surface-border"
+                    />
+                  </div>
+                )}
               </Card.Body>
             </Card>
           </div>

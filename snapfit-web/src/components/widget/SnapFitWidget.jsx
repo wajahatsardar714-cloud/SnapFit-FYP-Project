@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Camera, ImagePlus, Loader2, Ruler, Smartphone, X } from 'lucide-react';
 import { isLikelyDesktop } from '../../utils/device';
 import SizeResult from './SizeResult';
+import TryOnPreview from './TryOnPreview';
 
 // Code-split: LiveCapture pulls in @mediapipe/tasks-vision (WASM), which is only
 // needed once a shopper opens the camera tab. Merchants who only use the (default)
@@ -39,9 +40,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
   const [errorMessage, setErrorMessage] = useState('');
   const [poseChecks, setPoseChecks] = useState([]);
   const [feedback, setFeedback] = useState(null);
-  const [tryOnStatus, setTryOnStatus] = useState('idle'); // idle | loading | success | error
-  const [tryOnImage, setTryOnImage] = useState(null);
-  const [tryOnError, setTryOnError] = useState('');
+  const [tryOn, setTryOn] = useState(null);
   const fileInputRef = useRef(null);
 
   const isConfigured = Boolean(apiKey && productId && apiUrl);
@@ -65,9 +64,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
     setErrorMessage('');
     setPoseChecks([]);
     setFeedback(null);
-    setTryOnStatus('idle');
-    setTryOnImage(null);
-    setTryOnError('');
+    setTryOn(null);
   }
 
   function openModal() {
@@ -112,6 +109,9 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
     if (heightValue) {
       formData.append('userHeight', String(heightValue));
     }
+    // Size + try-on in one call: one upload, billed as one request. The
+    // backend only renders the try-on for try-on-ready products.
+    formData.append('includeTryOn', 'true');
 
     try {
       const res = await fetch(`${apiUrl.replace(/\/$/, '')}/recommend`, {
@@ -130,42 +130,11 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
       }
 
       setResult(data.recommendation);
+      setTryOn(data.tryOn || null);
       setStep('result');
     } catch {
       setErrorMessage("SnapFit's sizing service is temporarily unavailable. Please try again in a moment.");
       setStep('error');
-    }
-  }
-
-  async function handleTryOn() {
-    if (!file || tryOnStatus === 'loading') return;
-    setTryOnStatus('loading');
-    setTryOnError('');
-
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('productId', productId);
-
-    try {
-      const res = await fetch(`${apiUrl.replace(/\/$/, '')}/try-on`, {
-        method: 'POST',
-        headers: { 'x-api-key': apiKey },
-        body: formData,
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok || !data?.success) {
-        setTryOnError(data?.message || 'Could not generate a preview right now. Please try again.');
-        setTryOnStatus('error');
-        return;
-      }
-
-      setTryOnImage(data.image);
-      setTryOnStatus('success');
-    } catch {
-      setTryOnError("SnapFit's preview service is temporarily unavailable. Please try again in a moment.");
-      setTryOnStatus('error');
     }
   }
 
@@ -423,7 +392,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <Loader2 size={32} className="animate-spin text-gray-900" />
                 <p className="mt-4 text-sm font-medium text-gray-700">Analyzing your photo...</p>
-                <p className="mt-1 text-xs text-gray-400">This usually takes a few seconds.</p>
+                <p className="mt-1 text-xs text-gray-400">Measuring you and preparing your preview — this takes a few seconds.</p>
               </div>
             )}
 
@@ -431,46 +400,11 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
               <div className="text-center">
                 <SizeResult result={result} />
 
-                <div className="mt-5 border-t pt-4">
-                  {tryOnStatus === 'idle' && (
-                    <button
-                      type="button"
-                      onClick={handleTryOn}
-                      className="w-full rounded-md border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      Preview on your photo
-                    </button>
-                  )}
-
-                  {tryOnStatus === 'loading' && (
-                    <div className="flex flex-col items-center gap-2 py-3">
-                      <Loader2 size={20} className="animate-spin text-gray-500" />
-                      <p className="text-xs text-gray-500">Generating your preview — this takes longer than sizing...</p>
-                    </div>
-                  )}
-
-                  {tryOnStatus === 'error' && (
-                    <div className="text-center">
-                      <p className="text-xs text-red-600">{tryOnError}</p>
-                      <button
-                        type="button"
-                        onClick={handleTryOn}
-                        className="mt-2 text-xs font-medium text-gray-600 underline hover:text-gray-900"
-                      >
-                        Try again
-                      </button>
-                    </div>
-                  )}
-
-                  {tryOnStatus === 'success' && tryOnImage && (
-                    <div>
-                      <img src={tryOnImage} alt="Product preview on your photo" className="mx-auto max-h-72 rounded-md object-contain" />
-                      <p className="mt-2 text-[11px] text-gray-400">
-                        Preview is approximate and does not reflect fabric drape or fit.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {tryOn && tryOn.status !== 'unavailable' && (
+                  <div className="mt-5 border-t pt-4 text-left">
+                    <TryOnPreview tryOn={tryOn} originalUrl={previewUrl} size={result.size} />
+                  </div>
+                )}
 
                 <div className="mt-5 border-t pt-4">
                   <p className="text-xs font-medium text-gray-500">How did it fit?</p>
