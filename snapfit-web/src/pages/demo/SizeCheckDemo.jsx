@@ -3,6 +3,10 @@ import { ShirtIcon } from 'lucide-react';
 import SnapFitWidget from '../../components/widget/SnapFitWidget';
 
 const STORAGE_KEY = 'snapfit_demo_tester_config';
+// Optional, local .env only: the demo product's photo and name, so the shop page
+// shows the same product the widget sizes and tries on.
+const DEMO_PRODUCT_IMAGE = import.meta.env.VITE_DEMO_PRODUCT_IMAGE;
+const DEMO_PRODUCT_NAME = import.meta.env.VITE_DEMO_PRODUCT_NAME || 'Classic Crew Neck T-Shirt';
 
 function loadStoredConfig() {
   try {
@@ -65,11 +69,15 @@ function SizeCheckDemo() {
 
         <div className="mt-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="flex h-72 items-center justify-center bg-gray-100">
-            <ShirtIcon size={64} className="text-gray-300" />
+            {DEMO_PRODUCT_IMAGE ? (
+              <img src={DEMO_PRODUCT_IMAGE} alt={DEMO_PRODUCT_NAME} className="h-full object-contain p-4" />
+            ) : (
+              <ShirtIcon size={64} className="text-gray-300" />
+            )}
           </div>
           <div className="p-6">
             <p className="text-xs uppercase tracking-wide text-gray-400">Everyday Essentials</p>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900">Classic Crew Neck T-Shirt</h1>
+            <h1 className="mt-1 text-2xl font-bold text-gray-900">{DEMO_PRODUCT_NAME}</h1>
             <p className="mt-2 text-xl font-semibold text-gray-900">$24.00</p>
             <p className="mt-3 text-sm text-gray-500">
               A soft, breathable everyday tee. Not sure which size to order? Use SnapFit to get a personalized
