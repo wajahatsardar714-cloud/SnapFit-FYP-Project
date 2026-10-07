@@ -512,7 +512,7 @@ function IntegrationDocsPage() {
   if (!res.ok || !data.success) {
     throw new Error(data.message);
   }
-  return data.recommendation; // { size, confidence, bodyType, notes, fitScores }
+  return data.recommendation; // { size, confidence, alternativeSize, measurements, sizeComparison, fitNotes, ... }
 }`;
 
   const pythonExample = `import requests
@@ -558,11 +558,28 @@ else:
   "success": true,
   "recommendation": {
     "size": "M",
-    "confidence": 0.82,
+    "confidence": 0.95,
     "bodyType": "average",
-    "notes": "M is a close fit. L is also within range.",
-    "fitScores": { "S": 0.41, "M": 0.82, "L": 0.35 }
-  }
+    "notes": "Based on your proportions, M is the best fit. L may also work if you prefer a looser fit.",
+    "fitScores": { "S": 0.1, "M": 0.95, "L": 0.6 },
+    "alternativeSize": "L",
+    "measurements": {
+      "chest": { "value": 100.8, "unit": "cm", "estimated": true },
+      "shoulderWidth": { "value": 44.2, "unit": "cm", "estimated": false }
+    },
+    "sizeComparison": [
+      {
+        "label": "M",
+        "score": 0.95,
+        "perMeasurement": [
+          { "name": "chest", "userValue": 100.8, "min": 94, "max": 102, "status": "within" }
+        ]
+      }
+    ],
+    "fitNotes": ["Chest is near the top of M; consider L for a looser fit."]
+  },
+  "product": { "productId": "SKU-1029", "productName": "Classic Crew Tee", "imageUrl": "https://…/uploads/products/…png", "tryOnReady": true },
+  "tryOn": { "status": "success", "image": "data:image/jpeg;base64,…" }
 }`;
 
   const recommendErrorExample = `{
@@ -701,8 +718,25 @@ else:
                       required: false,
                       description: "Shopper's height in centimeters. Switches matching from ratio-based to measurement-based, improving accuracy.",
                     },
+                    {
+                      field: 'includeTryOn',
+                      type: 'boolean',
+                      required: false,
+                      description:
+                        'Send "true" to also get a virtual try-on of this product on the photo in the same call (one upload, billed as one request). Only rendered when the product has an image and anchor points.',
+                    },
                   ]}
                 />
+                <p>
+                  <code className="font-mono">measurements</code> are in cm (only with <code className="font-mono">userHeight</code>);
+                  chest, waist and hip are circumferences estimated from the photo (
+                  <code className="font-mono">estimated: true</code>). Size chart ranges are compared in cm whatever unit the chart
+                  uses. <code className="font-mono">tryOn</code> is present only when{' '}
+                  <code className="font-mono">includeTryOn</code> was sent: status <code className="font-mono">success</code>{' '}
+                  (with <code className="font-mono">image</code>), <code className="font-mono">unavailable</code> (product not
+                  set up for try-on) or <code className="font-mono">failed</code> (with a <code className="font-mono">message</code>) —
+                  a try-on problem never fails the size recommendation.
+                </p>
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Success response — 200</p>
                 <CodeBlock code={recommendSuccessExample} lang="json" />
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Error response — 4xx/5xx</p>
