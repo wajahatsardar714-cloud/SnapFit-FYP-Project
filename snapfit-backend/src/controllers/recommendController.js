@@ -1,23 +1,13 @@
 const fs = require('fs/promises');
 const Recommendation = require('../models/Recommendation');
 const { getChartForProduct } = require('./productMappingController');
-const { analyzeImage, AiServiceError } = require('../services/aiService');
+const { analyzeImage } = require('../services/aiService');
+const { aiErrorResponse } = require('../utils/aiErrors');
 
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
-const AI_ERROR_MESSAGES = {
-  NO_BODY_DETECTED: 'We could not detect a person in this photo. Please upload a clear, full-body photo.',
-  INVALID_IMAGE: 'This file could not be read as an image. Please upload a JPG or PNG photo.',
-  FILE_TOO_LARGE: 'This image is too large. Please upload a photo under 10MB.',
-  RESOLUTION_TOO_LOW: 'This image resolution is too low. Please upload a higher-resolution photo.',
-};
-
-function friendlyAiErrorMessage(err) {
-  return (
-    AI_ERROR_MESSAGES[err.message] ||
-    'We could not process your photo right now. Please try again with a clear, front-facing full-body photo.'
-  );
-}
+const RECOMMEND_FALLBACK_MESSAGE =
+  'We could not process your photo right now. Please try again with a clear, front-facing full-body photo.';
 
 async function cleanupUpload(file) {
   if (file) {
@@ -81,8 +71,8 @@ async function recommend(req, res) {
       ipAddress: req.ip,
     });
 
-    const statusCode = err instanceof AiServiceError ? err.statusCode : 502;
-    return res.status(statusCode).json({ success: false, message: friendlyAiErrorMessage(err) });
+    const { status: statusCode, body } = aiErrorResponse(err, { fallback: RECOMMEND_FALLBACK_MESSAGE });
+    return res.status(statusCode).json(body);
   }
 
   await cleanupUpload(req.file);

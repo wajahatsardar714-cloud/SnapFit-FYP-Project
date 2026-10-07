@@ -1,20 +1,12 @@
 const fs = require('fs/promises');
-const { tryOnImage, AiServiceError } = require('../services/aiService');
+const { tryOnImage } = require('../services/aiService');
+const { aiErrorResponse } = require('../utils/aiErrors');
 
 const TRY_ON_ERROR_MESSAGES = {
-  NO_BODY_DETECTED: 'We could not detect a person in this photo. Please upload a clear, full-body photo.',
-  INVALID_IMAGE: 'This file could not be read as an image. Please upload a JPG or PNG photo.',
-  RESOLUTION_TOO_LOW: 'This image resolution is too low. Please upload a higher-resolution photo.',
   PRODUCT_ANCHOR_POINTS_NOT_FOUND: 'A photo preview is not set up for this product yet.',
   INVALID_PRODUCT_IMAGE: 'This product does not have a usable preview photo yet.',
 };
-
-function friendlyTryOnErrorMessage(err) {
-  // MISSING_ANCHOR_POINT:<key> carries extra detail after the colon -- match on
-  // the code alone.
-  const code = String(err.message || '').split(':')[0];
-  return TRY_ON_ERROR_MESSAGES[code] || 'We could not generate a photo preview right now. Please try again in a moment.';
-}
+const TRY_ON_FALLBACK_MESSAGE = 'We could not generate a photo preview right now. Please try again in a moment.';
 
 async function cleanupUpload(file) {
   if (file) {
@@ -41,8 +33,11 @@ async function tryOn(req, res) {
     return res.status(200).json({ success: true, image: aiResult.image });
   } catch (err) {
     await cleanupUpload(req.file);
-    const statusCode = err instanceof AiServiceError ? err.statusCode : 502;
-    return res.status(statusCode).json({ success: false, message: friendlyTryOnErrorMessage(err) });
+    const { status: statusCode, body } = aiErrorResponse(err, {
+      messages: TRY_ON_ERROR_MESSAGES,
+      fallback: TRY_ON_FALLBACK_MESSAGE,
+    });
+    return res.status(statusCode).json(body);
   }
 }
 
