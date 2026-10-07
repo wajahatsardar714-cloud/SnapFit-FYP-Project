@@ -27,41 +27,38 @@ const PHOTO_SOURCES = [
   { key: 'phone', label: 'Phone (QR)', Icon: Smartphone },
 ];
 
-// Ranges are on the scale feature_engine.py actually emits: chest/hip are
-// front-view *widths* (not circumferences), and lengths come out larger than
-// tape measurements because the pixel->cm scale uses shoulder-to-ankle as the
-// full height. Tuned so a typical full-body photo gets a real recommendation.
+// A typical men's tee chart in body measurements (cm), on the same scale as the
+// AI service's measurement_engine: shoulder width seam to seam, chest/waist
+// circumferences, torso length shoulder line -> hip line.
 const SAMPLE_SIZE_CHART = {
   unit: 'cm',
+  category: 'tops',
   sizes: [
     {
       label: 'S',
       measurements: {
-        chest: { min: 36, max: 40 },
-        shoulderWidth: { min: 40, max: 44 },
-        hip: { min: 22, max: 25 },
-        torsoLength: { min: 58, max: 64 },
-        inseam: { min: 90, max: 97 },
+        chest: { min: 86, max: 94 },
+        shoulderWidth: { min: 40, max: 43 },
+        waist: { min: 72, max: 80 },
+        torsoLength: { min: 46, max: 50 },
       },
     },
     {
       label: 'M',
       measurements: {
-        chest: { min: 40, max: 44 },
-        shoulderWidth: { min: 44, max: 48 },
-        hip: { min: 25, max: 28 },
-        torsoLength: { min: 64, max: 70 },
-        inseam: { min: 97, max: 104 },
+        chest: { min: 94, max: 102 },
+        shoulderWidth: { min: 43, max: 46 },
+        waist: { min: 80, max: 88 },
+        torsoLength: { min: 50, max: 54 },
       },
     },
     {
       label: 'L',
       measurements: {
-        chest: { min: 44, max: 48 },
-        shoulderWidth: { min: 48, max: 52 },
-        hip: { min: 28, max: 31 },
-        torsoLength: { min: 70, max: 76 },
-        inseam: { min: 104, max: 111 },
+        chest: { min: 102, max: 110 },
+        shoulderWidth: { min: 46, max: 49 },
+        waist: { min: 88, max: 96 },
+        torsoLength: { min: 54, max: 58 },
       },
     },
   ],
@@ -254,7 +251,7 @@ function KeyValueTable({ rows }) {
   );
 }
 
-function SizeRecommendation({ recommendation }) {
+function SizeRecommendation({ recommendation, alternativeSize, fitNotes }) {
   const scores = Object.entries(recommendation.fit_scores || {});
   return (
     <div className="space-y-4">
@@ -269,10 +266,18 @@ function SizeRecommendation({ recommendation }) {
               Confidence {Math.round(recommendation.confidence * 100)}%
             </Badge>
             <Badge variant="info">Body type: {recommendation.body_type}</Badge>
+            {alternativeSize && <Badge>Alternative: {alternativeSize}</Badge>}
           </div>
         </div>
       </div>
       <p className="text-sm text-ink-700">{recommendation.notes}</p>
+      {fitNotes?.length > 0 && (
+        <ul className="list-disc space-y-1 pl-5 text-sm text-ink-700">
+          {fitNotes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      )}
       <div className="space-y-2">
         {scores.map(([label, score]) => (
           <div key={label} className="flex items-center gap-3 text-sm">
@@ -574,7 +579,11 @@ function AiTestPage() {
                       </Card.Header>
                       <Card.Body padding="sm">
                         {result.body.size_recommendation ? (
-                          <SizeRecommendation recommendation={result.body.size_recommendation} />
+                          <SizeRecommendation
+                            recommendation={result.body.size_recommendation}
+                            alternativeSize={result.body.alternativeSize}
+                            fitNotes={result.body.fitNotes}
+                          />
                         ) : (
                           <p className="text-sm text-ink-500">No size chart was sent, so no recommendation.</p>
                         )}
@@ -595,9 +604,12 @@ function AiTestPage() {
                           <h2 className="font-semibold text-ink-900">Estimated measurements</h2>
                         </Card.Header>
                         <Card.Body padding="sm">
-                          {features.estimated_cm ? (
+                          {Object.keys(result.body.measurements || {}).length > 0 ? (
                             <KeyValueTable
-                              rows={Object.entries(features.estimated_cm).map(([k, v]) => [k, `${formatNumber(v, 1)} cm`])}
+                              rows={Object.entries(result.body.measurements).map(([k, v]) => [
+                                v.estimated ? `${k} (estimated)` : k,
+                                `${formatNumber(v.value, 1)} cm`,
+                              ])}
                             />
                           ) : (
                             <p className="text-sm text-ink-500">Enter your height to get estimates in cm.</p>

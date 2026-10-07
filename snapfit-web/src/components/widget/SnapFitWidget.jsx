@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Camera, ImagePlus, Loader2, Ruler, Smartphone, X } from 'lucide-react';
 import { isLikelyDesktop } from '../../utils/device';
+import SizeResult from './SizeResult';
 
 // Code-split: LiveCapture pulls in @mediapipe/tasks-vision (WASM), which is only
 // needed once a shopper opens the camera tab. Merchants who only use the (default)
@@ -11,13 +12,6 @@ const LiveCapture = lazy(() => import('./LiveCapture'));
 const MobileHandoff = lazy(() => import('./MobileHandoff'));
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-
-function confidenceTone(confidence) {
-  const pct = confidence * 100;
-  if (pct > 70) return { bar: 'bg-green-500', text: 'text-green-700' };
-  if (pct >= 50) return { bar: 'bg-yellow-500', text: 'text-yellow-700' };
-  return { bar: 'bg-red-500', text: 'text-red-700' };
-}
 
 function heightToCm(unit, cm, feet, inches) {
   if (unit === 'cm') {
@@ -435,30 +429,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
             {step === 'result' && result && (
               <div className="text-center">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gray-900 text-2xl font-bold text-white">
-                  {result.size}
-                </div>
-
-                <div className="mt-4 text-left">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Confidence</span>
-                    <span className={confidenceTone(result.confidence).text}>{Math.round(result.confidence * 100)}%</span>
-                  </div>
-                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className={`h-full rounded-full ${confidenceTone(result.confidence).bar}`}
-                      style={{ width: `${Math.round(result.confidence * 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {result.bodyType && (
-                  <p className="mt-3 text-xs uppercase tracking-wide text-gray-400">
-                    Body type: <span className="font-medium text-gray-600">{result.bodyType}</span>
-                  </p>
-                )}
-
-                {result.notes && <p className="mt-3 text-sm text-gray-600">{result.notes}</p>}
+                <SizeResult result={result} />
 
                 <div className="mt-5 border-t pt-4">
                   {tryOnStatus === 'idle' && (
