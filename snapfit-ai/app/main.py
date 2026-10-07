@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.feature_engine import calculate_features
 from app.pose_estimator import PoseEstimationError, extract_landmarks
+from app.pose_validator import PoseInvalidError, assert_valid_pose
 from app.size_matcher import SizeMatchError, recommend_size
 from app.try_on import TryOnError, fetch_image_bytes, fetch_product_anchor_data, generate_try_on
 from app.utils import calculate_confidence, validate_image
@@ -44,6 +45,17 @@ async def log_requests(request: Request, call_next):
     return response
 
 
+def _pose_invalid_exception(error):
+    return HTTPException(status_code=422, detail={"code": "POSE_INVALID", "failed_checks": error.failed_checks})
+
+
+def _extract_valid_pose(image_bytes):
+    pose = extract_landmarks(image_bytes)
+    dimensions = pose["image_dimensions"]
+    assert_valid_pose(pose["landmarks"], dimensions["width"], dimensions["height"], pose["brightness"])
+    return pose
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "snapfit-ai"}
@@ -62,9 +74,11 @@ async def analyze(
         raise HTTPException(status_code=400, detail=validation["error"])
 
     try:
-        pose = extract_landmarks(image_bytes)
+        pose = _extract_valid_pose(image_bytes)
     except PoseEstimationError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except PoseInvalidError as e:
+        raise _pose_invalid_exception(e)
 
     image_dimensions = pose["image_dimensions"]
     features = calculate_features(
@@ -121,6 +135,13 @@ async def try_on(
         raise HTTPException(status_code=400, detail=validation["error"])
 
     try:
+        pose = _extract_valid_pose(image_bytes)
+    except PoseEstimationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except PoseInvalidError as e:
+        raise _pose_invalid_exception(e)
+
+    try:
         anchor_points, product_image_url = await fetch_product_anchor_data(merchant_id, product_id)
     except TryOnError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -133,9 +154,7 @@ async def try_on(
         raise HTTPException(status_code=502, detail="PRODUCT_IMAGE_UNREACHABLE")
 
     try:
-        result_bytes = generate_try_on(image_bytes, product_image_bytes, anchor_points)
-    except PoseEstimationError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        result_bytes = generate_try_on(image_bytes, product_image_bytes, anchor_points, pose=pose)
     except TryOnError as e:
         raise HTTPException(status_code=422, detail=str(e))
 

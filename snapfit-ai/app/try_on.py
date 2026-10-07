@@ -82,18 +82,20 @@ def _build_alpha_mask(product_image):
     return alpha, product_image
 
 
-def generate_try_on(customer_image_bytes, product_image_bytes, anchor_points):
+def generate_try_on(customer_image_bytes, product_image_bytes, anchor_points, pose=None):
     """Warps a flat product image onto a customer's photo via 4 corresponding
     points (product anchor points -> the customer's own BlazePose landmarks).
 
     Independently callable: takes plain bytes/dicts in, returns JPEG bytes out --
-    no dependency on the size-recommendation request/response shape.
+    no dependency on the size-recommendation request/response shape. Pass an
+    already-extracted `pose` to skip running pose detection a second time.
     """
     for key in ANCHOR_KEYS:
         if key not in anchor_points:
             raise TryOnError(f"MISSING_ANCHOR_POINT:{key}")
 
-    pose = extract_landmarks(customer_image_bytes)
+    if pose is None:
+        pose = extract_landmarks(customer_image_bytes)
     landmarks = pose["landmarks"]
     height = pose["image_dimensions"]["height"]
     width = pose["image_dimensions"]["width"]
