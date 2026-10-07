@@ -278,6 +278,13 @@ const PHOTO_VALIDATION_ERRORS = [
     status: 422,
     meaning: 'No person could be detected in the photo.',
   },
+  {
+    code: 'We need a better photo: <first instruction>.',
+    internalCode: 'POSE_INVALID',
+    status: 422,
+    meaning:
+      'The photo fails the pose rules (whole body visible, facing the camera, standing straight, arms slightly away from the body, feet hip-width apart, reasonable lighting). The response also has code: "POSE_INVALID" and poseChecks: [{ id, message }] listing every failed check.',
+  },
 ];
 
 const AI_SERVICE_GENERIC_MESSAGE =
@@ -539,7 +546,7 @@ else:
   productId="SKU-1029"
   apiUrl="${API_BASE}"
   buttonLabel="Check My Size"
-  autoCapture={false} // optional — auto-capture after a 1.5s stable hold instead of a manual button
+  autoCapture={true} // optional — false turns off the 3s auto-capture countdown (manual button only)
 />`;
 
   const iframeExample = `<iframe
@@ -765,7 +772,8 @@ else:
                   field: 'autoCapture',
                   type: 'boolean',
                   required: false,
-                  description: 'Defaults to false (manual capture button). When true, the camera auto-captures after 1.5s of continuous valid framing.',
+                  description:
+                    'Defaults to true: once the shopper holds a valid pose, a 3-second countdown captures the photo automatically. The manual Capture button is always available once the pose is valid; set false to use it only.',
                 },
               ]}
             />

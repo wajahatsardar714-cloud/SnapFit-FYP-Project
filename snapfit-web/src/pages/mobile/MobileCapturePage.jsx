@@ -116,7 +116,6 @@ function MobileCapturePage() {
                   setCapturedFile(null);
                   setMode('upload');
                 }}
-                autoCapture={false}
               />
             </Suspense>
             {capturedFile && (

@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BRIGHTNESS_SAMPLE_SIZE, DETECTION_INTERVAL_MS, POSE_RULES } from '../config/poseConfig';
+import { primaryInstruction, validatePose } from '../utils/poseValidation';
 
 // Same package version on the client (WASM) and server (Python mediapipe==1.0.1, see
 // snapfit-ai/requirements.txt) so the two never drift apart.
@@ -7,121 +9,126 @@ const WASM_BASE_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TA
 const MODEL_ASSET_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
-const DEFAULT_THROTTLE_MS = 200;
-const VISIBILITY_THRESHOLD = 0.6;
-const EDGE_MARGIN = 0.04;
-const MIN_BODY_SPAN = 0.45;
-// Must stay below (1 - 2*EDGE_MARGIN): once every required landmark is inside the
-// edge margin, the max possible span is 1 - 2*EDGE_MARGIN (0.92 here). A higher
-// value made this branch unreachable — "too close" always fell through to the
-// edge-crop check instead.
-const MAX_BODY_SPAN = 0.85;
-
 // A low-end device that's too slow to compile/run the WASM model will also be too
 // slow to load it promptly, so a single load timeout doubles as the "runs too
-// slowly" signal Prompt 28 asks for — see LiveCapture's poseError fallback.
+// slowly" signal -- see LiveCapture's poseError fallback.
 const MODEL_LOAD_TIMEOUT_MS = 6000;
 
-// Same landmarks the server-side confidence check requires (snapfit-ai/app/utils.py
-// REQUIRED_LANDMARKS) — a photo that fails this client-side gate would also score
-// poorly server-side, so gating on the same set catches bad framing before upload.
-const REQUIRED_LANDMARK_INDEX = {
-  LEFT_SHOULDER: 11,
-  RIGHT_SHOULDER: 12,
-  LEFT_HIP: 23,
-  RIGHT_HIP: 24,
-  LEFT_KNEE: 25,
-  RIGHT_KNEE: 26,
-  LEFT_ANKLE: 27,
-  RIGHT_ANKLE: 28,
-};
+// Frames kept for the stillness check: its window plus one detection of slack.
+const HISTORY_MS = POSE_RULES.stillnessWindowMs + DETECTION_INTERVAL_MS;
 
-export const REQUIRED_LANDMARKS = Object.keys(REQUIRED_LANDMARK_INDEX);
-
-// landmarks: the 33-point array from PoseLandmarker's VIDEO-mode result
-// (result.landmarks[0]), normalized to [0, 1] image coordinates.
-export function evaluateFraming(landmarks) {
-  const missingLandmarks = [];
-  const points = {};
-
-  for (const [name, index] of Object.entries(REQUIRED_LANDMARK_INDEX)) {
-    const point = landmarks[index];
-    if (!point || (point.visibility ?? 0) < VISIBILITY_THRESHOLD) {
-      missingLandmarks.push(name);
-    } else {
-      points[name] = point;
-    }
-  }
-
-  if (missingLandmarks.length > 0) {
-    return { isFramedCorrectly: false, missingLandmarks, reason: 'MISSING_LANDMARKS' };
-  }
-
-  const xs = Object.values(points).map((p) => p.x);
-  const ys = Object.values(points).map((p) => p.y);
-  const nearEdge = xs.some((x) => x < EDGE_MARGIN || x > 1 - EDGE_MARGIN) || ys.some((y) => y < EDGE_MARGIN || y > 1 - EDGE_MARGIN);
-  if (nearEdge) {
-    return { isFramedCorrectly: false, missingLandmarks: [], reason: 'TOO_CLOSE_TO_EDGE' };
-  }
-
-  const shoulderY = Math.min(points.LEFT_SHOULDER.y, points.RIGHT_SHOULDER.y);
-  const ankleY = Math.max(points.LEFT_ANKLE.y, points.RIGHT_ANKLE.y);
-  const bodySpan = ankleY - shoulderY;
-  if (bodySpan < MIN_BODY_SPAN) {
-    return { isFramedCorrectly: false, missingLandmarks: [], reason: 'TOO_FAR' };
-  }
-  if (bodySpan > MAX_BODY_SPAN) {
-    return { isFramedCorrectly: false, missingLandmarks: [], reason: 'TOO_CLOSE' };
-  }
-
-  return { isFramedCorrectly: true, missingLandmarks: [], reason: null };
-}
-
-let sharedLandmarkerPromise = null;
+const SKELETON = [
+  [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24],
+  [23, 24], [23, 25], [25, 27], [24, 26], [26, 28], [27, 29], [28, 30],
+];
 
 async function createLandmarker() {
   // Dynamic import so @mediapipe/tasks-vision (and its WASM) is code-split into its
-  // own chunk and only ever fetched once this function actually runs — i.e. once a
-  // shopper opens the camera tab, never on initial widget/page load.
+  // own chunk and only fetched once a shopper opens the camera.
   const { FilesetResolver, PoseLandmarker } = await import('@mediapipe/tasks-vision');
   const vision = await FilesetResolver.forVisionTasks(WASM_BASE_URL);
-  const baseOptions = { modelAssetPath: MODEL_ASSET_URL };
+  const options = (delegate) => ({
+    baseOptions: { modelAssetPath: MODEL_ASSET_URL, delegate },
+    runningMode: 'VIDEO',
+    numPoses: 1,
+  });
   try {
-    return await PoseLandmarker.createFromOptions(vision, {
-      baseOptions: { ...baseOptions, delegate: 'GPU' },
-      runningMode: 'VIDEO',
-      numPoses: 1,
-    });
+    return await PoseLandmarker.createFromOptions(vision, options('GPU'));
   } catch {
-    return PoseLandmarker.createFromOptions(vision, {
-      baseOptions: { ...baseOptions, delegate: 'CPU' },
-      runningMode: 'VIDEO',
-      numPoses: 1,
-    });
+    return PoseLandmarker.createFromOptions(vision, options('CPU'));
   }
 }
 
-function getSharedLandmarker() {
-  if (!sharedLandmarkerPromise) {
-    sharedLandmarkerPromise = createLandmarker().catch((err) => {
-      sharedLandmarkerPromise = null;
+// One landmarker shared by every mounted camera, closed (freeing its WASM/GPU
+// memory) when the last one unmounts.
+const shared = { promise: null, users: 0 };
+
+function acquireLandmarker() {
+  shared.users += 1;
+  if (!shared.promise) {
+    shared.promise = createLandmarker().catch((err) => {
+      shared.promise = null;
       throw err;
     });
   }
-  return sharedLandmarkerPromise;
+  return shared.promise;
 }
 
-// Runs the lite PoseLandmarker model against a live <video> element for real-time
-// framing feedback only. These landmarks never leave the browser — the actual
-// measurement landmarks still come from the server-side BlazePose pipeline
-// (snapfit-ai) once a photo is captured and uploaded.
-export function useLivePoseDetection(videoRef, { enabled = true, throttleMs = DEFAULT_THROTTLE_MS } = {}) {
+function releaseLandmarker() {
+  shared.users -= 1;
+  if (shared.users > 0 || !shared.promise) return;
+  const closing = shared.promise;
+  shared.promise = null;
+  closing.then((landmarker) => landmarker.close()).catch(() => {});
+}
+
+// detectForVideo needs strictly increasing timestamps across every call.
+let lastTimestamp = 0;
+function nextTimestamp() {
+  lastTimestamp = Math.max(lastTimestamp + 1, performance.now());
+  return lastTimestamp;
+}
+
+function measureBrightness(source, sampleCanvas) {
+  const size = BRIGHTNESS_SAMPLE_SIZE;
+  sampleCanvas.width = size;
+  sampleCanvas.height = size;
+  const ctx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(source, 0, 0, size, size);
+  const { data } = ctx.getImageData(0, 0, size, size);
+  let total = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    total += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  return total / (size * size);
+}
+
+function clearOverlay(canvas) {
+  canvas?.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawSkeleton(canvas, video, landmarks, color) {
+  if (!canvas) return;
+  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+  }
+  clearOverlay(canvas);
+  if (!landmarks) return;
+  const ctx = canvas.getContext('2d');
+
+  const scale = Math.max(canvas.width, canvas.height) / 400;
+  const visible = (lm) => lm && (lm.visibility ?? 0) >= POSE_RULES.visibilityThreshold;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2 * scale;
+  ctx.lineCap = 'round';
+  for (const [a, b] of SKELETON) {
+    if (!visible(landmarks[a]) || !visible(landmarks[b])) continue;
+    ctx.beginPath();
+    ctx.moveTo(landmarks[a].x * canvas.width, landmarks[a].y * canvas.height);
+    ctx.lineTo(landmarks[b].x * canvas.width, landmarks[b].y * canvas.height);
+    ctx.stroke();
+  }
+}
+
+// Only re-render when what the shopper sees would change.
+const summarize = (result) =>
+  `${result.ok}|${result.checks.map((c) => `${c.id}:${c.passed ? 1 : 0}`).join(',')}|${primaryInstruction(result)}`;
+
+// Runs the lite PoseLandmarker model against a live <video> for real-time pose
+// gating. These landmarks never leave the browser -- the measurement landmarks
+// still come from the server-side BlazePose pipeline after capture.
+//
+// overlayRef: optional <canvas> to draw the detected skeleton on (drawn
+// directly, no React state per frame). resetKey: change it (e.g. on camera
+// switch) to restart the stillness history and gate.
+export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = null, resetKey = null } = {}) {
   const [isModelReady, setIsModelReady] = useState(false);
-  const [isFramedCorrectly, setIsFramedCorrectly] = useState(false);
-  const [missingLandmarks, setMissingLandmarks] = useState(REQUIRED_LANDMARKS);
-  const [framingReason, setFramingReason] = useState(null);
+  const [validation, setValidation] = useState(null);
   const [error, setError] = useState(null);
   const landmarkerRef = useRef(null);
+  const sampleCanvasRef = useRef(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -136,7 +143,7 @@ export function useLivePoseDetection(videoRef, { enabled = true, throttleMs = DE
       setError('The live pose guide is taking too long to load on this device.');
     }, MODEL_LOAD_TIMEOUT_MS);
 
-    getSharedLandmarker()
+    acquireLandmarker()
       .then((landmarker) => {
         if (cancelled) return;
         clearTimeout(timeoutId);
@@ -152,6 +159,9 @@ export function useLivePoseDetection(videoRef, { enabled = true, throttleMs = DE
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
+      landmarkerRef.current = null;
+      setIsModelReady(false);
+      releaseLandmarker();
     };
   }, [enabled]);
 
@@ -161,30 +171,40 @@ export function useLivePoseDetection(videoRef, { enabled = true, throttleMs = DE
     let rafId;
     let lastDetectAt = 0;
     let lastVideoTime = -1;
+    let lastSummary = null;
+    const history = [];
+    sampleCanvasRef.current ??= document.createElement('canvas');
 
     function tick() {
       const video = videoRef.current;
       const landmarker = landmarkerRef.current;
+      const now = performance.now();
 
-      if (video && landmarker && video.readyState >= 2 && video.currentTime !== lastVideoTime) {
-        const now = performance.now();
-        if (now - lastDetectAt >= throttleMs) {
-          lastDetectAt = now;
-          lastVideoTime = video.currentTime;
+      if (
+        video &&
+        landmarker &&
+        video.readyState >= 2 &&
+        video.currentTime !== lastVideoTime &&
+        now - lastDetectAt >= DETECTION_INTERVAL_MS
+      ) {
+        lastDetectAt = now;
+        lastVideoTime = video.currentTime;
 
-          const result = landmarker.detectForVideo(video, now);
-          const landmarks = result.landmarks?.[0];
+        const landmarks = landmarker.detectForVideo(video, nextTimestamp()).landmarks?.[0] ?? null;
+        if (landmarks) history.push({ time: now, landmarks });
+        while (history.length && history[0].time < now - HISTORY_MS) history.shift();
 
-          if (!landmarks) {
-            setIsFramedCorrectly(false);
-            setMissingLandmarks(REQUIRED_LANDMARKS);
-            setFramingReason('NO_BODY_DETECTED');
-          } else {
-            const framing = evaluateFraming(landmarks);
-            setIsFramedCorrectly(framing.isFramedCorrectly);
-            setMissingLandmarks(framing.missingLandmarks);
-            setFramingReason(framing.reason);
-          }
+        const result = validatePose(landmarks, {
+          aspectRatio: video.videoWidth / video.videoHeight,
+          brightness: measureBrightness(video, sampleCanvasRef.current),
+          history: landmarks ? history : null,
+        });
+        drawSkeleton(overlayRef?.current, video, landmarks, result.ok ? '#10B981' : '#F8FAFC');
+
+        const summary = summarize(result);
+        if (summary !== lastSummary) {
+          lastSummary = summary;
+          setValidation(result);
         }
       }
 
@@ -194,15 +214,26 @@ export function useLivePoseDetection(videoRef, { enabled = true, throttleMs = DE
     rafId = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(rafId);
-      // Drop stale results so a later re-enable (e.g. after Retake) starts from a
-      // clean slate instead of a frozen "framed correctly" from the prior session.
-      setIsFramedCorrectly(false);
-      setMissingLandmarks(REQUIRED_LANDMARKS);
-      setFramingReason(null);
+      clearOverlay(overlayRef?.current);
+      // Start the next session (retake, camera switch) from a clean gate.
+      setValidation(null);
     };
-    // videoRef is a stable ref object, not a reactive value — intentionally omitted.
+    // videoRef/overlayRef are stable ref objects, not reactive values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, isModelReady, throttleMs]);
+  }, [enabled, isModelReady, resetKey]);
 
-  return { isModelReady, isFramedCorrectly, missingLandmarks, framingReason, error };
+  // Re-checks a captured still (canvas) before it's accepted -- the frame that
+  // was actually saved, not just the last live one. Stillness is n/a for a still.
+  const checkFrame = useCallback((canvas) => {
+    const landmarker = landmarkerRef.current;
+    if (!landmarker) return null;
+    sampleCanvasRef.current ??= document.createElement('canvas');
+    const landmarks = landmarker.detectForVideo(canvas, nextTimestamp()).landmarks?.[0] ?? null;
+    return validatePose(landmarks, {
+      aspectRatio: canvas.width / canvas.height,
+      brightness: measureBrightness(canvas, sampleCanvasRef.current),
+    });
+  }, []);
+
+  return { isModelReady, validation, error, checkFrame };
 }

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Camera, ImagePlus, Loader2, Ruler, Smartphone, X } from 'lucide-react';
+import { isLikelyDesktop } from '../../utils/device';
 
 // Code-split: LiveCapture pulls in @mediapipe/tasks-vision (WASM), which is only
 // needed once a shopper opens the camera tab. Merchants who only use the (default)
@@ -10,17 +11,6 @@ const LiveCapture = lazy(() => import('./LiveCapture'));
 const MobileHandoff = lazy(() => import('./MobileHandoff'));
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-
-// A laptop's built-in camera is front-facing and awkward for a full-body shot --
-// on a non-touch device, offer a QR handoff to the shopper's phone instead of (or
-// alongside) the local camera. Combines UA sniffing with a pointer-type check
-// since either alone is an unreliable signal (e.g. UA spoofing, some tablets).
-function isLikelyDesktop() {
-  if (typeof navigator === 'undefined') return false;
-  const isMobileUA = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent || '');
-  const hasCoarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-  return !isMobileUA && !hasCoarsePointer;
-}
 
 function confidenceTone(confidence) {
   const pct = confidence * 100;
@@ -38,7 +28,7 @@ function heightToCm(unit, cm, feet, inches) {
   return totalCm > 0 ? totalCm : undefined;
 }
 
-function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size', autoCapture = false }) {
+function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size', autoCapture = true }) {
   const [isDesktop] = useState(isLikelyDesktop);
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState('form'); // form | loading | result | error
@@ -53,6 +43,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
   const [heightInches, setHeightInches] = useState('');
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [poseChecks, setPoseChecks] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const [tryOnStatus, setTryOnStatus] = useState('idle'); // idle | loading | success | error
   const [tryOnImage, setTryOnImage] = useState(null);
@@ -78,6 +69,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
     setFormError('');
     setResult(null);
     setErrorMessage('');
+    setPoseChecks([]);
     setFeedback(null);
     setTryOnStatus('idle');
     setTryOnImage(null);
@@ -138,6 +130,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
       if (!res.ok || !data?.success) {
         setErrorMessage(data?.message || 'Something went wrong while analyzing your photo. Please try again.');
+        setPoseChecks(data?.poseChecks || []);
         setStep('error');
         return;
       }
@@ -546,6 +539,16 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
               <div className="flex flex-col items-center py-6 text-center">
                 <AlertTriangle size={28} className="text-amber-500" />
                 <p className="mt-3 text-sm font-medium text-gray-800">{errorMessage}</p>
+                {poseChecks.length > 1 && (
+                  <ul className="mt-3 space-y-1 text-left text-xs text-gray-600">
+                    {poseChecks.map((check) => (
+                      <li key={check.id} className="flex gap-2">
+                        <span aria-hidden="true">•</span>
+                        {check.message}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <button
                   type="button"
                   onClick={() => setStep('form')}

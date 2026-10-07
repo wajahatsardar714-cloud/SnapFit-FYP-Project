@@ -1,79 +1,31 @@
-import { useEffect, useRef } from 'react';
-import { Camera, RefreshCw } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Camera, RefreshCw, SwitchCamera } from 'lucide-react';
+import { AUTO_CAPTURE_COUNTDOWN_S, MIRROR_PREVIEW } from '../../config/poseConfig';
 import { useCameraStream } from '../../hooks/useCameraStream';
 import { useLivePoseDetection } from '../../hooks/useLivePoseDetection';
-
-const AUTO_CAPTURE_HOLD_MS = 1500;
-const AUTO_CAPTURE_CHECK_MS = 100;
-
-// Friendly grouping for the missingLandmarks names useLivePoseDetection reports
-// (LEFT_SHOULDER, RIGHT_HIP, etc.) — purely presentational.
-const LANDMARK_GROUP_LABEL = {
-  LEFT_SHOULDER: 'shoulders',
-  RIGHT_SHOULDER: 'shoulders',
-  LEFT_HIP: 'hips',
-  RIGHT_HIP: 'hips',
-  LEFT_KNEE: 'knees',
-  RIGHT_KNEE: 'knees',
-  LEFT_ANKLE: 'feet',
-  RIGHT_ANKLE: 'feet',
-};
+import { defaultFacingMode } from '../../utils/device';
+import { alignmentState, primaryInstruction } from '../../utils/poseValidation';
+import PoseGuideOverlay from './PoseGuideOverlay';
 
 const TONE_STYLES = {
-  good: { border: 'border-green-500', text: 'text-green-700' },
-  bad: { border: 'border-red-500', text: 'text-red-600' },
-  // Low-end-device fallback: pose model failed to load or is taking too long
-  // (useLivePoseDetection's load timeout). Capture is enabled but unvalidated.
+  aligned: { border: 'border-green-500', text: 'text-green-700' },
+  partial: { border: 'border-amber-500', text: 'text-amber-700' },
+  searching: { border: 'border-gray-300', text: 'text-gray-700' },
+  // Low-end-device fallback: pose model failed to load or is taking too long.
+  // Capture is enabled but unvalidated here (the server still checks the pose).
   degraded: { border: 'border-amber-500', text: 'text-amber-700' },
   loading: { border: 'border-gray-300', text: 'text-gray-500' },
 };
 
-function describeMissing(missingLandmarks) {
-  const labels = [...new Set(missingLandmarks.map((name) => LANDMARK_GROUP_LABEL[name] || 'body'))];
-  if (labels.length === 0) return 'you';
-  if (labels.length === 1) return `your ${labels[0]}`;
-  return `your ${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
-}
-
-function getStatus({ isModelReady, isFramedCorrectly, missingLandmarks, framingReason, poseError }) {
+function getStatus({ isModelReady, validation, poseError, countdown }) {
   if (poseError) {
-    return { tone: 'degraded', text: 'Live framing guide unavailable on this device — line up a full-body shot and capture manually.' };
+    return { tone: 'degraded', text: 'Live pose guide unavailable on this device — line up a full-body shot and capture manually.' };
   }
-  if (!isModelReady) {
-    return { tone: 'loading', text: 'Loading pose guide…' };
-  }
-  if (isFramedCorrectly) {
-    return { tone: 'good', text: 'Hold still…' };
-  }
-  if (framingReason === 'NO_BODY_DETECTED') {
-    return { tone: 'bad', text: "We can't see you — step into frame" };
-  }
-  if (framingReason === 'MISSING_LANDMARKS') {
-    return { tone: 'bad', text: `Step back, we can't see ${describeMissing(missingLandmarks)}` };
-  }
-  if (framingReason === 'TOO_CLOSE_TO_EDGE') {
-    return { tone: 'bad', text: 'Move into frame' };
-  }
-  if (framingReason === 'TOO_FAR') {
-    return { tone: 'bad', text: 'Move closer to the camera' };
-  }
-  if (framingReason === 'TOO_CLOSE') {
-    return { tone: 'bad', text: 'Step back for a full-body shot' };
-  }
-  return { tone: 'bad', text: 'Adjust your position' };
-}
-
-function SilhouetteOverlay({ good }) {
-  return (
-    <svg viewBox="0 0 200 400" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
-      <g fill="none" stroke={good ? '#22c55e' : '#f8fafc'} strokeOpacity={good ? 0.9 : 0.45} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="100" cy="55" r="24" />
-        <path d="M68 105 Q100 88 132 105 L142 235 Q100 252 58 235 Z" />
-        <path d="M58 235 L42 375" />
-        <path d="M142 235 L158 375" />
-      </g>
-    </svg>
-  );
+  if (!isModelReady) return { tone: 'loading', text: 'Loading pose guide…' };
+  if (!validation) return { tone: 'searching', text: 'Step into the frame so we can see your whole body' };
+  if (countdown != null) return { tone: 'aligned', text: `Hold still — taking your photo in ${countdown}…` };
+  if (validation.ok) return { tone: 'aligned', text: 'Perfect — hold still' };
+  return { tone: alignmentState(validation), text: primaryInstruction(validation) || 'Adjust your position' };
 }
 
 function UploadInsteadLink({ onClick }) {
@@ -86,36 +38,47 @@ function UploadInsteadLink({ onClick }) {
   );
 }
 
-// Required-landmark set comes straight from useLivePoseDetection (shoulders, hips,
-// knees, ankles). Confirmed against snapfit-ai/app/feature_engine.py: the ratios
-// that actually feed size_matcher.py (shoulder_to_hip_ratio, torso_length_ratio,
-// and the measurement-mode chest/shoulder/hip/torso/inseam cm values) all derive
-// from shoulders + hips + ankles — this hook's set is a strict superset of that
-// (it also requires knees, matching the server's own confidence scoring in
-// snapfit-ai/app/utils.py), so a capture that passes here will also score well
-// server-side. Nothing to change here — this component just consumes it as-is.
-function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, autoCapture = false }) {
+function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, autoCapture = true }) {
   const videoRef = useRef(null);
+  const overlayRef = useRef(null);
   const canvasRef = useRef(null);
-  const stableSinceRef = useRef(null);
   const capturingRef = useRef(false);
+  const [initialFacingMode] = useState(defaultFacingMode);
+  const [videoSize, setVideoSize] = useState({ width: 0, height: 0 });
+  const [countdown, setCountdown] = useState(null);
+  const [captureError, setCaptureError] = useState('');
 
   const cameraEnabled = !file;
-  const { stream, status: cameraStatus, error: cameraError } = useCameraStream({ enabled: cameraEnabled });
+  const {
+    stream,
+    status: cameraStatus,
+    error: cameraError,
+    switchCamera,
+    canSwitch,
+  } = useCameraStream({ enabled: cameraEnabled, initialFacingMode });
   const cameraReady = cameraStatus === 'granted';
 
-  const {
-    isModelReady,
-    isFramedCorrectly,
-    missingLandmarks,
-    framingReason,
-    error: poseError,
-  } = useLivePoseDetection(videoRef, { enabled: cameraEnabled && cameraReady });
+  const { isModelReady, validation, error: poseError, checkFrame } = useLivePoseDetection(videoRef, {
+    enabled: cameraEnabled && cameraReady,
+    overlayRef,
+    resetKey: stream?.id,
+  });
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream || null;
+    const video = videoRef.current;
+    if (!video) return undefined;
+    video.srcObject = stream || null;
+    // Track the real frame size (it changes on camera switch / phone rotation)
+    // so the preview box, pose guide and gate all use the true aspect ratio.
+    function handleVideoSize() {
+      if (video.videoWidth) setVideoSize({ width: video.videoWidth, height: video.videoHeight });
     }
+    video.addEventListener('loadedmetadata', handleVideoSize);
+    video.addEventListener('resize', handleVideoSize);
+    return () => {
+      video.removeEventListener('loadedmetadata', handleVideoSize);
+      video.removeEventListener('resize', handleVideoSize);
+    };
   }, [stream]);
 
   useEffect(() => {
@@ -125,8 +88,8 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   }, [cameraStatus, onSwitchToUpload]);
 
   // Degraded mode (pose model failed to load or timed out): let the shopper
-  // capture manually rather than trap them behind a gate that can never turn green.
-  const canCapture = isFramedCorrectly || Boolean(poseError);
+  // capture manually rather than trap them behind a gate that can never pass.
+  const canCapture = Boolean(validation?.ok) || Boolean(poseError);
 
   function handleCapture() {
     if (!canCapture || capturingRef.current) return;
@@ -135,14 +98,25 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     if (!video || !canvas || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
 
     capturingRef.current = true;
+    // Always the raw camera frame: never mirrored, whatever MIRROR_PREVIEW says.
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    if (!poseError) {
+      const recheck = checkFrame(canvas);
+      if (recheck && !recheck.ok) {
+        capturingRef.current = false;
+        setCaptureError(`Almost — ${primaryInstruction(recheck) || 'hold the pose'} and try again.`);
+        return;
+      }
+    }
+
+    setCaptureError('');
     canvas.toBlob(
       (blob) => {
-        // Always release the guard once the async encode settles — if the parent
-        // rejects this file (e.g. over the 10MB limit) `file` never changes, so a
-        // reset keyed on the `file` prop would leave Capture permanently disabled.
+        // Always release the guard once the async encode settles -- if the parent
+        // rejects this file (e.g. over the 10MB limit) `file` never changes.
         capturingRef.current = false;
         if (!blob) return;
         onCapture(new File([blob], `snapfit-capture-${Date.now()}.jpg`, { type: 'image/jpeg' }));
@@ -152,29 +126,30 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     );
   }
 
+  // All checks passing (stillness included) starts a countdown; any check
+  // failing cancels it.
+  const readyForAutoCapture = autoCapture && cameraEnabled && Boolean(validation?.ok);
   useEffect(() => {
-    if (!autoCapture || !cameraEnabled) {
-      stableSinceRef.current = null;
+    if (!readyForAutoCapture) {
+      setCountdown(null);
       return undefined;
     }
-
-    if (!isFramedCorrectly) {
-      stableSinceRef.current = null;
-      return undefined;
-    }
-    if (stableSinceRef.current == null) {
-      stableSinceRef.current = performance.now();
-    }
-
+    let remaining = AUTO_CAPTURE_COUNTDOWN_S;
+    setCountdown(remaining);
     const id = setInterval(() => {
-      if (stableSinceRef.current != null && performance.now() - stableSinceRef.current >= AUTO_CAPTURE_HOLD_MS) {
-        handleCapture();
+      remaining -= 1;
+      if (remaining > 0) {
+        setCountdown(remaining);
+        return;
       }
-    }, AUTO_CAPTURE_CHECK_MS);
-
+      clearInterval(id);
+      setCountdown(null);
+      handleCapture();
+    }, 1000);
     return () => clearInterval(id);
+    // handleCapture reads the latest refs/state at fire time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoCapture, cameraEnabled, isFramedCorrectly]);
+  }, [readyForAutoCapture]);
 
   if (file) {
     return (
@@ -213,31 +188,68 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     );
   }
 
-  const status = getStatus({ isModelReady, isFramedCorrectly, missingLandmarks, framingReason, poseError });
+  const status = getStatus({ isModelReady, validation, poseError, countdown });
   const { border: borderClass, text: textClass } = TONE_STYLES[status.tone];
+  const aspect = videoSize.width && videoSize.height ? videoSize.width / videoSize.height : 3 / 4;
 
   return (
     <div>
-      <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-lg border-4 bg-gray-900 transition-colors ${borderClass}`}>
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-        <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-contain" />
-        <SilhouetteOverlay good={status.tone === 'good'} />
+      <div
+        className={`relative mx-auto overflow-hidden rounded-lg border-4 bg-gray-900 transition-colors ${borderClass}`}
+        style={{ aspectRatio: aspect, width: `min(100%, calc(65vh * ${aspect}))` }}
+      >
+        <div className="absolute inset-0" style={MIRROR_PREVIEW ? { transform: 'scaleX(-1)' } : undefined}>
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="h-full w-full object-cover"
+          />
+          <canvas ref={overlayRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+          <PoseGuideOverlay
+            width={videoSize.width}
+            height={videoSize.height}
+            state={poseError || !isModelReady ? 'searching' : alignmentState(validation)}
+          />
+        </div>
+
+        {countdown != null && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="text-7xl font-bold text-white drop-shadow-lg" aria-live="assertive">
+              {countdown}
+            </span>
+          </div>
+        )}
+
+        {canSwitch && (
+          <button
+            type="button"
+            onClick={switchCamera}
+            aria-label="Switch camera"
+            className="absolute right-2 top-2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+          >
+            <SwitchCamera size={18} />
+          </button>
+        )}
       </div>
       <canvas ref={canvasRef} className="hidden" />
 
-      <p className={`mt-2 text-center text-sm font-medium ${textClass}`}>{status.text}</p>
+      <p className={`mt-2 text-center text-sm font-medium ${textClass}`} aria-live="polite">
+        {status.text}
+      </p>
+      {captureError && <p className="mt-1 text-center text-xs text-red-600">{captureError}</p>}
 
-      {(!autoCapture || Boolean(poseError)) && (
-        <button
-          type="button"
-          onClick={handleCapture}
-          disabled={!canCapture}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Camera size={16} />
-          Capture
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={handleCapture}
+        disabled={!canCapture}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <Camera size={16} />
+        Capture
+      </button>
 
       <UploadInsteadLink onClick={onSwitchToUpload} />
     </div>
