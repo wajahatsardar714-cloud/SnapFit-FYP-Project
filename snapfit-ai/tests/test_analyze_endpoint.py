@@ -1,4 +1,5 @@
 import io
+import json
 import os
 
 import pytest
@@ -76,3 +77,30 @@ def test_try_on_validates_pose_before_fetching_product(monkeypatch, a_pose):
     )
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "POSE_INVALID"
+
+
+def test_analyze_returns_measurement_comparison_and_keeps_legacy_fields(monkeypatch, a_pose):
+    monkeypatch.setattr(main, "extract_landmarks", lambda _bytes: _fake_pose(a_pose))
+    chart = {
+        "unit": "cm",
+        "category": "tops",
+        "sizes": [
+            {"label": "M", "measurements": {"chest": {"min": 90, "max": 98}}},
+            {"label": "L", "measurements": {"chest": {"min": 98, "max": 106}}},
+        ],
+    }
+    response = client.post(
+        "/analyze",
+        files={"image": ("photo.jpg", _jpeg_bytes(), "image/jpeg")},
+        data={"user_height": "175", "size_chart": json.dumps(chart)},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body["size_recommendation"]) == {"recommended_size", "confidence", "fit_scores", "body_type", "notes"}
+    assert body["recommendedSize"] == body["size_recommendation"]["recommended_size"]
+    assert body["alternativeSize"] in ("M", "L")
+    assert body["measurements"]["chest"]["estimated"] is True
+    assert [size["label"] for size in body["sizeComparison"]] == ["M", "L"]
+    assert body["sizeComparison"][0]["perMeasurement"][0]["name"] == "chest"
+    assert isinstance(body["fitNotes"], list)

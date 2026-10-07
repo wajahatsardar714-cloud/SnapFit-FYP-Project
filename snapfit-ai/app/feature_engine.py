@@ -56,6 +56,10 @@ def calculate_features(landmarks, image_height, image_width, user_height_cm=None
         "chest_width_estimate_ratio": chest_width_estimate_ratio,
     }
 
+    # Legacy, kept only for /analyze response compatibility: scales by
+    # shoulder-to-ankle distance as if it were full height, so values run ~20%
+    # high and chest is a width, not a circumference. Size matching uses
+    # measurement_engine.estimate_measurements instead.
     estimated_cm = None
     if user_height_cm is not None:
         pixel_to_cm_ratio = user_height_cm / body_height_px

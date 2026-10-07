@@ -9,6 +9,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.feature_engine import calculate_features
+from app.measurement_engine import estimate_measurements
 from app.pose_estimator import PoseEstimationError, extract_landmarks
 from app.pose_validator import PoseInvalidError, assert_valid_pose
 from app.size_matcher import SizeMatchError, recommend_size
@@ -43,6 +44,11 @@ async def log_requests(request: Request, call_next):
     outcome = "SUCCESS" if response.status_code < 400 else "FAILURE"
     logger.info(f"{request.method} {request.url.path} {response.status_code} {outcome} ({elapsed_ms:.1f}ms)")
     return response
+
+
+# size_recommendation keeps its original shape; the per-measurement comparison
+# is returned in the newer top-level fields.
+LEGACY_RECOMMENDATION_KEYS = ("recommended_size", "confidence", "fit_scores", "body_type", "notes")
 
 
 def _pose_invalid_exception(error):
@@ -85,8 +91,11 @@ async def analyze(
         pose["key_landmarks"], image_dimensions["height"], image_dimensions["width"], user_height
     )
     confidence = calculate_confidence(pose["landmarks"])
+    measurements = estimate_measurements(
+        pose["landmarks"], image_dimensions["width"], image_dimensions["height"], user_height
+    )
 
-    size_recommendation = None
+    match = None
     if size_chart:
         try:
             chart = json.loads(size_chart)
@@ -94,7 +103,7 @@ async def analyze(
             raise HTTPException(status_code=400, detail="INVALID_SIZE_CHART_JSON")
 
         try:
-            size_recommendation = recommend_size(features, chart, user_height)
+            match = recommend_size(features, chart, measurements)
         except SizeMatchError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
@@ -103,7 +112,12 @@ async def analyze(
         "key_landmarks": pose["key_landmarks"],
         "confidence": confidence,
         "features": features,
-        "size_recommendation": size_recommendation,
+        "size_recommendation": {key: match[key] for key in LEGACY_RECOMMENDATION_KEYS} if match else None,
+        "measurements": measurements,
+        "sizeComparison": match["size_comparison"] if match else None,
+        "recommendedSize": match["recommended_size"] if match else None,
+        "alternativeSize": match["alternative_size"] if match else None,
+        "fitNotes": match["fit_notes"] if match else [],
     }
 
 
