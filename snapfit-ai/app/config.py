@@ -10,7 +10,7 @@ from types import MappingProxyType
 #   *_deg -> degrees, measured in pixel space (aspect-corrected)
 #   brightness_* -> mean luma, 0-255
 #   head_top_from_nose_factor -> head top sits this many (nose -> shoulder-line)
-#     distances above the nose; 1.0 leaves room for hair
+#     distances above the nose (0.8 ~ top of the skull)
 #   shoulder_depth_ratio_max -> max |z(left) - z(right)| shoulder difference as a
 #     fraction of on-screen shoulder width (BlazePose z shares the x scale)
 _RULES_PATH = os.path.join(os.path.dirname(__file__), "pose_rules.json")

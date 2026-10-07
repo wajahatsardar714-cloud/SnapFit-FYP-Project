@@ -37,7 +37,7 @@ def test_analyze_accepts_a_valid_pose(monkeypatch, a_pose):
 
 def test_analyze_rejects_an_invalid_pose_with_failed_checks(monkeypatch, a_pose):
     for point in a_pose["landmarks"].values():
-        point["x"] += 0.15
+        point["x"] += 0.22
     monkeypatch.setattr(main, "extract_landmarks", lambda _bytes: _fake_pose(a_pose))
     response = client.post("/analyze", files={"image": ("photo.jpg", _jpeg_bytes(), "image/jpeg")})
     assert response.status_code == 422

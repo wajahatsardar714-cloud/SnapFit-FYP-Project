@@ -13,11 +13,11 @@ export const MIRROR_PREVIEW = false;
 //   *Deg -> degrees, measured in aspect-corrected pixel space
 //   brightness* -> mean luma, 0-255
 //   headTopFromNoseFactor -> head top sits this many (nose -> shoulder line)
-//     distances above the nose; 1.0 leaves room for hair
+//     distances above the nose (0.8 ~ top of the skull)
 //   shoulderDepthRatioMax -> max shoulder z-difference as a fraction of
 //     on-screen shoulder width (BlazePose z shares the x scale)
 export const POSE_RULES = Object.freeze({
-  visibilityThreshold: 0.6,
+  visibilityThreshold: 0.5,
   requiredLandmarks: Object.freeze([
     'NOSE',
     'LEFT_SHOULDER',
@@ -32,30 +32,28 @@ export const POSE_RULES = Object.freeze({
     'RIGHT_KNEE',
     'LEFT_ANKLE',
     'RIGHT_ANKLE',
-    'LEFT_HEEL',
-    'RIGHT_HEEL',
   ]),
-  frameMargin: 0.02,
-  headTopFromNoseFactor: 1.0,
-  bodyHeightMin: 0.65,
-  bodyHeightMax: 0.9,
-  centerTolerance: 0.1,
-  shoulderHipRatioMin: 1.1,
-  shoulderHipRatioMax: 2.6,
-  shoulderTorsoRatioMin: 0.45,
-  shoulderDepthRatioMax: 0.5,
-  lineTiltMaxDeg: 5,
-  torsoLeanMaxDeg: 8,
-  elbowAngleMinDeg: 150,
-  armAbductionMinDeg: 15,
-  armAbductionMaxDeg: 45,
-  kneeAngleMinDeg: 160,
-  feetHipRatioMin: 0.7,
-  feetHipRatioMax: 2.2,
-  stillnessWindowMs: 1000,
-  stillnessMaxMovement: 0.02,
-  brightnessMin: 40,
-  brightnessMax: 240,
+  frameMargin: 0.01,
+  headTopFromNoseFactor: 0.8,
+  bodyHeightMin: 0.55,
+  bodyHeightMax: 0.93,
+  centerTolerance: 0.18,
+  shoulderHipRatioMin: 1.0,
+  shoulderHipRatioMax: 2.8,
+  shoulderTorsoRatioMin: 0.4,
+  shoulderDepthRatioMax: 0.7,
+  lineTiltMaxDeg: 8,
+  torsoLeanMaxDeg: 12,
+  elbowAngleMinDeg: 140,
+  armAbductionMinDeg: 8,
+  armAbductionMaxDeg: 60,
+  kneeAngleMinDeg: 150,
+  feetHipRatioMin: 0.4,
+  feetHipRatioMax: 2.8,
+  stillnessWindowMs: 700,
+  stillnessMaxMovement: 0.035,
+  brightnessMin: 35,
+  brightnessMax: 245,
 });
 
 // How often the live detector runs (ms). ~7 fps is enough for framing feedback
@@ -64,7 +62,11 @@ export const DETECTION_INTERVAL_MS = 150;
 
 // Once every check passes (stillness included), count down this long, then
 // capture automatically.
-export const AUTO_CAPTURE_COUNTDOWN_S = 3;
+export const AUTO_CAPTURE_COUNTDOWN_S = 2;
+
+// A pose that just passed stays "passing" through failures shorter than this,
+// so one jittery detection frame doesn't reset the countdown.
+export const PASS_GRACE_MS = 600;
 
 // Brightness is sampled from a tiny downscale of the video frame.
 export const BRIGHTNESS_SAMPLE_SIZE = 32;

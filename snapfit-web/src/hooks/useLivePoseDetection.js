@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BRIGHTNESS_SAMPLE_SIZE, DETECTION_INTERVAL_MS, POSE_RULES } from '../config/poseConfig';
+import { BRIGHTNESS_SAMPLE_SIZE, DETECTION_INTERVAL_MS, PASS_GRACE_MS, POSE_RULES } from '../config/poseConfig';
 import { primaryInstruction, validatePose } from '../utils/poseValidation';
 
 // Same package version on the client (WASM) and server (Python mediapipe==1.0.1, see
@@ -172,6 +172,7 @@ export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = nu
     let lastDetectAt = 0;
     let lastVideoTime = -1;
     let lastSummary = null;
+    let lastPass = null; // { time, result } of the most recent passing frame
     const history = [];
     sampleCanvasRef.current ??= document.createElement('canvas');
 
@@ -199,12 +200,16 @@ export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = nu
           brightness: measureBrightness(video, sampleCanvasRef.current),
           history: landmarks ? history : null,
         });
-        drawSkeleton(overlayRef?.current, video, landmarks, result.ok ? '#10B981' : '#F8FAFC');
+        // Grace period: a brief failure right after a pass (one jittery frame)
+        // keeps reporting the pass, so the countdown isn't reset.
+        if (result.ok) lastPass = { time: now, result };
+        const shown = !result.ok && lastPass && now - lastPass.time < PASS_GRACE_MS ? lastPass.result : result;
+        drawSkeleton(overlayRef?.current, video, landmarks, shown.ok ? '#10B981' : '#F8FAFC');
 
-        const summary = summarize(result);
+        const summary = summarize(shown);
         if (summary !== lastSummary) {
           lastSummary = summary;
-          setValidation(result);
+          setValidation(shown);
         }
       }
 

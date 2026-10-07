@@ -92,7 +92,13 @@ describe('validatePose', () => {
   });
 
   it('fails too close and too far on distance', () => {
-    const tooClose = validate(landmarks((n) => scaleAbout(n, 1.15)));
+    // Taller than the accepted range but still fully inside the frame.
+    const tooClose = validate(
+      landmarks((n) => {
+        scaleAbout(n, 1.22, 0.5, 0.5265);
+        Object.values(n).forEach((p) => (p.y -= 0.0265));
+      })
+    );
     expect(failedIds(tooClose)).toEqual(['distance']);
     expect(primaryInstruction(tooClose)).toBe('Step back a little');
 
@@ -102,7 +108,7 @@ describe('validatePose', () => {
   });
 
   it('fails an off-centre body on centered', () => {
-    expect(failedIds(validate(landmarks((n) => Object.values(n).forEach((p) => (p.x += 0.15)))))).toEqual(['centered']);
+    expect(failedIds(validate(landmarks((n) => Object.values(n).forEach((p) => (p.x += 0.22)))))).toEqual(['centered']);
   });
 
   it('fails dark and blown-out frames on lighting', () => {
@@ -128,7 +134,7 @@ describe('validatePose', () => {
     });
 
     it('fails a moving sequence', () => {
-      const history = frames(8, 150, (n, i) => Object.values(n).forEach((p) => (p.x += i * 0.01)));
+      const history = frames(8, 150, (n, i) => Object.values(n).forEach((p) => (p.x += i * 0.02)));
       const result = validate(history.at(-1).landmarks, { history });
       expect(failedIds(result)).toEqual(['stillness']);
       expect(primaryInstruction(result)).toBe('Hold still');

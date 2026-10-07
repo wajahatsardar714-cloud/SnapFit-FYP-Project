@@ -546,7 +546,7 @@ else:
   productId="SKU-1029"
   apiUrl="${API_BASE}"
   buttonLabel="Check My Size"
-  autoCapture={true} // optional — false turns off the 3s auto-capture countdown (manual button only)
+  autoCapture={true} // optional — false turns off the 2s auto-capture countdown (manual button only)
 />`;
 
   const iframeExample = `<iframe
@@ -807,7 +807,7 @@ else:
                   type: 'boolean',
                   required: false,
                   description:
-                    'Defaults to true: once the shopper holds a valid pose, a 3-second countdown captures the photo automatically. The manual Capture button is always available once the pose is valid; set false to use it only.',
+                    'Defaults to true: once the shopper holds a valid pose, a 2-second countdown captures the photo automatically. The manual Capture button is always available once the pose is valid; set false to use it only.',
                 },
               ]}
             />

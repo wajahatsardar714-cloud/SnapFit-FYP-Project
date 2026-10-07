@@ -102,7 +102,10 @@ def test_tilted_shoulders_fail_level(a_pose):
 
 
 def test_too_close_fails_distance(a_pose):
-    _scale_about(a_pose["landmarks"], 1.15)
+    # Taller than the accepted range but still fully inside the frame.
+    _scale_about(a_pose["landmarks"], 1.22, cy=0.5265)
+    for point in a_pose["landmarks"].values():
+        point["y"] -= 0.0265
     result = _validate(a_pose)
     assert _failed_ids(result) == ["distance"]
     assert failed_checks(result)[0]["message"] == "Step back a little"
@@ -117,13 +120,13 @@ def test_too_far_fails_distance(a_pose):
 
 def test_off_centre_fails_centered(a_pose):
     for point in a_pose["landmarks"].values():
-        point["x"] += 0.15
+        point["x"] += 0.22
     assert _failed_ids(_validate(a_pose)) == ["centered"]
 
 
 def test_head_cut_off_fails_framing(a_pose):
     for point in a_pose["landmarks"].values():
-        point["y"] -= 0.12
+        point["y"] -= 0.14
     assert _failed_ids(_validate(a_pose))[0] == "framing"
 
 
