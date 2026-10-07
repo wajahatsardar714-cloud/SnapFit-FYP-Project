@@ -14,7 +14,9 @@ function loadStoredConfig() {
 
 function SizeCheckDemo() {
   const stored = loadStoredConfig();
-  const [apiKey, setApiKey] = useState(stored.apiKey || '');
+  // VITE_DEMO_API_KEY (optional, local .env only) pre-fills a working key so the
+  // demo is usable straight away; a key typed here still takes priority.
+  const [apiKey, setApiKey] = useState(stored.apiKey || import.meta.env.VITE_DEMO_API_KEY || '');
   const [productId, setProductId] = useState(stored.productId || 'demo-product-1');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
