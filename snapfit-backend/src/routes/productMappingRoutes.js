@@ -1,48 +1,31 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { body, param } = require('express-validator');
 const { protect } = require('../middlewares/authMiddleware');
+const { uploadProductImage } = require('../utils/productImageUpload');
 const {
   mapProduct,
   getProductMappings,
   removeMapping,
+  setProductImage,
+  deleteProductImage,
   saveAnchorPoints,
   getAnchorPointsForProduct,
 } = require('../controllers/productMappingController');
 
 const router = express.Router();
 
-const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'products');
-fs.mkdirSync(uploadDir, { recursive: true });
+const mappingIdValidation = [param('id').isMongoId().withMessage('Invalid product mapping ID')];
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed'));
-    }
-    cb(null, true);
-  },
-});
-
-function uploadProductImage(req, res, next) {
-  upload.single('image')(req, res, (err) => {
-    if (err) {
-      return res.status(400).json({ message: err.message || 'Image upload failed' });
-    }
-    next();
-  });
-}
+const mapValidation = [
+  body('productId').trim().notEmpty().withMessage('Product ID is required'),
+  body('productName').optional({ checkFalsy: true }).trim(),
+  body('sizeChartId')
+    .notEmpty()
+    .withMessage('Size chart is required')
+    .bail()
+    .isMongoId()
+    .withMessage('Invalid size chart ID'),
+];
 
 // Internal, service-to-service lookup for the AI microservice's try-on endpoint
 // (Phase 12 / Prompt 30) -- no merchant credential exists in that context, so this
@@ -54,9 +37,12 @@ router.get('/anchor-points', getAnchorPointsForProduct);
 
 router.use(protect);
 
-router.post('/map', mapProduct);
+// Accepts JSON, or multipart with an optional `image` (the product photo).
+router.post('/map', uploadProductImage(), mapValidation, mapProduct);
 router.get('/mappings', getProductMappings);
-router.delete('/map/:id', removeMapping);
-router.put('/:id/anchor-points', uploadProductImage, saveAnchorPoints);
+router.delete('/map/:id', mappingIdValidation, removeMapping);
+router.put('/:id/image', uploadProductImage({ required: true }), mappingIdValidation, setProductImage);
+router.delete('/:id/image', mappingIdValidation, deleteProductImage);
+router.put('/:id/anchor-points', uploadProductImage(), mappingIdValidation, saveAnchorPoints);
 
 module.exports = router;

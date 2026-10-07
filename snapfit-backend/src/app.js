@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const os = require('os');
-const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
@@ -14,6 +13,7 @@ const tryOnRoutes = require('./routes/tryOnRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const handoffRoutes = require('./routes/handoffRoutes');
+const { PRODUCTS_DIR } = require('./utils/productImageUpload');
 
 const app = express();
 
@@ -21,7 +21,7 @@ app.use(cors());
 app.use(express.json());
 // Persisted product flat-lay images (Phase 12 virtual try-on) — served by URL so
 // both the dashboard and the AI microservice can fetch them.
-app.use('/uploads/products', express.static(path.join(__dirname, '..', 'uploads', 'products')));
+app.use('/uploads/products', express.static(PRODUCTS_DIR));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

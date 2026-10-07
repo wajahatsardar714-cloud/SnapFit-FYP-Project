@@ -1,7 +1,7 @@
-const fs = require('fs/promises');
-const path = require('path');
+const { validationResult } = require('express-validator');
 const ProductMapping = require('../models/ProductMapping');
 const SizeChart = require('../models/SizeChart');
+const { productImageUrlPath, removeFile, removeProductImage } = require('../utils/productImageUpload');
 
 const REQUIRED_ANCHOR_POINTS = ['shoulderLeft', 'shoulderRight', 'hipLeft', 'hipRight'];
 
@@ -31,33 +31,80 @@ function parseAnchorPoints(raw) {
   return { points: parsed };
 }
 
-async function mapProduct(req, res) {
-  const { productId, productName, sizeChartId } = req.body;
+// 'ready' (image + all 4 anchor points) | 'image_missing' | 'anchors_missing'
+function tryOnStatus(mapping) {
+  if (!mapping.productImage) return 'image_missing';
+  const anchors = mapping.anchorPoints || {};
+  const complete = REQUIRED_ANCHOR_POINTS.every(
+    (key) => Number.isFinite(anchors[key]?.x) && Number.isFinite(anchors[key]?.y)
+  );
+  return complete ? 'ready' : 'anchors_missing';
+}
 
-  if (!productId || !String(productId).trim()) {
-    return res.status(400).json({ message: 'Product ID is required' });
+function serializeMapping(mapping) {
+  return { ...mapping.toObject(), tryOnStatus: tryOnStatus(mapping) };
+}
+
+// Product info the shopper-facing widget may see (scoped to the API key's own
+// merchant by the caller).
+function widgetProductInfo(mapping, req) {
+  return {
+    productId: mapping.productId,
+    productName: mapping.productName || null,
+    imageUrl: mapping.productImage ? `${req.protocol}://${req.get('host')}${mapping.productImage}` : null,
+    tryOnReady: tryOnStatus(mapping) === 'ready',
+  };
+}
+
+function sendValidationErrors(req, res) {
+  const errors = validationResult(req);
+  if (errors.isEmpty()) return false;
+  res.status(400).json({ message: errors.array()[0].msg, errors: errors.array() });
+  return true;
+}
+
+async function discardUpload(req) {
+  if (req.file) await removeFile(req.file.path);
+}
+
+async function findOwnMapping(req) {
+  return ProductMapping.findOne({ _id: req.params.id, merchantId: req.merchant.merchantId });
+}
+
+async function mapProduct(req, res) {
+  if (sendValidationErrors(req, res)) {
+    await discardUpload(req);
+    return undefined;
   }
-  if (!sizeChartId) {
-    return res.status(400).json({ message: 'Size chart is required' });
-  }
+  const { productId, productName, sizeChartId } = req.body;
 
   try {
     const chart = await SizeChart.findOne({ _id: sizeChartId, merchantId: req.merchant.merchantId });
     if (!chart) {
+      await discardUpload(req);
       return res.status(404).json({ message: 'Size chart not found' });
     }
 
-    const mapping = await ProductMapping.findOneAndUpdate(
-      { merchantId: req.merchant.merchantId, productId },
-      { productName, sizeChartId },
-      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-    );
-
-    return res.status(200).json({ mapping });
-  } catch (err) {
-    if (err.name === 'CastError') {
-      return res.status(400).json({ message: 'Invalid size chart ID' });
+    const update = { productName, sizeChartId };
+    let previousImage = null;
+    if (req.file) {
+      const existing = await ProductMapping.findOne({ merchantId: req.merchant.merchantId, productId });
+      previousImage = existing?.productImage || null;
+      // A new photo invalidates anchor points placed on the old one.
+      Object.assign(update, { productImage: productImageUrlPath(req.file), $unset: { anchorPoints: 1 } });
     }
+
+    const mapping = await ProductMapping.findOneAndUpdate({ merchantId: req.merchant.merchantId, productId }, update, {
+      new: true,
+      upsert: true,
+      runValidators: true,
+      setDefaultsOnInsert: true,
+    });
+    if (previousImage) await removeProductImage(previousImage);
+
+    return res.status(200).json({ mapping: serializeMapping(mapping) });
+  } catch (err) {
+    await discardUpload(req);
     return res.status(500).json({ message: 'Failed to map product', error: err.message });
   }
 }
@@ -68,13 +115,14 @@ async function getProductMappings(req, res) {
       .populate('sizeChartId', 'name category')
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({ mappings });
+    return res.status(200).json({ mappings: mappings.map(serializeMapping) });
   } catch (err) {
     return res.status(500).json({ message: 'Failed to fetch product mappings', error: err.message });
   }
 }
 
 async function removeMapping(req, res) {
+  if (sendValidationErrors(req, res)) return undefined;
   try {
     const mapping = await ProductMapping.findOneAndDelete({
       _id: req.params.id,
@@ -84,33 +132,80 @@ async function removeMapping(req, res) {
     if (!mapping) {
       return res.status(404).json({ message: 'Product mapping not found' });
     }
+    await removeProductImage(mapping.productImage);
 
     return res.status(200).json({ message: 'Product mapping removed' });
   } catch (err) {
-    if (err.name === 'CastError') {
-      return res.status(404).json({ message: 'Product mapping not found' });
-    }
     return res.status(500).json({ message: 'Failed to remove product mapping', error: err.message });
   }
 }
 
-// Helper for the future recommendation API — not exposed as its own route yet.
-async function getChartForProduct(merchantId, productId) {
-  const mapping = await ProductMapping.findOne({ merchantId, productId }).populate('sizeChartId');
-  return mapping ? mapping.sizeChartId : null;
+// Mapping + its populated size chart, for the recommendation API.
+async function getMappingForProduct(merchantId, productId) {
+  return ProductMapping.findOne({ merchantId, productId }).populate('sizeChartId');
+}
+
+async function setProductImage(req, res) {
+  if (sendValidationErrors(req, res)) {
+    await discardUpload(req);
+    return undefined;
+  }
+  try {
+    const mapping = await findOwnMapping(req);
+    if (!mapping) {
+      await discardUpload(req);
+      return res.status(404).json({ message: 'Product mapping not found' });
+    }
+
+    const previousImage = mapping.productImage;
+    mapping.productImage = productImageUrlPath(req.file);
+    // A new photo invalidates anchor points placed on the old one.
+    mapping.anchorPoints = undefined;
+    await mapping.save();
+    await removeProductImage(previousImage);
+
+    return res.status(200).json({ mapping: serializeMapping(mapping) });
+  } catch (err) {
+    await discardUpload(req);
+    return res.status(500).json({ message: 'Failed to save product image', error: err.message });
+  }
+}
+
+async function deleteProductImage(req, res) {
+  if (sendValidationErrors(req, res)) return undefined;
+  try {
+    const mapping = await findOwnMapping(req);
+    if (!mapping) {
+      return res.status(404).json({ message: 'Product mapping not found' });
+    }
+
+    const previousImage = mapping.productImage;
+    mapping.productImage = undefined;
+    mapping.anchorPoints = undefined;
+    await mapping.save();
+    await removeProductImage(previousImage);
+
+    return res.status(200).json({ mapping: serializeMapping(mapping) });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to remove product image', error: err.message });
+  }
 }
 
 async function saveAnchorPoints(req, res) {
+  if (sendValidationErrors(req, res)) {
+    await discardUpload(req);
+    return undefined;
+  }
   const { error, points } = parseAnchorPoints(req.body.anchorPoints);
   if (error) {
-    if (req.file) await fs.unlink(req.file.path).catch(() => {});
+    await discardUpload(req);
     return res.status(400).json({ message: error });
   }
 
   try {
-    const mapping = await ProductMapping.findOne({ _id: req.params.id, merchantId: req.merchant.merchantId });
+    const mapping = await findOwnMapping(req);
     if (!mapping) {
-      if (req.file) await fs.unlink(req.file.path).catch(() => {});
+      await discardUpload(req);
       return res.status(404).json({ message: 'Product mapping not found' });
     }
 
@@ -118,24 +213,18 @@ async function saveAnchorPoints(req, res) {
       return res.status(400).json({ message: 'A product image is required' });
     }
 
-    const previousImagePath = mapping.productImage;
+    const previousImage = mapping.productImage;
     if (req.file) {
-      mapping.productImage = `/uploads/products/${req.file.filename}`;
+      mapping.productImage = productImageUrlPath(req.file);
     }
     mapping.anchorPoints = points;
     await mapping.save();
 
-    if (req.file && previousImagePath) {
-      const absolutePrevious = path.join(__dirname, '..', '..', previousImagePath);
-      await fs.unlink(absolutePrevious).catch(() => {});
-    }
+    if (req.file) await removeProductImage(previousImage);
 
-    return res.status(200).json({ mapping });
+    return res.status(200).json({ mapping: serializeMapping(mapping) });
   } catch (err) {
-    if (req.file) await fs.unlink(req.file.path).catch(() => {});
-    if (err.name === 'CastError') {
-      return res.status(404).json({ message: 'Product mapping not found' });
-    }
+    await discardUpload(req);
     return res.status(500).json({ message: 'Failed to save anchor points', error: err.message });
   }
 }
@@ -148,7 +237,7 @@ async function getAnchorPointsForProduct(req, res) {
 
   try {
     const mapping = await ProductMapping.findOne({ merchantId, productId });
-    if (!mapping || !mapping.anchorPoints || !mapping.productImage) {
+    if (!mapping || tryOnStatus(mapping) !== 'ready') {
       return res.status(404).json({ message: 'No anchor points configured for this product' });
     }
 
@@ -168,7 +257,11 @@ module.exports = {
   mapProduct,
   getProductMappings,
   removeMapping,
-  getChartForProduct,
+  getMappingForProduct,
+  setProductImage,
+  deleteProductImage,
   saveAnchorPoints,
   getAnchorPointsForProduct,
+  tryOnStatus,
+  widgetProductInfo,
 };

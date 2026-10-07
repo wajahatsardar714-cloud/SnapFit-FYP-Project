@@ -1,6 +1,6 @@
 const fs = require('fs/promises');
 const Recommendation = require('../models/Recommendation');
-const { getChartForProduct } = require('./productMappingController');
+const { getMappingForProduct, widgetProductInfo } = require('./productMappingController');
 const { analyzeImage } = require('../services/aiService');
 const { aiErrorResponse } = require('../utils/aiErrors');
 
@@ -38,14 +38,15 @@ async function recommend(req, res) {
     }
   }
 
-  let sizeChart;
+  let mapping;
   try {
-    sizeChart = await getChartForProduct(merchant._id, productId);
+    mapping = await getMappingForProduct(merchant._id, productId);
   } catch (err) {
     await cleanupUpload(req.file);
     return res.status(500).json({ success: false, message: 'Failed to look up product mapping', error: err.message });
   }
 
+  const sizeChart = mapping?.sizeChartId;
   if (!sizeChart) {
     await cleanupUpload(req.file);
     return res.status(404).json({
@@ -122,6 +123,7 @@ async function recommend(req, res) {
       notes: sizeRecommendation.notes,
       fitScores: sizeRecommendation.fit_scores,
     },
+    product: widgetProductInfo(mapping, req),
   });
 }
 
