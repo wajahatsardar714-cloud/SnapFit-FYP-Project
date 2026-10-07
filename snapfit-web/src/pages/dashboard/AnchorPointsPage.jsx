@@ -4,8 +4,12 @@ import toast from 'react-hot-toast';
 import { ImagePlus, Loader2 } from 'lucide-react';
 import api from '../../services/api';
 import Button from '../../components/ui/Button';
-
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+import {
+  PRODUCT_IMAGE_ACCEPT,
+  PRODUCT_IMAGE_HINT,
+  resolveProductImageUrl,
+  validateProductImageFile,
+} from '../../utils/productImage';
 
 // Four visually-distinct dots are needed to tell the draggable landmarks apart
 // on the photo -- reuses the theme's existing primary/warning/success/danger
@@ -24,11 +28,6 @@ const DEFAULT_POINTS = {
   hipLeft: { x: 0.32, y: 0.55 },
   hipRight: { x: 0.68, y: 0.55 },
 };
-
-function resolveImageUrl(productImage) {
-  if (!productImage) return null;
-  return productImage.startsWith('http') ? productImage : `${API_ORIGIN}${productImage}`;
-}
 
 function AnchorMarker({ point, label, color, containerRef, onDrag }) {
   function updateFromEvent(e) {
@@ -92,7 +91,7 @@ function AnchorPointsPage() {
             hipRight: found.anchorPoints.hipRight || DEFAULT_POINTS.hipRight,
           });
         }
-        setImagePreviewUrl(resolveImageUrl(found.productImage));
+        setImagePreviewUrl(resolveProductImageUrl(found.productImage));
       })
       .catch(() => toast.error('Failed to load product mapping'))
       .finally(() => setLoading(false));
@@ -112,8 +111,10 @@ function AnchorPointsPage() {
   function handleImageChange(e) {
     const selected = e.target.files?.[0];
     if (!selected) return;
-    if (!selected.type.startsWith('image/')) {
-      toast.error('Please choose an image file (JPG or PNG).');
+    e.target.value = '';
+    const problem = validateProductImageFile(selected);
+    if (problem) {
+      toast.error(problem);
       return;
     }
     setImageFile(selected);
@@ -164,8 +165,8 @@ function AnchorPointsPage() {
         <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-surface-border p-10 text-center transition-colors duration-150 hover:border-primary">
           <ImagePlus size={28} className="text-ink-300" />
           <p className="mt-2 text-sm text-ink-700">Click to upload a product flat-lay photo</p>
-          <p className="mt-1 text-xs text-ink-500">JPG or PNG, up to 10MB</p>
-          <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+          <p className="mx-auto mt-1 max-w-md text-xs text-ink-500">{PRODUCT_IMAGE_HINT}</p>
+          <input type="file" accept={PRODUCT_IMAGE_ACCEPT} className="hidden" onChange={handleImageChange} />
         </label>
       ) : (
         <>
@@ -197,7 +198,7 @@ function AnchorPointsPage() {
 
           <label className="mt-4 inline-block cursor-pointer text-sm font-medium text-primary underline">
             Replace photo
-            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            <input type="file" accept={PRODUCT_IMAGE_ACCEPT} className="hidden" onChange={handleImageChange} />
           </label>
         </>
       )}
