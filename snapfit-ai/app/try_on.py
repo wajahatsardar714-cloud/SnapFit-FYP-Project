@@ -6,8 +6,8 @@ The product's 4 anchor points (shoulders, hips) and two interpolated bands
 grid, so the garment follows the torso rather than one flat perspective
 plane. Body widths at each band use the same anthropometric breadth model as
 measurement_engine. The garment is clipped to a landmark-built body
-silhouette (with fabric allowance), forearms stay on top of it, and the
-torso's shading is transferred onto it.
+silhouette (with fabric allowance), forearms stay on top of it, and its
+brightness is matched to the scene.
 
 Silhouette from landmarks rather than MediaPipe's segmentation mask: reading
 that mask in the pinned mediapipe 1.0.1 aborts the whole process
@@ -53,6 +53,9 @@ FOREARM_WIDTH = 0.26
 HAND_RADIUS = 0.14
 THIGH_WIDTH = 0.42
 FABRIC_ALLOWANCE = 0.08
+# Garments hang below the hip line (hems, tunics): the torso silhouette is
+# extended this fraction of the shoulder-to-hip distance below the hips.
+HEM_ALLOWANCE = 0.4
 VISIBLE = 0.5
 
 # Plain-background detection for product photos without transparency.
@@ -63,10 +66,17 @@ GRABCUT_ITERATIONS = 3
 GRABCUT_INSET = 0.03
 
 CROP_PADDING = 3
+# Product photos are downscaled to this multiple of their on-body size.
+PRESCALE_HEADROOM = 1.25
 
-SHADING_STRENGTH = 0.7
-SHADING_MIN = 0.8
-SHADING_MAX = 1.2
+# Lighting match: one global gain from the scene brightness around the person,
+# relative to a neutral exposure. (A per-pixel shading transfer from the torso
+# printed the shopper's own clothes and arms onto light garments.)
+EXPOSURE_RING_PX = 61
+NEUTRAL_SCENE_LUMA = 160.0
+EXPOSURE_STRENGTH = 0.3
+EXPOSURE_MIN = 0.85
+EXPOSURE_MAX = 1.05
 
 PRODUCT_ALPHA_CACHE_SIZE = 32
 _product_alpha_cache = OrderedDict()
@@ -220,7 +230,10 @@ def body_masks(landmarks, width, height, bands, shoulder_span):
     the band edges plus neck, arms and thighs; forearms + hands separately."""
     p = {name: _to_px(lm, width, height) for name, lm in landmarks.items()}
     body = np.zeros((height, width), np.uint8)
-    torso = np.array([edge[0] for edge in bands] + [edge[1] for edge in reversed(bands)], dtype=np.int32)
+    hip_left, hip_right = bands[-1]
+    drop = ((hip_left + hip_right) / 2 - (bands[0][0] + bands[0][1]) / 2) * HEM_ALLOWANCE
+    hem = (hip_left + drop, hip_right + drop)
+    torso = np.array([edge[0] for edge in bands] + [hem[0], hem[1]] + [edge[1] for edge in reversed(bands)], dtype=np.int32)
     cv2.fillPoly(body, [torso], 255, cv2.LINE_AA)
 
     shoulder_mid = (p["LEFT_SHOULDER"] + p["RIGHT_SHOULDER"]) / 2
@@ -324,6 +337,21 @@ def _warp_triangle(src_image, out, src_tri, dst_tri):
     region[inside] = warped[inside]
 
 
+def _prescale_product(product_rgba, anchor_points, dst_bands):
+    """Area-downscales a large product photo to about its on-body size before
+    warping. Bilinear warping alone samples a big image too sparsely and turns
+    fabric texture into moire streaks. Anchors are normalised, so they still
+    apply after resizing."""
+    p_height, p_width = product_rgba.shape[:2]
+    src_span = abs(anchor_points["shoulderRight"]["x"] - anchor_points["shoulderLeft"]["x"]) * p_width
+    dst_span = float(np.linalg.norm(dst_bands[0][1] - dst_bands[0][0]))
+    scale = PRESCALE_HEADROOM * dst_span / max(src_span, 1e-6)
+    if scale >= 1:
+        return product_rgba
+    size = (max(1, round(p_width * scale)), max(1, round(p_height * scale)))
+    return cv2.resize(product_rgba, size, interpolation=cv2.INTER_AREA)
+
+
 def piecewise_warp(src_image, src_grid, dst_grid, out_size):
     """Warps an HxWxC float32 image through the grid's quads (2 triangles each)."""
     out_w, out_h = out_size
@@ -344,19 +372,17 @@ def _soft(mask):
     return cv2.GaussianBlur(mask, (5, 5), 0).astype(np.float32) / 255.0
 
 
-def _apply_torso_shading(garment_bgr, customer_bgr, torso_mask):
-    """Transfers the torso's low-frequency shading (light falloff, shadows) onto
-    the garment, normalised so the shopper's own clothing colour doesn't tint it."""
-    torso = torso_mask > 127
-    if not torso.any():
+def _match_scene_exposure(garment_bgr, customer_bgr, body_mask):
+    """Darkens/brightens the garment by one mild global gain from the scene's
+    brightness right around the person (not the person: their own clothes and
+    arms would otherwise be printed onto the garment)."""
+    near = cv2.dilate(body_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (EXPOSURE_RING_PX, EXPOSURE_RING_PX)))
+    ring = (near > 0) & (body_mask == 0)
+    if not ring.any():
         return garment_bgr
-    luma = cv2.cvtColor(customer_bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
-    blur = max(3, int(min(customer_bgr.shape[:2]) * 0.04) | 1)
-    smooth = cv2.GaussianBlur(luma, (blur, blur), 0)
-    mean = float(smooth[torso].mean()) or 1.0
-    shading = np.clip((smooth / mean) ** SHADING_STRENGTH, SHADING_MIN, SHADING_MAX)
-    shading[~torso] = 1.0
-    return np.clip(garment_bgr * shading[..., None], 0, 255)
+    luma = cv2.cvtColor(customer_bgr.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+    gain = np.clip((float(luma[ring].mean()) / NEUTRAL_SCENE_LUMA) ** EXPOSURE_STRENGTH, EXPOSURE_MIN, EXPOSURE_MAX)
+    return np.clip(garment_bgr * gain, 0, 255)
 
 
 def generate_try_on(customer_image_bytes, product_image_bytes, anchor_points, pose=None, ease=1.0):
@@ -380,22 +406,21 @@ def generate_try_on(customer_image_bytes, product_image_bytes, anchor_points, po
     product_image = decode_image(product_image_bytes, keep_alpha=True)
     if product_image is None:
         raise TryOnError("INVALID_PRODUCT_IMAGE")
-    p_height, p_width = product_image.shape[:2]
     alpha = product_alpha(product_image_bytes, product_image)
-
     dst_bands, shoulder_span = body_bands(landmarks, width, height, ease)
+    product_rgba = _prescale_product(
+        np.dstack([product_image[:, :, :3].astype(np.float32), alpha * 255.0]), anchor_points, dst_bands
+    )
+    p_height, p_width = product_rgba.shape[:2]
     src_grid, dst_grid = build_warp_grid(_product_bands(anchor_points, p_width, p_height), dst_bands, p_width, p_height)
 
-    product_rgba = np.dstack([product_image[:, :, :3].astype(np.float32), alpha * 255.0])
     warped = piecewise_warp(product_rgba, src_grid, dst_grid, (width, height))
     garment, garment_alpha = warped[:, :, :3], warped[:, :, 3] / 255.0
 
     body, forearms = body_masks(landmarks, width, height, dst_bands, shoulder_span)
     garment_alpha *= _soft(body) * (1.0 - _soft(forearms))
 
-    torso_mask = np.zeros((height, width), np.uint8)
-    cv2.fillPoly(torso_mask, [np.int32([e[0] for e in dst_bands] + [e[1] for e in reversed(dst_bands)])], 255)
-    garment = _apply_torso_shading(garment, customer_image.astype(np.float32), torso_mask)
+    garment = _match_scene_exposure(garment, customer_image, body)
 
     composited = customer_image.astype(np.float32) * (1 - garment_alpha[..., None]) + garment * garment_alpha[..., None]
     success, encoded = cv2.imencode(".jpg", np.clip(composited, 0, 255).astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 90])
