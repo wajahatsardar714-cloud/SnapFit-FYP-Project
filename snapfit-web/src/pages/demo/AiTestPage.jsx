@@ -1,12 +1,14 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Activity, Camera, ImageUp, RefreshCw, ScanLine, Shirt, Smartphone, Sparkles, X } from 'lucide-react';
+import { Activity, Camera, ImageUp, RefreshCw, ScanLine, Shirt, Smartphone, Sparkles, SwitchCamera, X } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Alert from '../../components/ui/Alert';
 import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
+import { MIRROR_PREVIEW } from '../../config/poseConfig';
 import { useCameraStream } from '../../hooks/useCameraStream';
+import { defaultFacingMode } from '../../utils/device';
 
 // Developer test bench for the Python AI microservice. Public (no login, no API
 // key): it calls the FastAPI service directly through Vite's /ai proxy (see
@@ -92,7 +94,14 @@ async function callAi(path, formData) {
   }
   if (!response.ok) {
     const detail = body?.detail;
-    const message = typeof detail === 'string' ? detail : detail ? JSON.stringify(detail) : `HTTP ${response.status}`;
+    let message = `HTTP ${response.status}`;
+    if (typeof detail === 'string') {
+      message = detail;
+    } else if (detail?.code === 'POSE_INVALID') {
+      message = `POSE_INVALID — ${detail.failed_checks.map((c) => c.message).join('; ')}`;
+    } else if (detail) {
+      message = JSON.stringify(detail);
+    }
     throw new Error(message);
   }
   return { body, elapsedMs };
@@ -124,9 +133,12 @@ function HealthBadge({ health, onRefresh }) {
   );
 }
 
+// Ungated on purpose (unlike the widget's LiveCapture) so any pose can be sent
+// to the AI service -- e.g. to see exactly which POSE_INVALID checks it fails.
 function CameraCapture({ onCapture, onClose }) {
   const videoRef = useRef(null);
-  const { stream, status, error } = useCameraStream({ enabled: true });
+  const [initialFacingMode] = useState(defaultFacingMode);
+  const { stream, status, error, switchCamera, canSwitch } = useCameraStream({ enabled: true, initialFacingMode });
 
   useEffect(() => {
     if (videoRef.current && stream) videoRef.current.srcObject = stream;
@@ -145,7 +157,26 @@ function CameraCapture({ onCapture, onClose }) {
   return (
     <div className="space-y-3">
       {status === 'granted' ? (
-        <video ref={videoRef} autoPlay playsInline muted className="w-full rounded-lg bg-black" />
+        <div className="relative">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full rounded-lg bg-black"
+            style={MIRROR_PREVIEW ? { transform: 'scaleX(-1)' } : undefined}
+          />
+          {canSwitch && (
+            <button
+              type="button"
+              onClick={switchCamera}
+              aria-label="Switch camera"
+              className="absolute right-2 top-2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+            >
+              <SwitchCamera size={16} />
+            </button>
+          )}
+        </div>
       ) : (
         <Alert
           variant={status === 'requesting' ? 'info' : 'danger'}
