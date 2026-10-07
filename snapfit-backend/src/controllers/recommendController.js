@@ -94,6 +94,8 @@ async function recommend(req, res) {
   }
 
   const ratios = aiResult.features?.ratios || {};
+  const measurements = aiResult.measurements || {};
+  const sizeComparison = aiResult.sizeComparison || [];
   const status = sizeRecommendation.confidence < LOW_CONFIDENCE_THRESHOLD ? 'low_confidence' : 'success';
 
   await Recommendation.create({
@@ -101,6 +103,7 @@ async function recommend(req, res) {
     productId,
     sizeChartId: sizeChart._id,
     recommendedSize: sizeRecommendation.recommended_size,
+    alternativeSize: aiResult.alternativeSize || undefined,
     confidence: sizeRecommendation.confidence,
     bodyFeatures: {
       shoulderToHipRatio: ratios.shoulder_to_hip_ratio,
@@ -109,6 +112,8 @@ async function recommend(req, res) {
       hipWidthNorm: ratios.hip_width_ratio,
       chestWidthNorm: ratios.chest_width_estimate_ratio,
     },
+    measurements: Object.fromEntries(Object.entries(measurements).map(([name, m]) => [name, m.value])),
+    sizeScores: sizeComparison.map(({ label, score }) => ({ label, score })),
     userHeight,
     status,
     ipAddress: req.ip,
@@ -122,6 +127,10 @@ async function recommend(req, res) {
       bodyType: sizeRecommendation.body_type,
       notes: sizeRecommendation.notes,
       fitScores: sizeRecommendation.fit_scores,
+      alternativeSize: aiResult.alternativeSize ?? null,
+      measurements,
+      sizeComparison,
+      fitNotes: aiResult.fitNotes || [],
     },
     product: widgetProductInfo(mapping, req),
   });

@@ -9,7 +9,9 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 // a temp folder and gives every file its own in-memory MongoDB.
 function setupTestEnv() {
   const uploadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'snapfit-products-'));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'snapfit-tmp-'));
   process.env.PRODUCT_UPLOAD_DIR = uploadDir;
+  process.env.UPLOAD_TMP_DIR = tmpDir;
   process.env.JWT_SECRET = 'test-secret';
   process.env.AI_SERVICE_URL = 'http://ai.test';
 
@@ -27,9 +29,14 @@ function setupTestEnv() {
     await mongoose.disconnect();
     await mongo.stop();
     fs.rmSync(uploadDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  return { uploadDir, listUploads: () => fs.readdirSync(uploadDir) };
+  return {
+    uploadDir,
+    listUploads: () => fs.readdirSync(uploadDir),
+    listTmpPhotos: () => fs.readdirSync(tmpDir),
+  };
 }
 
 function tokenFor(merchant) {
