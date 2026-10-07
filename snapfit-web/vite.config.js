@@ -31,6 +31,13 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
       },
+      // Direct line to the Python AI service for the public /test/ai page, which
+      // exercises it without going through the backend's auth/API-key layer.
+      '/ai': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ai/, ''),
+      },
     },
   },
 });

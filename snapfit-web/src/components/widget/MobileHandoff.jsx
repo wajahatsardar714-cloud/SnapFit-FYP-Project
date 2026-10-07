@@ -31,7 +31,9 @@ async function resolvePhoneReachableOrigin(apiBase) {
   return window.location.origin;
 }
 
-function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload }) {
+// `sessionsPath` lets the dev-only /test/ai page use the backend's key-less
+// /handoff/test-sessions routes; the widget keeps the default, API-key-authed ones.
+function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload, sessionsPath = '/handoff/sessions' }) {
   const [status, setStatus] = useState('creating'); // creating | waiting | expired | error
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -39,6 +41,8 @@ function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload }) {
   const sessionIdRef = useRef(null);
 
   const apiBase = apiUrl.replace(/\/$/, '');
+  const sessionsBase = `${apiBase}${sessionsPath}`;
+  const authHeaders = apiKey ? { 'x-api-key': apiKey } : {};
 
   async function startSession() {
     clearInterval(pollIdRef.current);
@@ -46,9 +50,9 @@ function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload }) {
     setErrorMessage('');
 
     try {
-      const createRes = await fetch(`${apiBase}/handoff/sessions`, {
+      const createRes = await fetch(sessionsBase, {
         method: 'POST',
-        headers: { 'x-api-key': apiKey },
+        headers: authHeaders,
       });
       const createData = await createRes.json().catch(() => null);
       if (!createRes.ok || !createData?.sessionId) {
@@ -76,15 +80,15 @@ function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload }) {
     if (!sessionId) return;
 
     try {
-      const res = await fetch(`${apiBase}/handoff/sessions/${sessionId}`, {
-        headers: { 'x-api-key': apiKey },
+      const res = await fetch(`${sessionsBase}/${sessionId}`, {
+        headers: authHeaders,
       });
       const data = await res.json().catch(() => null);
 
       if (data?.status === 'ready') {
         clearInterval(pollIdRef.current);
-        const photoRes = await fetch(`${apiBase}/handoff/sessions/${sessionId}/photo`, {
-          headers: { 'x-api-key': apiKey },
+        const photoRes = await fetch(`${sessionsBase}/${sessionId}/photo`, {
+          headers: authHeaders,
         });
         if (!photoRes.ok) {
           setErrorMessage('The photo could not be retrieved. Please try again.');

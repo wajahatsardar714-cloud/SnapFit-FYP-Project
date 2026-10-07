@@ -17,6 +17,7 @@ import AnalyticsDashboardPage from './pages/dashboard/AnalyticsDashboardPage';
 import IntegrationDocsPage from './pages/dashboard/IntegrationDocsPage';
 import SettingsPage from './pages/dashboard/SettingsPage';
 import SizeCheckDemo from './pages/demo/SizeCheckDemo';
+import AiTestPage from './pages/demo/AiTestPage';
 import MobileCapturePage from './pages/mobile/MobileCapturePage';
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/demo/size-check" element={<SizeCheckDemo />} />
+          <Route path="/test/ai" element={<AiTestPage />} />
           <Route path="/mobile-capture/:sessionId" element={<MobileCapturePage />} />
 
           {/*

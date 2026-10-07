@@ -53,4 +53,19 @@ router.get('/sessions/:sessionId/photo', identifyMerchantByApiKey, getHandoffPho
 // Phone: upload, scoped only by the random sessionId from the QR code.
 router.post('/sessions/:sessionId/photo', uploadImage, uploadHandoffPhoto);
 
+// Dev-only, key-less desktop side for the web app's public /test/ai page, so the
+// QR phone handoff can be tested without logging in for an API key. Sessions are
+// scoped to a fixed pseudo-merchant; the phone still uploads via the shared
+// /sessions/:sessionId/photo route above. Never mounted in production.
+if (process.env.NODE_ENV !== 'production') {
+  const useTestBenchMerchant = (req, res, next) => {
+    req.merchant = { _id: 'ai-test-bench' };
+    next();
+  };
+
+  router.post('/test-sessions', useTestBenchMerchant, createHandoffSession);
+  router.get('/test-sessions/:sessionId', useTestBenchMerchant, getHandoffStatus);
+  router.get('/test-sessions/:sessionId/photo', useTestBenchMerchant, getHandoffPhoto);
+}
+
 module.exports = router;

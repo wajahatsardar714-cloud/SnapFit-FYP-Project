@@ -30,12 +30,26 @@ app.get('/api/health', (req, res) => {
 // Non-sensitive local-network hint for the QR-code phone handoff (Prompt: mobile
 // capture handoff) -- lets the widget build a phone-reachable URL when the
 // desktop page is loaded over "localhost", which a phone can never resolve.
+// Virtual adapters (WSL/Hyper-V, Docker, VMs) and link-local 169.254.x addresses
+// are never reachable from a phone, so skip them and prefer typical home/office
+// LAN ranges -- otherwise the first adapter found (often vEthernet (WSL)) wins.
+const VIRTUAL_ADAPTER_PATTERN = /vEthernet|WSL|Hyper-V|VirtualBox|VMware|Docker|Loopback|Bluetooth/i;
+
+function lanIpPriority(address) {
+  if (address.startsWith('192.168.')) return 0;
+  if (address.startsWith('10.')) return 1;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(address)) return 2;
+  return 3;
+}
+
 app.get('/api/network-info', (req, res) => {
-  const interfaces = os.networkInterfaces();
-  const lanIp = Object.values(interfaces)
-    .flat()
-    .find((iface) => iface.family === 'IPv4' && !iface.internal)?.address;
-  res.json({ lanIp: lanIp || null });
+  const candidates = Object.entries(os.networkInterfaces())
+    .filter(([name]) => !VIRTUAL_ADAPTER_PATTERN.test(name))
+    .flatMap(([, addresses]) => addresses)
+    .filter((iface) => iface.family === 'IPv4' && !iface.internal && !iface.address.startsWith('169.254.'))
+    .map((iface) => iface.address)
+    .sort((a, b) => lanIpPriority(a) - lanIpPriority(b));
+  res.json({ lanIp: candidates[0] || null });
 });
 
 app.use('/api/auth', authRoutes);
