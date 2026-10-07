@@ -13,7 +13,7 @@ from app.measurement_engine import estimate_measurements
 from app.pose_estimator import PoseEstimationError, extract_landmarks
 from app.pose_validator import PoseInvalidError, assert_valid_pose
 from app.size_matcher import SizeMatchError, recommend_size
-from app.try_on import TryOnError, fetch_image_bytes, fetch_product_anchor_data, generate_try_on
+from app.try_on import TryOnError, fetch_image_bytes, fetch_product_anchor_data, garment_ease, generate_try_on
 from app.utils import calculate_confidence, validate_image
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -62,6 +62,24 @@ def _extract_valid_pose(image_bytes):
     return pose
 
 
+TRY_ON_ERROR_STATUS = {"TRYON_NOT_AVAILABLE": 404, "BACKEND_UNREACHABLE": 502, "PRODUCT_IMAGE_UNREACHABLE": 502}
+
+
+async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
+    """Try-on image as a data URL. Raises TryOnError with a code on failure."""
+    try:
+        anchor_points, product_image_url = await fetch_product_anchor_data(merchant_id, product_id)
+    except httpx.HTTPError:
+        raise TryOnError("BACKEND_UNREACHABLE")
+    try:
+        product_image_bytes = await fetch_image_bytes(product_image_url)
+    except httpx.HTTPError:
+        raise TryOnError("PRODUCT_IMAGE_UNREACHABLE")
+
+    result_bytes = generate_try_on(image_bytes, product_image_bytes, anchor_points, pose=pose, ease=ease)
+    return f"data:image/jpeg;base64,{base64.b64encode(result_bytes).decode('ascii')}"
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "snapfit-ai"}
@@ -72,7 +90,12 @@ async def analyze(
     image: UploadFile = File(...),
     user_height: Optional[float] = Form(None),
     size_chart: Optional[str] = Form(None),
+    try_on_product_id: Optional[str] = Form(None),
+    merchant_id: Optional[str] = Form(None),
 ):
+    """With try_on_product_id + merchant_id, also renders the virtual try-on from
+    the same pose (one upload, one detection). A try-on failure never fails the
+    analysis: it is reported as tryOn: {"error": CODE}."""
     image_bytes = await image.read()
 
     validation = validate_image(image_bytes)
@@ -107,6 +130,14 @@ async def analyze(
         except SizeMatchError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
+    try_on_result = None
+    if try_on_product_id and merchant_id:
+        try:
+            image_url = await _render_try_on(image_bytes, pose, merchant_id, try_on_product_id, garment_ease(match))
+            try_on_result = {"image": image_url}
+        except TryOnError as e:
+            try_on_result = {"error": str(e).split(":")[0]}
+
     return {
         "image_dimensions": image_dimensions,
         "key_landmarks": pose["key_landmarks"],
@@ -118,6 +149,7 @@ async def analyze(
         "recommendedSize": match["recommended_size"] if match else None,
         "alternativeSize": match["alternative_size"] if match else None,
         "fitNotes": match["fit_notes"] if match else [],
+        "tryOn": try_on_result,
     }
 
 
@@ -156,21 +188,7 @@ async def try_on(
         raise _pose_invalid_exception(e)
 
     try:
-        anchor_points, product_image_url = await fetch_product_anchor_data(merchant_id, product_id)
+        return {"image": await _render_try_on(image_bytes, pose, merchant_id, product_id)}
     except TryOnError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except httpx.HTTPError:
-        raise HTTPException(status_code=502, detail="BACKEND_UNREACHABLE")
-
-    try:
-        product_image_bytes = await fetch_image_bytes(product_image_url)
-    except httpx.HTTPError:
-        raise HTTPException(status_code=502, detail="PRODUCT_IMAGE_UNREACHABLE")
-
-    try:
-        result_bytes = generate_try_on(image_bytes, product_image_bytes, anchor_points, pose=pose)
-    except TryOnError as e:
-        raise HTTPException(status_code=422, detail=str(e))
-
-    encoded = base64.b64encode(result_bytes).decode("ascii")
-    return {"image": f"data:image/jpeg;base64,{encoded}"}
+        code = str(e).split(":")[0]
+        raise HTTPException(status_code=TRY_ON_ERROR_STATUS.get(code, 422), detail=code)
