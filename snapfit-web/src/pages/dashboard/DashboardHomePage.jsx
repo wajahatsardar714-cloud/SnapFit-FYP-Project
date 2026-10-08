@@ -43,7 +43,7 @@ function calcMonthTrend(current, previous) {
 const PLAN_STATUS_BADGE_VARIANT = { active: 'success', expired: 'danger', inactive: 'neutral' };
 
 function confidenceTextColor(confidence) {
-  if (confidence == null) return 'text-ink-500';
+  if (confidence == null) return 'text-muted-foreground';
   const pct = confidence * 100;
   if (pct > 75) return 'text-success';
   if (pct >= 50) return 'text-warning';
@@ -53,11 +53,11 @@ function confidenceTextColor(confidence) {
 function QuickActionCard({ to, icon: Icon, label, description }) {
   return (
     <Link to={to} className="block">
-      <Card className="flex items-start gap-3 transition-colors hover:border-primary-200">
-        <Icon size={18} className="mt-0.5 shrink-0 text-primary-600" />
+      <Card className="flex items-start gap-3 transition-colors hover:border-primary/40">
+        <Icon size={18} className="mt-0.5 shrink-0 text-primary" />
         <div>
-          <p className="text-sm font-medium text-ink-700">{label}</p>
-          <p className="mt-0.5 text-xs text-ink-500">{description}</p>
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
         </div>
       </Card>
     </Link>
@@ -70,9 +70,9 @@ function ChecklistItem({ done, label, to }) {
       {done ? (
         <CheckCircle2 size={18} className="shrink-0 text-success" />
       ) : (
-        <Circle size={18} className="shrink-0 text-ink-300" />
+        <Circle size={18} className="shrink-0 text-muted" />
       )}
-      <span className={done ? 'text-ink-500 line-through' : 'text-ink-700'}>{label}</span>
+      <span className={done ? 'text-muted-foreground line-through' : 'text-foreground'}>{label}</span>
     </Link>
   );
 }
@@ -119,7 +119,7 @@ function DashboardHomePage() {
   if (loading || !dashboard) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-ink-300" size={28} />
+        <Loader2 className="animate-spin text-muted" size={28} />
       </div>
     );
   }
@@ -144,8 +144,8 @@ function DashboardHomePage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-ink-900">Welcome back, {merchant.businessName}</h1>
-      <p className="mt-1 text-sm text-ink-500">Here&apos;s what&apos;s happening with your SnapFit integration.</p>
+      <h1 className="text-xl font-semibold text-foreground">Welcome back, {merchant.businessName}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Here&apos;s what&apos;s happening with your SnapFit integration.</p>
 
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Requests Today" value={requestsToday.toLocaleString()} sub="Recommendations served" />
@@ -175,7 +175,7 @@ function DashboardHomePage() {
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-ink-900">Quick actions</h2>
+          <h2 className="text-sm font-semibold text-foreground">Quick actions</h2>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <QuickActionCard
               to="/dashboard/size-charts"
@@ -206,18 +206,18 @@ function DashboardHomePage() {
           <div className="mt-6">
             <Card>
               <Card.Header>
-                <h2 className="text-sm font-semibold text-ink-900">Recent Activity</h2>
+                <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
               </Card.Header>
               <Card.Body padding="sm">
                 {recent.length === 0 ? (
-                  <p className="px-2 py-6 text-center text-sm text-ink-500">No recommendations yet.</p>
+                  <p className="px-2 py-6 text-center text-sm text-muted-foreground">No recommendations yet.</p>
                 ) : (
-                  <ul className="divide-y divide-surface-border">
+                  <ul className="divide-y divide-border">
                     {recent.map((r) => (
                       <li key={r._id} className="flex items-center justify-between gap-4 px-2 py-3">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate font-mono text-xs text-ink-700">{r.productId}</p>
-                          <p className="mt-0.5 text-xs text-ink-500">{formatDateTime(r.createdAt)}</p>
+                          <p className="truncate font-mono text-xs text-foreground">{r.productId}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{formatDateTime(r.createdAt)}</p>
                         </div>
                         <Badge variant="neutral">{r.recommendedSize || '—'}</Badge>
                         <span className={`w-12 shrink-0 text-right text-sm font-medium ${confidenceTextColor(r.confidence)}`}>
@@ -235,12 +235,12 @@ function DashboardHomePage() {
         <div className="space-y-6">
           <Card>
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-ink-900">Plan Usage</span>
+              <span className="font-semibold text-foreground">Plan Usage</span>
               <Badge variant={hasSelectedPlan ? PLAN_STATUS_BADGE_VARIANT[subscription.status] || 'neutral' : 'neutral'}>
                 {hasSelectedPlan ? subscription.status : 'inactive'}
               </Badge>
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs text-ink-500">
+            <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
               <span>
                 {usage.requestsUsed} / {usage.requestsLimit ?? 'Unlimited'} requests
               </span>
@@ -261,9 +261,9 @@ function DashboardHomePage() {
           </Card>
 
           <Card>
-            <h2 className="text-sm font-semibold text-ink-900">Getting Started</h2>
+            <h2 className="text-sm font-semibold text-foreground">Getting Started</h2>
             {checklistDone ? (
-              <p className="mt-3 text-xs text-ink-500">You&apos;re all set up.</p>
+              <p className="mt-3 text-xs text-muted-foreground">You&apos;re all set up.</p>
             ) : (
               <div className="mt-2 -mx-1">
                 {checklist.map((item) => (

@@ -1,10 +1,10 @@
 import { Loader2 } from 'lucide-react';
 
 const VARIANT_CLASSES = {
-  primary: 'bg-primary text-white shadow-sm hover:bg-primary-700',
-  secondary: 'bg-white border border-surface-border text-ink-700 shadow-sm hover:bg-gray-50',
-  danger: 'bg-danger text-white shadow-sm hover:bg-danger-text',
-  ghost: 'bg-transparent text-ink-700 hover:bg-gray-100',
+  primary: 'bg-primary text-white shadow-sm hover:bg-primary-hover',
+  secondary: 'bg-white border border-border text-foreground shadow-sm hover:bg-gray-50',
+  danger: 'bg-danger text-white shadow-sm hover:bg-danger',
+  ghost: 'bg-transparent text-foreground hover:bg-gray-100',
 };
 
 const SIZE_CLASSES = {
@@ -30,7 +30,7 @@ function Button({
     <button
       type={type}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...rest}
     >
       {leading}

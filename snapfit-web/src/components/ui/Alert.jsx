@@ -1,10 +1,10 @@
 import { AlertCircle, AlertTriangle, CheckCircle2, Info as InfoIcon } from 'lucide-react';
 
 const VARIANT_CONFIG = {
-  success: { classes: 'bg-success-bg border-success-border text-success-text', Icon: CheckCircle2 },
-  danger: { classes: 'bg-danger-bg border-danger-border text-danger-text', Icon: AlertCircle },
-  warning: { classes: 'bg-warning-bg border-warning-border text-warning-text', Icon: AlertTriangle },
-  info: { classes: 'bg-info-bg border-info-border text-info-text', Icon: InfoIcon },
+  success: { classes: 'bg-success-soft border-success/30 text-success', Icon: CheckCircle2 },
+  danger: { classes: 'bg-danger-soft border-danger/30 text-danger', Icon: AlertCircle },
+  warning: { classes: 'bg-warning-soft border-warning/30 text-warning', Icon: AlertTriangle },
+  info: { classes: 'bg-primary-soft border-primary/30 text-primary', Icon: InfoIcon },
 };
 
 // A persistent inline banner (top of a form/page) -- not a toast. See ./toast.jsx

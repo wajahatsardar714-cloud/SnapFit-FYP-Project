@@ -56,8 +56,8 @@ function DashboardLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-surface-border bg-white">
-        <div className="px-5 py-5 text-lg font-bold text-primary-600">SnapFit</div>
+      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-white">
+        <div className="px-5 py-5 text-lg font-bold text-primary">SnapFit</div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
           {navItems.map(({ label, to, icon: Icon, end }) => (
@@ -66,8 +66,8 @@ function DashboardLayout() {
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
-                  isActive ? 'bg-primary-50 font-medium text-primary-700' : 'text-ink-700 hover:bg-gray-50'
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
+                  isActive ? 'bg-primary-soft font-medium text-primary-hover' : 'text-foreground hover:bg-gray-50'
                 }`
               }
             >
@@ -77,9 +77,9 @@ function DashboardLayout() {
           ))}
         </nav>
 
-        <div className="border-t border-surface-border p-3">
+        <div className="border-t border-border p-3">
           <div className="flex items-center justify-between px-2 py-1.5">
-            <span className="text-xs font-medium text-ink-500">Plan</span>
+            <span className="text-xs font-medium text-muted-foreground">Plan</span>
             <Badge variant={PLAN_BADGE_VARIANT[plan] || 'neutral'} className="capitalize">
               {plan}
             </Badge>
@@ -87,8 +87,8 @@ function DashboardLayout() {
           <button
             type="button"
             onClick={() => navigate('/dashboard/settings')}
-            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
-              isSettingsActive ? 'bg-primary-50 font-medium text-primary-700' : 'text-ink-700 hover:bg-gray-50'
+            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
+              isSettingsActive ? 'bg-primary-soft font-medium text-primary-hover' : 'text-foreground hover:bg-gray-50'
             }`}
           >
             <Settings size={18} />
@@ -98,14 +98,14 @@ function DashboardLayout() {
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-surface-border bg-white px-6">
-          <h1 className="text-base font-semibold text-ink-900">{pageTitle}</h1>
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-6">
+          <h1 className="text-base font-semibold text-foreground">{pageTitle}</h1>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => notifyInfo("You're all caught up — no new notifications.")}
-              className="rounded-lg p-2 text-ink-500 transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
               aria-label="Notifications"
             >
               <Bell size={18} />
@@ -115,32 +115,32 @@ function DashboardLayout() {
               <button
                 type="button"
                 onClick={() => setMenuOpen((open) => !open)}
-                className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
                 aria-haspopup="true"
                 aria-expanded={menuOpen}
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-700">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-hover">
                   {getInitials(merchant?.businessName || merchant?.name)}
                 </span>
-                <ChevronDown size={14} className="text-ink-500" />
+                <ChevronDown size={14} className="text-muted-foreground" />
               </button>
 
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                  <div className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-surface-border bg-white p-1 shadow-card">
+                  <div className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-border bg-white p-1 shadow-card">
                     <div className="px-3 py-2">
-                      <p className="truncate text-sm font-medium text-ink-900">{merchant?.businessName}</p>
-                      <p className="truncate text-xs text-ink-500">{merchant?.email}</p>
+                      <p className="truncate text-sm font-medium text-foreground">{merchant?.businessName}</p>
+                      <p className="truncate text-xs text-muted-foreground">{merchant?.email}</p>
                     </div>
-                    <div className="my-1 border-t border-surface-border" />
+                    <div className="my-1 border-t border-border" />
                     <button
                       type="button"
                       onClick={() => {
                         setMenuOpen(false);
                         navigate('/dashboard/settings');
                       }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-700 transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
                     >
                       <Settings size={16} />
                       Settings
@@ -148,7 +148,7 @@ function DashboardLayout() {
                     <button
                       type="button"
                       onClick={logout}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-danger transition-colors duration-150 hover:bg-danger-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-danger transition-colors duration-150 hover:bg-danger-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
                     >
                       <LogOut size={16} />
                       Log out
@@ -160,7 +160,7 @@ function DashboardLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-surface-page">
+        <main className="flex-1 overflow-y-auto bg-background">
           <div className="mx-auto max-w-7xl p-8">
             <Outlet />
           </div>

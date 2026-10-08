@@ -90,7 +90,7 @@ function calcTrend(current, previous) {
 }
 
 function confidenceTextColor(confidence) {
-  if (confidence == null) return 'text-ink-500';
+  if (confidence == null) return 'text-muted-foreground';
   const pct = confidence * 100;
   if (pct > 75) return 'text-success';
   if (pct >= 50) return 'text-warning';
@@ -114,13 +114,13 @@ function formatDateTime(value) {
   });
 }
 
-// Matches Card.jsx's own visual language (white bg, surface-border, rounded-lg,
-// shadow-card) rather than recharts' default tooltip chrome.
+// Matches Card.jsx's own visual language (surface, border, rounded, shadow-card)
+// rather than recharts' default tooltip chrome.
 function ChartTooltip({ active, label, children }) {
   if (!active) return null;
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card px-3 py-2 text-sm shadow-card">
-      {label && <p className="text-xs text-ink-500">{label}</p>}
+    <div className="rounded-xl border border-border bg-surface px-3 py-2 text-sm shadow-card">
+      {label && <p className="text-xs text-muted-foreground">{label}</p>}
       {children}
     </div>
   );
@@ -131,7 +131,7 @@ function AreaChartTooltip({ active, payload, label }) {
   const count = payload[0].value;
   return (
     <ChartTooltip active label={formatFullDate(label)}>
-      <p className="font-semibold text-ink-900">
+      <p className="font-semibold text-foreground">
         {count} recommendation{count === 1 ? '' : 's'}
       </p>
     </ChartTooltip>
@@ -148,9 +148,9 @@ function CategoryTooltip({ active, payload }) {
     <ChartTooltip active>
       <div className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.payload.fill }} />
-        <span className="text-ink-700">{label}</span>
+        <span className="text-foreground">{label}</span>
       </div>
-      <p className="mt-0.5 font-semibold text-ink-900">
+      <p className="mt-0.5 font-semibold text-foreground">
         {entry.value} recommendation{entry.value === 1 ? '' : 's'}
       </p>
     </ChartTooltip>
@@ -161,11 +161,11 @@ function ChartCard({ title, action, children, isEmpty, emptyLabel }) {
   return (
     <Card>
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-ink-700">{title}</h2>
+        <h2 className="text-sm font-medium text-foreground">{title}</h2>
         {action}
       </div>
       {isEmpty ? (
-        <div className="flex h-[260px] items-center justify-center text-sm text-ink-500">{emptyLabel}</div>
+        <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">{emptyLabel}</div>
       ) : (
         <div className="mt-3">{children}</div>
       )}
@@ -237,7 +237,7 @@ function ConfidenceGauge({ confidence }) {
           <p className={`text-2xl font-semibold ${confidenceTextColor(confidence)}`}>{pct != null ? `${pct}%` : '—'}</p>
         </div>
       </div>
-      <div className="mt-1 flex items-center gap-4 text-xs text-ink-500">
+      <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <span className="h-2 w-2 rounded-full bg-danger" />
           0-50%
@@ -343,7 +343,7 @@ function AnalyticsDashboardPage() {
   if (loading || !dashboard) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-ink-300" size={28} />
+        <Loader2 className="animate-spin text-muted" size={28} />
       </div>
     );
   }
@@ -370,8 +370,8 @@ function AnalyticsDashboardPage() {
     <div className={refreshing ? 'opacity-70 transition-opacity' : 'transition-opacity'}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink-900">Analytics</h1>
-          <p className="mt-1 text-sm text-ink-500">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : ''}</p>
+          <h1 className="text-xl font-semibold text-foreground">Analytics</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : ''}</p>
         </div>
         <Button variant="secondary" size="sm" icon={<RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />} onClick={() => loadAll({ silent: true })} disabled={refreshing}>
           Refresh
@@ -404,14 +404,14 @@ function AnalyticsDashboardPage() {
         <ChartCard
           title="Recommendations Over Time"
           action={
-            <div className="flex rounded-lg border border-surface-border p-0.5 text-xs">
+            <div className="flex rounded-lg border border-border p-0.5 text-xs">
               {PERIOD_OPTIONS.map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
                   onClick={() => handlePeriodChange(opt.key)}
                   className={`rounded-md px-2.5 py-1 font-medium transition-colors duration-150 ${
-                    period === opt.key ? 'bg-primary text-white' : 'text-ink-500 hover:bg-gray-50'
+                    period === opt.key ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-gray-50'
                   }`}
                 >
                   {opt.label}
@@ -500,8 +500,8 @@ function AnalyticsDashboardPage() {
         >
           {feedbackStats && feedbackStats.totalFeedback > 0 && (
             <>
-              <p className="text-xs text-ink-500">
-                <span className="font-semibold text-ink-900">{feedbackStats.accuracyRate}%</span> of customers report an
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">{feedbackStats.accuracyRate}%</span> of customers report an
                 acceptable fit
               </p>
               <ResponsiveContainer width="100%" height={200}>
@@ -532,7 +532,7 @@ function AnalyticsDashboardPage() {
 
         <Card>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-ink-700">Recent Recommendations</h2>
+            <h2 className="text-sm font-medium text-foreground">Recent Recommendations</h2>
             <Button
               variant="secondary"
               size="sm"
@@ -545,12 +545,12 @@ function AnalyticsDashboardPage() {
           </div>
 
           {recent.length === 0 ? (
-            <div className="flex h-[220px] items-center justify-center text-sm text-ink-500">No recommendations yet</div>
+            <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">No recommendations yet</div>
           ) : (
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-surface-border text-xs uppercase tracking-wide text-ink-500">
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="py-2 pr-3 font-medium">Size</th>
                     <th className="py-2 pr-3 font-medium">Confidence</th>
                     <th className="py-2 pr-3 font-medium">Status</th>
@@ -559,15 +559,15 @@ function AnalyticsDashboardPage() {
                 </thead>
                 <tbody>
                   {recent.map((r) => (
-                    <tr key={r._id} className="border-b border-surface-border last:border-0">
-                      <td className="py-2 pr-3 font-medium text-ink-900">{r.recommendedSize || '—'}</td>
+                    <tr key={r._id} className="border-b border-border last:border-0">
+                      <td className="py-2 pr-3 font-medium text-foreground">{r.recommendedSize || '—'}</td>
                       <td className={`py-2 pr-3 font-medium ${confidenceTextColor(r.confidence)}`}>
                         {r.confidence != null ? `${Math.round(r.confidence * 100)}%` : '—'}
                       </td>
                       <td className="py-2 pr-3">
                         <Badge variant={RECOMMENDATION_STATUS_VARIANT[r.status] || 'neutral'}>{r.status.replace('_', ' ')}</Badge>
                       </td>
-                      <td className="py-2 text-ink-500">{formatDateTime(r.createdAt)}</td>
+                      <td className="py-2 text-muted-foreground">{formatDateTime(r.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>

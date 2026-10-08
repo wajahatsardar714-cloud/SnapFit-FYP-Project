@@ -9,18 +9,18 @@ const VALUE_PROPS = [
   { icon: BarChart3, text: 'Track fit accuracy and cut returns with built-in analytics' },
 ];
 
-// Solid flat fill only -- no gradient/illustration, per the theme's design
-// constraints. Hidden below sm: a 42/58 split has no sensible mobile layout.
+// Light surface with blue accents (no blue background or gradient), per the
+// theme's usage rules. Hidden below sm: a 42/58 split has no sensible mobile layout.
 function AuthSidePanel() {
   return (
-    <div className="hidden bg-primary-600 sm:flex sm:w-[42%] sm:flex-col sm:justify-center sm:px-12 lg:px-16">
+    <div className="hidden border-r border-border bg-surface-2 sm:flex sm:w-[42%] sm:flex-col sm:justify-center sm:px-12 lg:px-16">
       <div className="max-w-sm">
-        <p className="text-lg font-semibold text-white">Built for merchants who hate returns.</p>
+        <p className="text-lg font-semibold text-foreground">Built for merchants who hate returns.</p>
         <ul className="mt-8 space-y-6">
           {VALUE_PROPS.map(({ icon: Icon, text }) => (
             <li key={text} className="flex items-start gap-3">
-              <Icon size={20} className="mt-0.5 shrink-0 text-primary-100" />
-              <span className="text-sm text-primary-50">{text}</span>
+              <Icon size={20} className="mt-0.5 shrink-0 text-primary" />
+              <span className="text-sm text-muted-foreground">{text}</span>
             </li>
           ))}
         </ul>

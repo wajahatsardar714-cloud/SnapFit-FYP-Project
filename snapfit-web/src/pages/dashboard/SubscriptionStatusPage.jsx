@@ -70,7 +70,7 @@ function SubscriptionStatusPage() {
   if (loading || !data) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-ink-300" size={28} />
+        <Loader2 className="animate-spin text-muted" size={28} />
       </div>
     );
   }
@@ -81,9 +81,9 @@ function SubscriptionStatusPage() {
   if (!hasSelectedPlan) {
     return (
       <div className="max-w-2xl">
-        <h1 className="text-xl font-semibold text-ink-900">Subscription</h1>
+        <h1 className="text-xl font-semibold text-foreground">Subscription</h1>
         <Card className="mt-6 border-dashed text-center">
-          <p className="text-sm text-ink-500">You haven&apos;t selected a plan yet.</p>
+          <p className="text-sm text-muted-foreground">You haven&apos;t selected a plan yet.</p>
           <Button className="mt-4" onClick={() => navigate('/dashboard/subscription/plans')}>
             Choose a Plan
           </Button>
@@ -97,11 +97,11 @@ function SubscriptionStatusPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold text-ink-900">Subscription</h1>
+      <h1 className="text-xl font-semibold text-foreground">Subscription</h1>
 
       <Card className="mt-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold capitalize text-ink-900">{subscription.plan} plan</h2>
+          <h2 className="text-lg font-semibold capitalize text-foreground">{subscription.plan} plan</h2>
           <Badge variant={STATUS_BADGE_VARIANT[subscription.status] || 'neutral'}>
             {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
           </Badge>
@@ -109,19 +109,19 @@ function SubscriptionStatusPage() {
 
         <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
           <div>
-            <dt className="text-ink-500">Start date</dt>
-            <dd className="mt-0.5 font-medium text-ink-900">{formatDate(subscription.startDate)}</dd>
+            <dt className="text-muted-foreground">Start date</dt>
+            <dd className="mt-0.5 font-medium text-foreground">{formatDate(subscription.startDate)}</dd>
           </div>
           <div>
-            <dt className="text-ink-500">Renews / ends</dt>
-            <dd className="mt-0.5 font-medium text-ink-900">{formatDate(subscription.endDate)}</dd>
+            <dt className="text-muted-foreground">Renews / ends</dt>
+            <dd className="mt-0.5 font-medium text-foreground">{formatDate(subscription.endDate)}</dd>
           </div>
         </dl>
 
         <div className="mt-6">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-ink-500">Usage this month</span>
-            <span className="font-medium text-ink-900">
+            <span className="text-muted-foreground">Usage this month</span>
+            <span className="font-medium text-foreground">
               {usage.requestsUsed} / {usage.requestsLimit ?? 'Unlimited'} requests
             </span>
           </div>
@@ -132,8 +132,8 @@ function SubscriptionStatusPage() {
           )}
         </div>
 
-        <div className="mt-4 text-sm text-ink-500">
-          Size chart limit: <span className="font-medium text-ink-900">{formatCharts(chartsLimit)}</span>
+        <div className="mt-4 text-sm text-muted-foreground">
+          Size chart limit: <span className="font-medium text-foreground">{formatCharts(chartsLimit)}</span>
         </div>
 
         <div className="mt-6 flex gap-3">

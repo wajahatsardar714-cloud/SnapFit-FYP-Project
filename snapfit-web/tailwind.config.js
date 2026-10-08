@@ -1,47 +1,41 @@
+// Every colour comes from a CSS variable in src/styles/theme.css; this file
+// only names them. Triplet variables get opacity-modifier support.
+const token = (name) => `rgb(var(--color-${name}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  // ThemeContext sets data-theme on <html>; dark: variants follow it.
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
         primary: {
-          50: '#EEF2FF',
-          100: '#E0E7FF',
-          // Fills a gap in F.1's original scale (100 jumped straight to 500) --
-          // needed by F.5's hover:border-primary-200. Standard indigo-200.
-          200: '#C7D2FE',
-          500: '#6366F1',
-          600: '#4F46E5',
-          700: '#4338CA',
-          DEFAULT: '#4F46E5',
+          DEFAULT: token('primary'),
+          hover: token('primary-hover'),
+          soft: 'var(--color-primary-soft)',
+          foreground: token('primary-foreground'),
         },
-        accent: {
-          DEFAULT: '#8B5CF6',
-          hover: '#7C3AED',
-        },
-        success: { DEFAULT: '#10B981', bg: '#ECFDF5', border: '#A7F3D0', text: '#047857' },
-        danger: { DEFAULT: '#EF4444', bg: '#FEF2F2', border: '#FECACA', text: '#B91C1C' },
-        warning: { DEFAULT: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' },
-        info: { DEFAULT: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' },
-        ink: {
-          900: '#111827', // headings
-          700: '#374151', // body text
-          500: '#6B7280', // muted text
-          300: '#D1D5DB', // disabled/placeholder
-        },
+        background: token('background'),
         surface: {
-          page: '#F9FAFB',
-          card: '#FFFFFF',
-          border: '#E5E7EB',
+          DEFAULT: token('surface'),
+          2: token('surface-2'),
         },
+        foreground: token('foreground'),
+        'muted-foreground': token('muted-foreground'),
+        muted: token('muted'),
+        border: token('border'),
+        success: { DEFAULT: token('success'), soft: 'var(--color-success-soft)' },
+        warning: { DEFAULT: token('warning'), soft: 'var(--color-warning-soft)' },
+        danger: { DEFAULT: token('danger'), soft: 'var(--color-danger-soft)' },
+        overlay: token('overlay'),
       },
       borderRadius: {
         xl: '0.875rem',
       },
       boxShadow: {
-        // The ONLY shadow allowed on default-state cards -- no heavier shadows,
-        // drop shadows, or glow effects anywhere in this theme.
-        card: '0 1px 2px 0 rgba(16, 24, 40, 0.05)',
+        // The only shadow allowed on default-state cards (none in dark mode).
+        card: 'var(--shadow-card)',
       },
     },
   },

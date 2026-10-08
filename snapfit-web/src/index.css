@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  a {
+    @apply text-primary hover:text-primary-hover;
+  }
+
+  ::selection {
+    background-color: var(--color-primary-soft);
+  }
+}

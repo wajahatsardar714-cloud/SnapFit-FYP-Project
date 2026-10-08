@@ -60,15 +60,15 @@ function PlanSelectionPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-ink-300" size={28} />
+        <Loader2 className="animate-spin text-muted" size={28} />
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-ink-900">Choose a plan</h1>
-      <p className="mt-1 text-sm text-ink-500">Pick the plan that fits your store&apos;s volume.</p>
+      <h1 className="text-xl font-semibold text-foreground">Choose a plan</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Pick the plan that fits your store&apos;s volume.</p>
 
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan) => {
@@ -76,12 +76,12 @@ function PlanSelectionPage() {
           return (
             <Card key={plan.plan} className={`flex flex-col ${isCurrent ? '!border-primary' : ''}`}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold capitalize text-ink-900">{plan.name}</h2>
+                <h2 className="text-lg font-semibold capitalize text-foreground">{plan.name}</h2>
                 {isCurrent && <Badge variant="info">Current</Badge>}
               </div>
-              <p className="mt-2 text-2xl font-semibold text-ink-900">{formatPrice(plan)}</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{formatPrice(plan)}</p>
 
-              <ul className="mt-4 flex-1 space-y-2 text-sm text-ink-700">
+              <ul className="mt-4 flex-1 space-y-2 text-sm text-foreground">
                 <li className="flex items-center gap-2">
                   <Check size={16} className="shrink-0 text-success" />
                   {formatRequests(plan.requestsLimit)}

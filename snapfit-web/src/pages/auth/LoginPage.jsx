@@ -36,12 +36,12 @@ function LoginPage() {
     <div className="flex min-h-screen">
       <div className="flex w-full flex-col justify-center px-6 py-12 sm:w-[58%] sm:px-12 lg:px-20">
         <div className="mx-auto w-full max-w-md">
-          <Link to="/login" className="text-lg font-bold text-primary-600">
+          <Link to="/login" className="text-lg font-bold text-primary">
             SnapFit
           </Link>
 
-          <h1 className="mt-8 text-2xl font-semibold text-ink-900">Log in to SnapFit</h1>
-          <p className="mt-1 text-sm text-ink-500">Sign in to your merchant account</p>
+          <h1 className="mt-8 text-2xl font-semibold text-foreground">Log in to SnapFit</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to your merchant account</p>
 
           {formError && (
             <div className="mt-6">
@@ -76,7 +76,7 @@ function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-ink-500">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
             <Link to="/register" className="font-medium text-primary hover:underline">
               Create one

@@ -23,7 +23,7 @@ function CodeBlock({ children, copyText }) {
 
   return (
     <div className="relative">
-      <pre className="overflow-x-auto rounded-lg bg-ink-900 p-4 text-sm leading-relaxed text-gray-100">
+      <pre data-theme="dark" className="overflow-x-auto rounded-lg bg-surface-2 p-4 text-sm leading-relaxed text-foreground">
         <code className="font-mono">{children}</code>
       </pre>
       <Button
@@ -106,18 +106,18 @@ function ApiKeyPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-xl font-semibold text-ink-900">API Key</h1>
-      <p className="mt-1 text-sm text-ink-500">Use this key to authenticate requests to the SnapFit API.</p>
+      <h1 className="text-xl font-semibold text-foreground">API Key</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Use this key to authenticate requests to the SnapFit API.</p>
 
       <Card className="mt-6">
         {loading ? (
           <div className="flex justify-center py-4">
-            <Loader2 className="animate-spin text-ink-300" size={24} />
+            <Loader2 className="animate-spin text-muted" size={24} />
           </div>
         ) : !apiKey ? (
           <div className="flex flex-col items-center py-6 text-center">
-            <KeyRound className="text-ink-300" size={32} />
-            <p className="mt-3 text-sm text-ink-500">You haven&apos;t generated an API key yet.</p>
+            <KeyRound className="text-muted" size={32} />
+            <p className="mt-3 text-sm text-muted-foreground">You haven&apos;t generated an API key yet.</p>
             <Button className="mt-4" loading={working} onClick={handleGenerate}>
               Generate API Key
             </Button>
@@ -158,15 +158,15 @@ function ApiKeyPage() {
       </Card>
 
       <div className="mt-8">
-        <h2 className="text-sm font-semibold text-ink-900">Quick start</h2>
-        <p className="mt-1 text-sm text-ink-500">
-          Pass your key in the <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">x-api-key</code>{' '}
+        <h2 className="text-sm font-semibold text-foreground">Quick start</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Pass your key in the <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">x-api-key</code>{' '}
           header when calling{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-ink-700">POST {API_BASE}/recommend</code>.
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">POST {API_BASE}/recommend</code>.
         </p>
 
         <div className="mt-4">
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-500">cURL</p>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">cURL</p>
           <CodeBlock>{`curl -X POST ${API_BASE}/recommend \\
   -H "x-api-key: ${displayKey}" \\
   -F "image=@photo.jpg" \\

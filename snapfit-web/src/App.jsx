@@ -27,15 +27,15 @@ function App() {
         <Toaster
           position="top-right"
           toastOptions={{
-            className: 'rounded-lg border border-surface-border bg-surface-card text-ink-700 shadow-card',
+            className: 'rounded-lg border border-border bg-surface text-foreground shadow-card',
             duration: 4000,
             success: {
-              className: 'rounded-lg border border-success-border bg-surface-card text-ink-700 shadow-card',
-              iconTheme: { primary: 'var(--color-success)', secondary: 'var(--color-surface-card)' },
+              className: 'rounded-lg border border-success/30 bg-surface text-foreground shadow-card',
+              iconTheme: { primary: 'rgb(var(--color-success))', secondary: 'rgb(var(--color-surface))' },
             },
             error: {
-              className: 'rounded-lg border border-danger-border bg-surface-card text-ink-700 shadow-card',
-              iconTheme: { primary: 'var(--color-danger)', secondary: 'var(--color-surface-card)' },
+              className: 'rounded-lg border border-danger/30 bg-surface text-foreground shadow-card',
+              iconTheme: { primary: 'rgb(var(--color-danger))', secondary: 'rgb(var(--color-surface))' },
             },
           }}
         />

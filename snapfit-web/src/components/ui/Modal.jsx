@@ -29,8 +29,8 @@ function Modal({ open, onClose, title, children, className = '' }) {
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <DialogPanel className={`w-full max-w-sm rounded-xl bg-surface-card p-6 shadow-card ${className}`}>
-              {title && <DialogTitle className="text-base font-semibold text-ink-900">{title}</DialogTitle>}
+            <DialogPanel className={`w-full max-w-sm rounded-xl bg-surface p-6 shadow-card ${className}`}>
+              {title && <DialogTitle className="text-base font-semibold text-foreground">{title}</DialogTitle>}
               {children}
             </DialogPanel>
           </TransitionChild>

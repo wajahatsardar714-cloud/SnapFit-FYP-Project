@@ -7,8 +7,8 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface-page">
-        <Loader2 className="animate-spin text-ink-300" size={28} />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="animate-spin text-muted" size={28} />
       </div>
     );
   }

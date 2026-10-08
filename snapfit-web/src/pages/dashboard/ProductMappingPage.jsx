@@ -36,11 +36,11 @@ function TryOnCell({ mapping, busy, onUpload, onRemoveImage }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-surface-border bg-gray-50">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-gray-50">
         {imageUrl ? (
           <img src={imageUrl} alt={`${mapping.productId} product`} className="h-full w-full object-contain" />
         ) : (
-          <ImageOff size={18} className="text-ink-300" aria-hidden="true" />
+          <ImageOff size={18} className="text-muted" aria-hidden="true" />
         )}
       </div>
       <div className="space-y-1">
@@ -74,7 +74,7 @@ function TryOnCell({ mapping, busy, onUpload, onRemoveImage }) {
               type="button"
               onClick={() => onRemoveImage(mapping)}
               disabled={busy}
-              className="text-ink-500 underline hover:text-danger"
+              className="text-muted-foreground underline hover:text-danger"
             >
               Remove image
             </button>
@@ -227,15 +227,15 @@ function ProductMappingPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-ink-300" size={28} />
+        <Loader2 className="animate-spin text-muted" size={28} />
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-ink-900">Product Mapping</h1>
-      <p className="mt-1 text-sm text-ink-500">
+      <h1 className="text-xl font-semibold text-foreground">Product Mapping</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
         Link products from your store to a size chart. Product IDs come from your own e-commerce system.
       </p>
 
@@ -243,7 +243,7 @@ function ProductMappingPage() {
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <Card.Header>
-              <h2 className="text-sm font-semibold text-ink-900">Map a product</h2>
+              <h2 className="text-sm font-semibold text-foreground">Map a product</h2>
             </Card.Header>
             <Card.Body>
               {formError && <Alert variant="danger" description={formError} className="mb-4" />}
@@ -282,7 +282,7 @@ function ProductMappingPage() {
                     ))}
                   </Select>
                   {charts.length === 0 && (
-                    <p className="mt-1 text-xs text-ink-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       You don&apos;t have any size charts yet.{' '}
                       <Link to="/dashboard/size-charts/new" className="font-medium text-primary underline">
                         Create one
@@ -293,9 +293,9 @@ function ProductMappingPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <span className={FIELD_LABEL_CLASSES}>Product image (optional, for try-on)</span>
-                  <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-surface-border px-4 py-3 text-sm transition-colors duration-150 hover:border-primary">
-                    <ImagePlus size={18} className="shrink-0 text-ink-300" />
-                    <span className="truncate text-ink-700">{imageFile ? imageFile.name : 'Choose a flat-lay photo'}</span>
+                  <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border px-4 py-3 text-sm transition-colors duration-150 hover:border-primary">
+                    <ImagePlus size={18} className="shrink-0 text-muted" />
+                    <span className="truncate text-foreground">{imageFile ? imageFile.name : 'Choose a flat-lay photo'}</span>
                     <input
                       id="mapping-image"
                       type="file"
@@ -307,7 +307,7 @@ function ProductMappingPage() {
                   {fieldErrors.image ? (
                     <p className="mt-1 text-xs text-danger">{fieldErrors.image}</p>
                   ) : (
-                    <p className="mt-1 text-xs text-ink-500">{PRODUCT_IMAGE_HINT}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{PRODUCT_IMAGE_HINT}</p>
                   )}
                 </div>
                 <div className="flex justify-end gap-3 sm:col-span-2">
@@ -324,20 +324,20 @@ function ProductMappingPage() {
 
           <Card>
             <Card.Header>
-              <h2 className="text-sm font-semibold text-ink-900">Existing mappings</h2>
+              <h2 className="text-sm font-semibold text-foreground">Existing mappings</h2>
             </Card.Header>
             {mappings.length === 0 ? (
               <Card.Body>
                 <div className="flex flex-col items-center gap-3 py-8 text-center">
-                  <Link2 size={36} className="text-ink-300" />
-                  <p className="text-sm text-ink-500">No products mapped yet.</p>
+                  <Link2 size={36} className="text-muted" />
+                  <p className="text-sm text-muted-foreground">No products mapped yet.</p>
                 </div>
               </Card.Body>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-ink-500">
+                    <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       <th className="px-6 py-3">Product ID</th>
                       <th className="px-6 py-3">Product Name</th>
                       <th className="px-6 py-3">Size Chart</th>
@@ -345,16 +345,16 @@ function ProductMappingPage() {
                       <th className="px-6 py-3" aria-hidden="true"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-surface-border">
+                  <tbody className="divide-y divide-border">
                     {mappings.map((mapping) => (
                       <tr
                         key={mapping._id}
-                        className="text-sm text-ink-700 transition-colors duration-150 hover:bg-gray-50"
+                        className="text-sm text-foreground transition-colors duration-150 hover:bg-gray-50"
                       >
                         <td className="px-6 py-3 font-mono text-xs">{mapping.productId}</td>
                         <td className="px-6 py-3">{mapping.productName || '—'}</td>
                         <td className="px-6 py-3">
-                          {mapping.sizeChartId?.name || <span className="text-ink-300">Chart deleted</span>}
+                          {mapping.sizeChartId?.name || <span className="text-muted">Chart deleted</span>}
                         </td>
                         <td className="px-6 py-3">
                           <TryOnCell
@@ -371,7 +371,7 @@ function ProductMappingPage() {
                               size="sm"
                               icon={<Trash2 size={15} />}
                               onClick={() => setRemoveTarget(mapping)}
-                              className="hover:!bg-danger-bg hover:!text-danger"
+                              className="hover:!bg-danger-soft hover:!text-danger"
                               aria-label={`Remove mapping for ${mapping.productId}`}
                             />
                           </div>
@@ -386,18 +386,18 @@ function ProductMappingPage() {
         </div>
 
         <Card>
-          <h2 className="text-sm font-semibold text-ink-900">Your size charts</h2>
+          <h2 className="text-sm font-semibold text-foreground">Your size charts</h2>
           {charts.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-500">No active size charts yet.</p>
+            <p className="mt-3 text-sm text-muted-foreground">No active size charts yet.</p>
           ) : (
             <ul className="mt-4 space-y-3">
               {charts.map((chart) => (
-                <li key={chart._id} className="rounded-lg border border-surface-border p-3">
+                <li key={chart._id} className="rounded-lg border border-border p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-ink-900">{chart.name}</span>
+                    <span className="text-sm font-medium text-foreground">{chart.name}</span>
                     <Badge variant="info">{chart.category}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-ink-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {chart.sizes.length} size{chart.sizes.length === 1 ? '' : 's'}
                     {chart.gender ? ` · ${chart.gender}` : ''}
                   </p>

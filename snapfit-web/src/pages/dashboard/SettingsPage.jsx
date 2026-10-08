@@ -60,7 +60,7 @@ function ProfileTab() {
   return (
     <Card>
       <Card.Header>
-        <h2 className="text-sm font-semibold text-ink-900">Profile</h2>
+        <h2 className="text-sm font-semibold text-foreground">Profile</h2>
       </Card.Header>
       <Card.Body>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -160,7 +160,7 @@ function SecurityTab() {
   return (
     <Card>
       <Card.Header>
-        <h2 className="text-sm font-semibold text-ink-900">Security</h2>
+        <h2 className="text-sm font-semibold text-foreground">Security</h2>
       </Card.Header>
       <Card.Body>
         {formError && <Alert variant="danger" description={formError} className="mb-4" />}
@@ -232,12 +232,12 @@ function DangerZoneTab() {
 
   return (
     <>
-      <Card className="!border-danger-border">
+      <Card className="!border-danger/30">
         <Card.Header>
-          <h2 className="text-sm font-semibold text-danger-text">Danger Zone</h2>
+          <h2 className="text-sm font-semibold text-danger">Danger Zone</h2>
         </Card.Header>
         <Card.Body>
-          <p className="text-sm text-ink-700">
+          <p className="text-sm text-foreground">
             Permanently delete your SnapFit account, API key, size charts, product mappings, and recommendation
             history. This action cannot be undone.
           </p>
@@ -248,8 +248,8 @@ function DangerZoneTab() {
       </Card>
 
       <Modal open={modalOpen} onClose={closeModal} title="Delete your account?">
-        <p className="mt-2 text-sm text-ink-500">
-          This will permanently delete <span className="font-medium text-ink-700">{merchant.businessName}</span>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This will permanently delete <span className="font-medium text-foreground">{merchant.businessName}</span>
           &apos;s account, including all size charts, product mappings, and recommendation history. This cannot be
           undone.
         </p>
@@ -279,8 +279,8 @@ function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-ink-900">Settings</h1>
-      <p className="mt-1 text-sm text-ink-500">Manage your profile, security, and account.</p>
+      <h1 className="text-xl font-semibold text-foreground">Settings</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Manage your profile, security, and account.</p>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4">
         <Card className="h-fit lg:col-span-1">
@@ -291,7 +291,7 @@ function SettingsPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150 ${
-                  activeTab === tab.key ? 'bg-primary-50 font-medium text-primary-700' : 'text-ink-700 hover:bg-gray-50'
+                  activeTab === tab.key ? 'bg-primary-soft font-medium text-primary-hover' : 'text-foreground hover:bg-gray-50'
                 }`}
               >
                 <tab.icon size={16} />

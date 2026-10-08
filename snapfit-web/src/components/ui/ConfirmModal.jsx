@@ -16,7 +16,7 @@ function ConfirmModal({
 }) {
   return (
     <Modal open={open} onClose={onClose} title={title}>
-      {description && <p className="mt-2 text-sm text-ink-500">{description}</p>}
+      {description && <p className="mt-2 text-sm text-muted-foreground">{description}</p>}
 
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="ghost" onClick={onClose} disabled={loading}>

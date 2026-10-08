@@ -57,8 +57,8 @@ function SizeChartsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink-900">Size Charts</h1>
-          <p className="mt-1 text-sm text-ink-500">Manage the size charts used for fit recommendations.</p>
+          <h1 className="text-xl font-semibold text-foreground">Size Charts</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Manage the size charts used for fit recommendations.</p>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/dashboard/product-mapping">
@@ -86,24 +86,24 @@ function SizeChartsPage() {
         </Select>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-surface-border bg-surface-card shadow-card">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
         {loading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-ink-300" size={28} />
+            <Loader2 className="animate-spin text-muted" size={28} />
           </div>
         ) : charts.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
-            <Ruler size={36} className="text-ink-300" />
+            <Ruler size={36} className="text-muted" />
             {category ? (
               <>
-                <p className="text-sm text-ink-500">No charts match this category.</p>
+                <p className="text-sm text-muted-foreground">No charts match this category.</p>
                 <Button variant="secondary" size="sm" onClick={() => setCategory('')}>
                   Clear filter
                 </Button>
               </>
             ) : (
               <>
-                <p className="text-sm text-ink-500">No size charts yet.</p>
+                <p className="text-sm text-muted-foreground">No size charts yet.</p>
                 <Link to="/dashboard/size-charts/new">
                   <Button icon={<Plus size={16} />}>Create your first size chart</Button>
                 </Link>
@@ -114,7 +114,7 @@ function SizeChartsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-ink-500">
+                <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <th className="px-6 py-3">Name</th>
                   <th className="px-6 py-3">Category</th>
                   <th className="px-6 py-3">Gender</th>
@@ -123,10 +123,10 @@ function SizeChartsPage() {
                   <th className="px-6 py-3" aria-hidden="true"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-border">
+              <tbody className="divide-y divide-border">
                 {charts.map((chart) => (
-                  <tr key={chart._id} className="text-sm text-ink-700 transition-colors duration-150 hover:bg-gray-50">
-                    <td className="px-6 py-3 font-medium text-ink-900">{chart.name}</td>
+                  <tr key={chart._id} className="text-sm text-foreground transition-colors duration-150 hover:bg-gray-50">
+                    <td className="px-6 py-3 font-medium text-foreground">{chart.name}</td>
                     <td className="px-6 py-3 capitalize">{chart.category}</td>
                     <td className="px-6 py-3 capitalize">{chart.gender || '—'}</td>
                     <td className="px-6 py-3">{chart.sizes.length}</td>
@@ -150,7 +150,7 @@ function SizeChartsPage() {
                           icon={<Trash2 size={15} />}
                           onClick={() => setDeleteTarget(chart)}
                           disabled={!chart.isActive}
-                          className="hover:!bg-danger-bg hover:!text-danger"
+                          className="hover:!bg-danger-soft hover:!text-danger"
                           aria-label={`Delete ${chart.name}`}
                         />
                       </div>
@@ -164,7 +164,7 @@ function SizeChartsPage() {
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-ink-500">
+        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
           </span>

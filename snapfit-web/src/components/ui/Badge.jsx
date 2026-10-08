@@ -1,9 +1,9 @@
 const VARIANT_CLASSES = {
-  success: 'bg-success-bg text-success-text border-success-border',
-  danger: 'bg-danger-bg text-danger-text border-danger-border',
-  warning: 'bg-warning-bg text-warning-text border-warning-border',
-  info: 'bg-info-bg text-info-text border-info-border',
-  neutral: 'bg-gray-100 text-ink-700 border-surface-border',
+  success: 'bg-success-soft text-success border-success/30',
+  danger: 'bg-danger-soft text-danger border-danger/30',
+  warning: 'bg-warning-soft text-warning border-warning/30',
+  info: 'bg-primary-soft text-primary border-primary/30',
+  neutral: 'bg-gray-100 text-foreground border-border',
 };
 
 function Badge({ variant = 'neutral', children, className = '' }) {

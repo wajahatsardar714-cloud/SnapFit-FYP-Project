@@ -91,12 +91,12 @@ function RegisterPage() {
     <div className="flex min-h-screen">
       <div className="flex w-full flex-col justify-center px-6 py-12 sm:w-[58%] sm:px-12 lg:px-20">
         <div className="mx-auto w-full max-w-md">
-          <Link to="/login" className="text-lg font-bold text-primary-600">
+          <Link to="/login" className="text-lg font-bold text-primary">
             SnapFit
           </Link>
 
-          <h1 className="mt-8 text-2xl font-semibold text-ink-900">Create your merchant account</h1>
-          <p className="mt-1 text-sm text-ink-500">Start integrating SnapFit into your store</p>
+          <h1 className="mt-8 text-2xl font-semibold text-foreground">Create your merchant account</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Start integrating SnapFit into your store</p>
 
           {formError && (
             <div className="mt-6">
@@ -140,8 +140,8 @@ function RegisterPage() {
                 {PASSWORD_RULES.map((rule) => {
                   const met = rule.test(form.password);
                   return (
-                    <li key={rule.label} className={`flex items-center gap-1.5 text-xs ${met ? 'text-success' : 'text-ink-500'}`}>
-                      <Check size={12} className={met ? 'text-success' : 'text-ink-300'} />
+                    <li key={rule.label} className={`flex items-center gap-1.5 text-xs ${met ? 'text-success' : 'text-muted-foreground'}`}>
+                      <Check size={12} className={met ? 'text-success' : 'text-muted'} />
                       {rule.label}
                     </li>
                   );
@@ -195,7 +195,7 @@ function RegisterPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-ink-500">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link to="/login" className="font-medium text-primary hover:underline">
               Sign in

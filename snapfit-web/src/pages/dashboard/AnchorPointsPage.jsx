@@ -148,31 +148,31 @@ function AnchorPointsPage() {
   if (loading || !mapping) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-ink-300" size={28} />
+        <Loader2 className="animate-spin text-muted" size={28} />
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold text-ink-900">Anchor Points</h1>
-      <p className="mt-1 text-sm text-ink-500">
+      <h1 className="text-xl font-semibold text-foreground">Anchor Points</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
         {mapping.productName || mapping.productId} — place the 4 points where they land on this product&apos;s flat-lay
         photo. These are used to warp the product image onto a customer&apos;s photo for the size-preview overlay.
       </p>
 
       {!imagePreviewUrl ? (
-        <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-surface-border p-10 text-center transition-colors duration-150 hover:border-primary">
-          <ImagePlus size={28} className="text-ink-300" />
-          <p className="mt-2 text-sm text-ink-700">Click to upload a product flat-lay photo</p>
-          <p className="mx-auto mt-1 max-w-md text-xs text-ink-500">{PRODUCT_IMAGE_HINT}</p>
+        <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-10 text-center transition-colors duration-150 hover:border-primary">
+          <ImagePlus size={28} className="text-muted" />
+          <p className="mt-2 text-sm text-foreground">Click to upload a product flat-lay photo</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">{PRODUCT_IMAGE_HINT}</p>
           <input type="file" accept={PRODUCT_IMAGE_ACCEPT} className="hidden" onChange={handleImageChange} />
         </label>
       ) : (
         <>
           <div
             ref={containerRef}
-            className="relative mt-6 select-none overflow-hidden rounded-lg border border-surface-border bg-gray-50"
+            className="relative mt-6 select-none overflow-hidden rounded-lg border border-border bg-gray-50"
           >
             <img src={imagePreviewUrl} alt="Product flat-lay" className="pointer-events-none block w-full" draggable={false} />
             {ANCHOR_POINTS.map(({ key, label, color }) => (
@@ -187,7 +187,7 @@ function AnchorPointsPage() {
             ))}
           </div>
 
-          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-500">
+          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
             {ANCHOR_POINTS.map(({ key, label, color }) => (
               <li key={key} className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />

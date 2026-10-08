@@ -198,7 +198,7 @@ function PoseOverlay({ imageUrl, dimensions, landmarks }) {
   const point = (name) => landmarks[name] && { x: landmarks[name].x * width, y: landmarks[name].y * height };
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-surface-border bg-gray-100">
+    <div className="relative overflow-hidden rounded-lg border border-border bg-gray-100">
       <img src={imageUrl} alt="Analyzed" className="block w-full" />
       <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full">
         {SKELETON.map(([a, b]) => {
@@ -241,9 +241,9 @@ function KeyValueTable({ rows }) {
     <table className="w-full text-sm">
       <tbody>
         {rows.map(([key, value]) => (
-          <tr key={key} className="border-b border-surface-border last:border-0">
-            <td className="py-1.5 pr-4 font-mono text-xs text-ink-500">{key}</td>
-            <td className="py-1.5 text-right font-mono text-ink-900">{value}</td>
+          <tr key={key} className="border-b border-border last:border-0">
+            <td className="py-1.5 pr-4 font-mono text-xs text-muted-foreground">{key}</td>
+            <td className="py-1.5 text-right font-mono text-foreground">{value}</td>
           </tr>
         ))}
       </tbody>
@@ -256,11 +256,11 @@ function SizeRecommendation({ recommendation, alternativeSize, fitNotes }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary-50 text-2xl font-bold text-primary">
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary-soft text-2xl font-bold text-primary">
           {recommendation.recommended_size}
         </div>
         <div>
-          <p className="text-sm text-ink-500">Recommended size</p>
+          <p className="text-sm text-muted-foreground">Recommended size</p>
           <div className="mt-1 flex flex-wrap gap-2">
             <Badge variant={confidenceVariant(recommendation.confidence)}>
               Confidence {Math.round(recommendation.confidence * 100)}%
@@ -270,9 +270,9 @@ function SizeRecommendation({ recommendation, alternativeSize, fitNotes }) {
           </div>
         </div>
       </div>
-      <p className="text-sm text-ink-700">{recommendation.notes}</p>
+      <p className="text-sm text-foreground">{recommendation.notes}</p>
       {fitNotes?.length > 0 && (
-        <ul className="list-disc space-y-1 pl-5 text-sm text-ink-700">
+        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
           {fitNotes.map((note) => (
             <li key={note}>{note}</li>
           ))}
@@ -281,14 +281,14 @@ function SizeRecommendation({ recommendation, alternativeSize, fitNotes }) {
       <div className="space-y-2">
         {scores.map(([label, score]) => (
           <div key={label} className="flex items-center gap-3 text-sm">
-            <span className="w-10 font-medium text-ink-900">{label}</span>
+            <span className="w-10 font-medium text-foreground">{label}</span>
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
               <div
-                className={`h-full rounded-full ${label === recommendation.recommended_size ? 'bg-primary' : 'bg-primary-200'}`}
+                className={`h-full rounded-full ${label === recommendation.recommended_size ? 'bg-primary' : 'bg-primary/30'}`}
                 style={{ width: `${Math.round(score * 100)}%` }}
               />
             </div>
-            <span className="w-10 text-right font-mono text-xs text-ink-500">{score.toFixed(2)}</span>
+            <span className="w-10 text-right font-mono text-xs text-muted-foreground">{score.toFixed(2)}</span>
           </div>
         ))}
       </div>
@@ -378,15 +378,15 @@ function AiTestPage() {
   const features = result?.kind === 'analyze' ? result.body.features : null;
 
   return (
-    <div className="min-h-screen bg-surface-page px-4 py-8 sm:px-6">
+    <div className="min-h-screen bg-background px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <ScanLine className="text-primary" size={24} />
-              <h1 className="text-2xl font-bold text-ink-900">AI Service Test Bench</h1>
+              <h1 className="text-2xl font-bold text-foreground">AI Service Test Bench</h1>
             </div>
-            <p className="mt-1 text-sm text-ink-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Calls the Python AI service directly — no login or API key required. For local development only.
             </p>
           </div>
@@ -405,8 +405,8 @@ function AiTestPage() {
           <div className="space-y-6 lg:col-span-2">
             <Card>
               <Card.Header padding="sm">
-                <h2 className="font-semibold text-ink-900">1. Photo</h2>
-                <p className="text-xs text-ink-500">Full body, facing the camera, head to ankles visible.</p>
+                <h2 className="font-semibold text-foreground">1. Photo</h2>
+                <p className="text-xs text-muted-foreground">Full body, facing the camera, head to ankles visible.</p>
               </Card.Header>
               <Card.Body padding="sm" className="space-y-3">
                 <div className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
@@ -416,7 +416,7 @@ function AiTestPage() {
                       type="button"
                       onClick={() => setSource(key)}
                       className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                        source === key ? 'bg-white text-primary shadow-sm' : 'text-ink-500 hover:text-ink-700'
+                        source === key ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       <Icon size={14} />
@@ -425,7 +425,7 @@ function AiTestPage() {
                   ))}
                 </div>
                 {source === 'phone' ? (
-                  <Suspense fallback={<p className="py-10 text-center text-sm text-ink-500">Loading…</p>}>
+                  <Suspense fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>}>
                     <MobileHandoff
                       apiUrl={API_BASE}
                       sessionsPath="/handoff/test-sessions"
@@ -437,7 +437,7 @@ function AiTestPage() {
                   <CameraCapture onCapture={selectFile} onClose={() => setSource('upload')} />
                 ) : (
                   <label
-                    className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-surface-border px-4 py-6 text-center hover:border-primary-200 hover:bg-primary-50"
+                    className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-6 text-center hover:border-primary/40 hover:bg-primary-soft"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
                       e.preventDefault();
@@ -447,9 +447,9 @@ function AiTestPage() {
                     {previewUrl ? (
                       <img src={previewUrl} alt="Selected" className="max-h-64 rounded-md" />
                     ) : (
-                      <ImageUp size={32} className="text-ink-300" />
+                      <ImageUp size={32} className="text-muted" />
                     )}
-                    <span className="text-sm text-ink-700">
+                    <span className="text-sm text-foreground">
                       {file ? file.name : 'Click to choose or drop an image'}
                     </span>
                     <input
@@ -465,8 +465,8 @@ function AiTestPage() {
 
             <Card>
               <Card.Header padding="sm">
-                <h2 className="font-semibold text-ink-900">2. Size analysis</h2>
-                <p className="text-xs text-ink-500">POST /analyze and /landmarks-only</p>
+                <h2 className="font-semibold text-foreground">2. Size analysis</h2>
+                <p className="text-xs text-muted-foreground">POST /analyze and /landmarks-only</p>
               </Card.Header>
               <Card.Body padding="sm" className="space-y-4">
                 <Input
@@ -479,7 +479,7 @@ function AiTestPage() {
                   onChange={(e) => setHeight(e.target.value)}
                   placeholder="e.g. 175 (enables cm estimates)"
                 />
-                <label className="flex items-center gap-2 text-sm text-ink-700">
+                <label className="flex items-center gap-2 text-sm text-foreground">
                   <input type="checkbox" checked={useChart} onChange={(e) => setUseChart(e.target.checked)} />
                   Send a size chart (get a size recommendation)
                 </label>
@@ -516,8 +516,8 @@ function AiTestPage() {
 
             <Card>
               <Card.Header padding="sm">
-                <h2 className="font-semibold text-ink-900">3. Virtual try-on</h2>
-                <p className="text-xs text-ink-500">
+                <h2 className="font-semibold text-foreground">3. Virtual try-on</h2>
+                <p className="text-xs text-muted-foreground">
                   POST /try-on — needs a product with anchor points saved in the backend.
                 </p>
               </Card.Header>
@@ -547,7 +547,7 @@ function AiTestPage() {
                           aria-pressed={tryOnView === key}
                           onClick={() => setTryOnView(key)}
                           className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${
-                            tryOnView === key ? 'bg-white text-primary shadow-sm' : 'text-ink-500 hover:text-ink-700'
+                            tryOnView === key ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                           }`}
                         >
                           {label}
@@ -557,7 +557,7 @@ function AiTestPage() {
                     <img
                       src={tryOnView === 'tryOn' ? tryOnImage : previewUrl}
                       alt={tryOnView === 'tryOn' ? 'Try-on result' : 'Original photo'}
-                      className="w-full rounded-lg border border-surface-border"
+                      className="w-full rounded-lg border border-border"
                     />
                   </div>
                 )}
@@ -568,14 +568,14 @@ function AiTestPage() {
           <div className="space-y-6 lg:col-span-3">
             {!result ? (
               <Card className="flex min-h-[20rem] flex-col items-center justify-center text-center">
-                <ScanLine size={40} className="text-ink-300" />
-                <p className="mt-3 text-sm text-ink-500">Choose a photo and run an analysis to see the results here.</p>
+                <ScanLine size={40} className="text-muted" />
+                <p className="mt-3 text-sm text-muted-foreground">Choose a photo and run an analysis to see the results here.</p>
               </Card>
             ) : (
               <>
                 <Card>
                   <Card.Header padding="sm" className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="font-semibold text-ink-900">
+                    <h2 className="font-semibold text-foreground">
                       Detected pose ({Object.keys(result.landmarks).length} landmarks)
                     </h2>
                     <div className="flex flex-wrap gap-2">
@@ -592,7 +592,7 @@ function AiTestPage() {
                   </Card.Header>
                   <Card.Body padding="sm">
                     <PoseOverlay imageUrl={previewUrl} dimensions={result.dimensions} landmarks={result.landmarks} />
-                    <p className="mt-2 text-xs text-ink-500">
+                    <p className="mt-2 text-xs text-muted-foreground">
                       Green = visibility ≥ 0.5, amber = low visibility. Hover a point for its name.
                     </p>
                   </Card.Body>
@@ -602,7 +602,7 @@ function AiTestPage() {
                   <>
                     <Card>
                       <Card.Header padding="sm">
-                        <h2 className="font-semibold text-ink-900">Size recommendation</h2>
+                        <h2 className="font-semibold text-foreground">Size recommendation</h2>
                       </Card.Header>
                       <Card.Body padding="sm">
                         {result.body.size_recommendation ? (
@@ -612,7 +612,7 @@ function AiTestPage() {
                             fitNotes={result.body.fitNotes}
                           />
                         ) : (
-                          <p className="text-sm text-ink-500">No size chart was sent, so no recommendation.</p>
+                          <p className="text-sm text-muted-foreground">No size chart was sent, so no recommendation.</p>
                         )}
                       </Card.Body>
                     </Card>
@@ -620,7 +620,7 @@ function AiTestPage() {
                     <div className="grid gap-6 md:grid-cols-2">
                       <Card>
                         <Card.Header padding="sm">
-                          <h2 className="font-semibold text-ink-900">Body ratios</h2>
+                          <h2 className="font-semibold text-foreground">Body ratios</h2>
                         </Card.Header>
                         <Card.Body padding="sm">
                           <KeyValueTable rows={Object.entries(features.ratios).map(([k, v]) => [k, formatNumber(v)])} />
@@ -628,7 +628,7 @@ function AiTestPage() {
                       </Card>
                       <Card>
                         <Card.Header padding="sm">
-                          <h2 className="font-semibold text-ink-900">Estimated measurements</h2>
+                          <h2 className="font-semibold text-foreground">Estimated measurements</h2>
                         </Card.Header>
                         <Card.Body padding="sm">
                           {Object.keys(result.body.measurements || {}).length > 0 ? (
@@ -639,7 +639,7 @@ function AiTestPage() {
                               ])}
                             />
                           ) : (
-                            <p className="text-sm text-ink-500">Enter your height to get estimates in cm.</p>
+                            <p className="text-sm text-muted-foreground">Enter your height to get estimates in cm.</p>
                           )}
                         </Card.Body>
                       </Card>
@@ -649,8 +649,8 @@ function AiTestPage() {
 
                 <Card>
                   <details>
-                    <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink-900">Raw JSON response</summary>
-                    <pre className="max-h-96 overflow-auto border-t border-surface-border bg-gray-50 p-4 text-xs text-ink-700">
+                    <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-foreground">Raw JSON response</summary>
+                    <pre className="max-h-96 overflow-auto border-t border-border bg-gray-50 p-4 text-xs text-foreground">
                       {JSON.stringify(result.body, null, 2)}
                     </pre>
                   </details>

@@ -19,7 +19,7 @@ function Card({ padding = 'md', className = '', children, ...rest }) {
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-surface-border bg-surface-card shadow-card ${rootPadding} ${className}`}
+      className={`overflow-hidden rounded-xl border border-border bg-surface shadow-card ${rootPadding} ${className}`}
       {...rest}
     >
       {children}
@@ -29,7 +29,7 @@ function Card({ padding = 'md', className = '', children, ...rest }) {
 
 function CardHeader({ padding = 'md', className = '', children, ...rest }) {
   return (
-    <div className={`border-b border-surface-border ${PADDING_CLASSES[padding]} ${className}`} {...rest}>
+    <div className={`border-b border-border ${PADDING_CLASSES[padding]} ${className}`} {...rest}>
       {children}
     </div>
   );
@@ -45,7 +45,7 @@ function CardBody({ padding = 'md', className = '', children, ...rest }) {
 
 function CardFooter({ padding = 'md', className = '', children, ...rest }) {
   return (
-    <div className={`border-t border-surface-border ${PADDING_CLASSES[padding]} ${className}`} {...rest}>
+    <div className={`border-t border-border ${PADDING_CLASSES[padding]} ${className}`} {...rest}>
       {children}
     </div>
   );
