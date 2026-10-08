@@ -76,7 +76,7 @@ function MobileCapturePage() {
 
   if (status === 'done') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface-2 p-6 text-center">
+      <div data-theme="light" className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface-2 p-6 text-center">
         <CheckCircle2 size={40} className="text-success" />
         <p className="text-lg font-semibold text-foreground">Photo sent!</p>
         <p className="text-sm text-muted-foreground">Return to your computer to see your size recommendation.</p>
@@ -86,7 +86,7 @@ function MobileCapturePage() {
 
   if (status === 'expired') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface-2 p-6 text-center">
+      <div data-theme="light" className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface-2 p-6 text-center">
         <p className="text-lg font-semibold text-foreground">This link has expired</p>
         <p className="text-sm text-muted-foreground">Go back to your computer and generate a new QR code.</p>
       </div>
@@ -94,7 +94,8 @@ function MobileCapturePage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-2 p-4">
+    // Shopper-facing: always light, like the widget.
+    <div data-theme="light" className="min-h-screen bg-surface-2 p-4">
       <div className="mx-auto max-w-sm">
         <h1 className="text-center text-lg font-semibold text-foreground">Take your photo</h1>
         <p className="mt-1 text-center text-sm text-muted-foreground">This is sent straight to your computer.</p>

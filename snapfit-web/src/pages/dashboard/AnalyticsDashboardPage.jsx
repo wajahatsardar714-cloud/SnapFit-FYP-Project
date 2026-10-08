@@ -20,6 +20,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import StatCard from '../../components/ui/StatCard';
+import { useChartTheme } from '../../utils/chartTheme';
 
 const AUTO_REFRESH_MS = 60000;
 const PERIOD_OPTIONS = [
@@ -28,12 +29,9 @@ const PERIOD_OPTIONS = [
   { key: '90d', label: '90 Days' },
 ];
 
-// Fixed order, used per-category for the size-distribution and confidence-bucket
-// bar charts -- assigned by category identity (not rank) so a given size/bucket
-// keeps the same color as counts change between refreshes.
-const CHART_COLORS = ['#4F46E5', '#8B5CF6', '#06B6D4', '#F59E0B', '#F43F5E', '#10B981'];
-const GRID_STROKE = '#E5E7EB';
-const AXIS_TICK_STYLE = { fontSize: 12, fill: '#6B7280' };
+// Series colours come from useChartTheme(), assigned by category position (not
+// rank) so a given size/bucket keeps the same colour as counts change.
+const axisTick = (chart, fontSize = 12) => ({ fontSize, fill: chart.axis });
 
 const CANONICAL_SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
@@ -51,12 +49,12 @@ const FIT_LABELS = {
   slightly_large: 'Slightly Large',
   too_large: 'Too Large',
 };
-const FIT_COLORS = {
-  too_small: '#EF4444',
-  slightly_small: '#F59E0B',
-  perfect: '#10B981',
-  slightly_large: '#F59E0B',
-  too_large: '#EF4444',
+const FIT_STATUS = {
+  too_small: 'danger',
+  slightly_small: 'warning',
+  perfect: 'success',
+  slightly_large: 'warning',
+  too_large: 'danger',
 };
 
 const RECOMMENDATION_STATUS_VARIANT = { success: 'success', low_confidence: 'warning', failed: 'danger' };
@@ -65,9 +63,9 @@ const RECOMMENDATION_STATUS_VARIANT = { success: 'success', low_confidence: 'war
 // not literal percentages -- recharts scales each Pie's slices relative to its
 // own data sum).
 const GAUGE_ZONES = [
-  { value: 50, fill: '#EF4444' },
-  { value: 25, fill: '#F59E0B' },
-  { value: 25, fill: '#10B981' },
+  { value: 50, status: 'danger' },
+  { value: 25, status: 'warning' },
+  { value: 25, status: 'success' },
 ];
 
 function sortByCanonicalOrder(items, getKey) {
@@ -179,6 +177,7 @@ function ChartCard({ title, action, children, isEmpty, emptyLabel }) {
 // this keeps it perfectly aligned with the zone track without any manual
 // pixel/coordinate math against a separately-positioned overlay.
 function ConfidenceGauge({ confidence }) {
+  const chart = useChartTheme();
   const pct = confidence != null ? Math.round(confidence * 100) : null;
   const markerCenter = pct ?? 0;
   const halfWidth = 1.25;
@@ -186,7 +185,7 @@ function ConfidenceGauge({ confidence }) {
   const after = Math.max(0.01, 100 - markerCenter - halfWidth);
   const markerData = [
     { value: before, fill: 'transparent' },
-    { value: halfWidth * 2, fill: '#111827' },
+    { value: halfWidth * 2, fill: chart.foreground },
     { value: after, fill: 'transparent' },
   ];
 
@@ -209,7 +208,7 @@ function ConfidenceGauge({ confidence }) {
             >
               {GAUGE_ZONES.map((zone, i) => (
                 // eslint-disable-next-line react/no-array-index-key
-                <Cell key={i} fill={zone.fill} />
+                <Cell key={i} fill={chart[zone.status]} />
               ))}
             </Pie>
             {pct != null && (
@@ -256,6 +255,7 @@ function ConfidenceGauge({ confidence }) {
 }
 
 function AnalyticsDashboardPage() {
+  const chart = useChartTheme();
   const [period, setPeriod] = useState('30d');
   const [dashboard, setDashboard] = useState(null);
   const [usage, setUsage] = useState([]);
@@ -351,16 +351,16 @@ function AnalyticsDashboardPage() {
   const sizeChartData = sortByCanonicalOrder(sizeDistribution, (s) => s.size).map((s, i) => ({
     ...s,
     displayLabel: s.size,
-    fill: CHART_COLORS[i % CHART_COLORS.length],
+    fill: chart.series[i % chart.series.length],
   }));
 
   const confidenceChartData = CONFIDENCE_BUCKET_ORDER.map((range, i) => {
     const bucket = confidenceDistribution.find((b) => b.range === range);
-    return { range, count: bucket?.count || 0, displayLabel: range, fill: CHART_COLORS[i % CHART_COLORS.length] };
+    return { range, count: bucket?.count || 0, displayLabel: range, fill: chart.series[i % chart.series.length] };
   });
 
   const feedbackChartData = feedbackStats
-    ? feedbackStats.breakdown.map((b) => ({ ...b, displayLabel: FIT_LABELS[b.fitResult], fill: FIT_COLORS[b.fitResult] }))
+    ? feedbackStats.breakdown.map((b) => ({ ...b, displayLabel: FIT_LABELS[b.fitResult], fill: chart[FIT_STATUS[b.fitResult]] }))
     : [];
 
   const trend = calcTrend(dashboard.recommendationsThisMonth, dashboard.recommendationsLastMonth);
@@ -424,26 +424,26 @@ function AnalyticsDashboardPage() {
         >
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={usage} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+              <CartesianGrid stroke={chart.grid} vertical={false} />
               <XAxis
                 dataKey="date"
                 tickFormatter={formatShortDate}
-                tick={AXIS_TICK_STYLE}
+                tick={axisTick(chart)}
                 axisLine={false}
                 tickLine={false}
                 minTickGap={24}
               />
-              <YAxis allowDecimals={false} tick={AXIS_TICK_STYLE} axisLine={false} tickLine={false} width={30} />
-              <Tooltip content={<AreaChartTooltip />} cursor={{ stroke: GRID_STROKE, strokeWidth: 1 }} />
+              <YAxis allowDecimals={false} tick={axisTick(chart)} axisLine={false} tickLine={false} width={30} />
+              <Tooltip content={<AreaChartTooltip />} cursor={{ stroke: chart.grid, strokeWidth: 1 }} />
               <Area
                 type="monotone"
                 dataKey="count"
-                stroke="#4F46E5"
+                stroke={chart.primary}
                 strokeWidth={2}
-                fill="#4F46E5"
+                fill={chart.primary}
                 fillOpacity={0.08}
-                dot={{ r: 3, fill: '#4F46E5', strokeWidth: 2, stroke: '#FFFFFF' }}
-                activeDot={{ r: 5, strokeWidth: 2, stroke: '#FFFFFF' }}
+                dot={{ r: 3, fill: chart.primary, strokeWidth: 2, stroke: chart.background }}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: chart.background }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -458,9 +458,9 @@ function AnalyticsDashboardPage() {
         <ChartCard title="Size Distribution" isEmpty={sizeChartData.length === 0} emptyLabel="No sized recommendations yet">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={sizeChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke={GRID_STROKE} vertical={false} />
-              <XAxis dataKey="size" tick={AXIS_TICK_STYLE} axisLine={false} tickLine={false} />
-              <YAxis allowDecimals={false} tick={AXIS_TICK_STYLE} axisLine={false} tickLine={false} width={24} />
+              <CartesianGrid stroke={chart.grid} vertical={false} />
+              <XAxis dataKey="size" tick={axisTick(chart)} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={axisTick(chart)} axisLine={false} tickLine={false} width={24} />
               <Tooltip content={<CategoryTooltip />} cursor={{ fill: 'rgba(79,70,229,0.04)' }} />
               <Bar dataKey="count" radius={[2, 2, 0, 0]} maxBarSize={40}>
                 {sizeChartData.map((entry) => (
@@ -478,9 +478,9 @@ function AnalyticsDashboardPage() {
         >
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={confidenceChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke={GRID_STROKE} vertical={false} />
-              <XAxis dataKey="range" tick={AXIS_TICK_STYLE} axisLine={false} tickLine={false} />
-              <YAxis allowDecimals={false} tick={AXIS_TICK_STYLE} axisLine={false} tickLine={false} width={24} />
+              <CartesianGrid stroke={chart.grid} vertical={false} />
+              <XAxis dataKey="range" tick={axisTick(chart)} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={axisTick(chart)} axisLine={false} tickLine={false} width={24} />
               <Tooltip content={<CategoryTooltip />} cursor={{ fill: 'rgba(79,70,229,0.04)' }} />
               <Bar dataKey="count" radius={[2, 2, 0, 0]} maxBarSize={40}>
                 {confidenceChartData.map((entry) => (
@@ -506,10 +506,10 @@ function AnalyticsDashboardPage() {
               </p>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={feedbackChartData} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+                  <CartesianGrid stroke={chart.grid} vertical={false} />
                   <XAxis
                     dataKey="displayLabel"
-                    tick={{ ...AXIS_TICK_STYLE, fontSize: 11 }}
+                    tick={axisTick(chart, 11)}
                     axisLine={false}
                     tickLine={false}
                     interval={0}
@@ -517,7 +517,7 @@ function AnalyticsDashboardPage() {
                     textAnchor="end"
                     height={50}
                   />
-                  <YAxis allowDecimals={false} tick={AXIS_TICK_STYLE} axisLine={false} tickLine={false} width={24} />
+                  <YAxis allowDecimals={false} tick={axisTick(chart)} axisLine={false} tickLine={false} width={24} />
                   <Tooltip content={<CategoryTooltip />} cursor={{ fill: 'rgba(79,70,229,0.04)' }} />
                   <Bar dataKey="count" radius={[2, 2, 0, 0]} maxBarSize={40}>
                     {feedbackChartData.map((entry) => (

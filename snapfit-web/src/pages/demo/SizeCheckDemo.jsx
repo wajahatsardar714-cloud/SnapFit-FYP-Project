@@ -29,7 +29,8 @@ function SizeCheckDemo() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-2 p-6">
+    // Stands in for a merchant's store page: always light, like the widget.
+    <div data-theme="light" className="min-h-screen bg-surface-2 p-6">
       <div className="mx-auto max-w-3xl">
         <div className="rounded-xl border border-dashed border-border bg-background p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tester config</p>

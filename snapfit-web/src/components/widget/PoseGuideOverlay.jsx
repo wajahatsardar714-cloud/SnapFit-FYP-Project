@@ -1,10 +1,12 @@
 import { useId } from 'react';
 import { POSE_GUIDE } from '../../config/poseConfig';
 
-const STATE_COLORS = {
-  searching: { stroke: '#F8FAFC', strokeOpacity: 0.75 },
-  partial: { stroke: '#F59E0B', strokeOpacity: 0.95 },
-  aligned: { stroke: '#10B981', strokeOpacity: 1 },
+// Colour comes from the theme via currentColor (the camera viewport is scoped
+// to the dark palette, so these are its bright shades).
+const STATE_STYLES = {
+  searching: { className: 'text-foreground', opacity: 0.75 },
+  partial: { className: 'text-warning', opacity: 0.95 },
+  aligned: { className: 'text-success', opacity: 1 },
 };
 
 const OUTLINE_HEADS = 0.07;
@@ -92,27 +94,28 @@ function PoseGuideOverlay({ width, height, state = 'searching' }) {
   const top = (height - guide.bodyHeightFraction * height) / 2;
   const toPx = ([x, y]) => [width / 2 + x * unit, top + y * unit];
   const shapes = buildFigure(guide);
-  const { stroke, strokeOpacity } = STATE_COLORS[state] || STATE_COLORS.searching;
+  const { className, opacity } = STATE_STYLES[state] || STATE_STYLES.searching;
 
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
-      className="pointer-events-none absolute inset-0 h-full w-full"
+      className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
       aria-hidden="true"
       data-state={state}
     >
       <defs>
-        {/* Outline of the union of all shapes: grown copy minus the plain copy. */}
+        {/* Outline of the union of all shapes: grown copy minus the plain copy.
+            White/black here are mask luminance (show/hide), not colours. */}
         <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width={width} height={height}>
           <Shapes shapes={shapes} toPx={toPx} unit={unit} extra={OUTLINE_HEADS * 2} color="white" />
           <Shapes shapes={shapes} toPx={toPx} unit={unit} extra={0} color="black" />
         </mask>
       </defs>
       <g opacity={0.12}>
-        <Shapes shapes={shapes} toPx={toPx} unit={unit} extra={0} color={stroke} />
+        <Shapes shapes={shapes} toPx={toPx} unit={unit} extra={0} color="currentColor" />
       </g>
-      <rect width={width} height={height} fill={stroke} fillOpacity={strokeOpacity} mask={`url(#${maskId})`} />
+      <rect width={width} height={height} fill="currentColor" fillOpacity={opacity} mask={`url(#${maskId})`} />
     </svg>
   );
 }

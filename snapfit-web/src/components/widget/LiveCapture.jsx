@@ -194,8 +194,11 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
 
   return (
     <div>
+      {/* Dark-scoped viewport: overlays on live video (pose guide, skeleton,
+          countdown, border) use the bright dark-theme shades for visibility. */}
       <div
-        className={`relative mx-auto overflow-hidden rounded-lg border-4 bg-primary transition-colors ${borderClass}`}
+        data-theme="dark"
+        className={`relative mx-auto overflow-hidden rounded-lg border-4 bg-overlay transition-colors ${borderClass}`}
         style={{ aspectRatio: aspect, width: `min(100%, calc(65vh * ${aspect}))` }}
       >
         <div className="absolute inset-0" style={MIRROR_PREVIEW ? { transform: 'scaleX(-1)' } : undefined}>

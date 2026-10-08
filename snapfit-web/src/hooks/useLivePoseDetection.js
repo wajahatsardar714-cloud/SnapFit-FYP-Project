@@ -87,7 +87,13 @@ function clearOverlay(canvas) {
   canvas?.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function drawSkeleton(canvas, video, landmarks, color) {
+// Canvas needs a concrete colour string: read the theme token in effect at the
+// canvas (the camera viewport is dark-scoped).
+function tokenColor(element, name) {
+  return `rgb(${getComputedStyle(element).getPropertyValue(`--color-${name}`).trim()})`;
+}
+
+function drawSkeleton(canvas, video, landmarks, tone) {
   if (!canvas) return;
   if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
     canvas.width = video.videoWidth;
@@ -99,6 +105,7 @@ function drawSkeleton(canvas, video, landmarks, color) {
 
   const scale = Math.max(canvas.width, canvas.height) / 400;
   const visible = (lm) => lm && (lm.visibility ?? 0) >= POSE_RULES.visibilityThreshold;
+  const color = tokenColor(canvas, tone);
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = 2 * scale;
@@ -204,7 +211,7 @@ export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = nu
         // keeps reporting the pass, so the countdown isn't reset.
         if (result.ok) lastPass = { time: now, result };
         const shown = !result.ok && lastPass && now - lastPass.time < PASS_GRACE_MS ? lastPass.result : result;
-        drawSkeleton(overlayRef?.current, video, landmarks, shown.ok ? '#10B981' : '#F8FAFC');
+        drawSkeleton(overlayRef?.current, video, landmarks, shown.ok ? 'success' : 'foreground');
 
         const summary = summarize(shown);
         if (summary !== lastSummary) {

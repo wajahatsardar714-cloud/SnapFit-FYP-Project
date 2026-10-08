@@ -32,6 +32,10 @@ function storePreference(preference) {
   }
 }
 
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+}
+
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
@@ -39,10 +43,14 @@ export function ThemeProvider({ children }) {
   const theme = resolveTheme(preference);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    applyTheme(theme);
   }, [theme]);
 
+  // Applied right away (not only in the effect above): effects run child-first,
+  // so components reading theme colours (e.g. charts) on the re-render would
+  // otherwise still see the old palette.
   const setTheme = useCallback((next) => {
+    applyTheme(resolveTheme(next));
     setPreference(next);
     storePreference(next);
   }, []);

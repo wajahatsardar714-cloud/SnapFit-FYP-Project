@@ -139,7 +139,9 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
   }
 
   return (
-    <>
+    // Always light: the widget sits inside a merchant's store page, so the
+    // dashboard's dark-mode setting must not change it.
+    <div data-theme="light" className="contents">
       <button
         type="button"
         onClick={openModal}
@@ -466,7 +468,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 

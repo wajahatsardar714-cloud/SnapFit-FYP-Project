@@ -16,10 +16,10 @@ import {
 // tokens (rather than new one-off hex values) since together they already give
 // four well-separated hues.
 const ANCHOR_POINTS = [
-  { key: 'shoulderLeft', label: 'Left shoulder', color: '#4F46E5' },
-  { key: 'shoulderRight', label: 'Right shoulder', color: '#F59E0B' },
-  { key: 'hipLeft', label: 'Left hip', color: '#10B981' },
-  { key: 'hipRight', label: 'Right hip', color: '#EF4444' },
+  { key: 'shoulderLeft', label: 'Left shoulder', color: 'bg-primary' },
+  { key: 'shoulderRight', label: 'Right shoulder', color: 'bg-warning' },
+  { key: 'hipLeft', label: 'Left hip', color: 'bg-success' },
+  { key: 'hipRight', label: 'Right hip', color: 'bg-danger' },
 ];
 
 const DEFAULT_POINTS = {
@@ -53,8 +53,8 @@ function AnchorMarker({ point, label, color, containerRef, onDrag }) {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       title={label}
-      style={{ left: `${point.x * 100}%`, top: `${point.y * 100}%`, backgroundColor: color }}
-      className="absolute z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-full border-2 border-white shadow-card ring-1 ring-overlay/10"
+      style={{ left: `${point.x * 100}%`, top: `${point.y * 100}%` }}
+      className={`${color} absolute z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-full border-2 border-primary-foreground shadow-card ring-1 ring-overlay/10`}
     />
   );
 }
@@ -190,7 +190,7 @@ function AnchorPointsPage() {
           <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
             {ANCHOR_POINTS.map(({ key, label, color }) => (
               <li key={key} className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
                 {label}
               </li>
             ))}

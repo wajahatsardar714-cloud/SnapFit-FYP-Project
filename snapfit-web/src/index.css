@@ -7,6 +7,13 @@
     @apply bg-background text-foreground;
   }
 
+  /* Re-declare text colour at every theme root (including scoped ones like the
+     widget or code blocks): inherited colour is already resolved, so without
+     this a light-scoped area inside dark mode would inherit white text. */
+  [data-theme] {
+    @apply text-foreground;
+  }
+
   a {
     @apply text-primary hover:text-primary-hover;
   }

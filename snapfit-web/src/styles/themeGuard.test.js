@@ -10,15 +10,6 @@ const HEX = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?\b/;
 const PALETTE =
   /\b(?:bg|text|border|ring|ring-offset|fill|stroke|divide|placeholder|outline|from|to|via|shadow|accent|caret|decoration)-(?:gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\b/;
 
-// Files still being converted in a later theme section.
-const PENDING = new Set([
-  'components/widget/PoseGuideOverlay.jsx',
-  'hooks/useLivePoseDetection.js',
-  'pages/dashboard/AnalyticsDashboardPage.jsx',
-  'pages/dashboard/AnchorPointsPage.jsx',
-  'pages/demo/AiTestPage.jsx',
-]);
-
 function sourceFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = join(dir, entry.name);
@@ -30,7 +21,6 @@ function sourceFiles(dir) {
 function violations() {
   return sourceFiles(SRC).flatMap((file) => {
     const rel = relative(SRC, file).replace(/\\/g, '/');
-    if (PENDING.has(rel)) return [];
     return readFileSync(file, 'utf8')
       .split('\n')
       .map((line, i) => ({ line, at: `${rel}:${i + 1}` }))

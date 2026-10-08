@@ -74,7 +74,7 @@ function PlanSelectionPage() {
         {plans.map((plan) => {
           const isCurrent = plan.plan === currentPlan;
           return (
-            <Card key={plan.plan} className={`flex flex-col ${isCurrent ? '!border-primary' : ''}`}>
+            <Card key={plan.plan} className={`flex flex-col ${isCurrent ? '!border-primary !bg-primary-soft' : ''}`}>
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold capitalize text-foreground">{plan.name}</h2>
                 {isCurrent && <Badge variant="info">Current</Badge>}

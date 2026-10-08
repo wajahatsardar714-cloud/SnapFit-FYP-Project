@@ -212,7 +212,7 @@ function PoseOverlay({ imageUrl, dimensions, landmarks }) {
               y1={p1.y}
               x2={p2.x}
               y2={p2.y}
-              stroke="#6366F1"
+              className="stroke-primary"
               strokeWidth={radius * 0.6}
               strokeLinecap="round"
             />
@@ -224,8 +224,7 @@ function PoseOverlay({ imageUrl, dimensions, landmarks }) {
             cx={lm.x * width}
             cy={lm.y * height}
             r={radius}
-            fill={lm.visibility >= 0.5 ? '#10B981' : '#F59E0B'}
-            stroke="#fff"
+            className={`${lm.visibility >= 0.5 ? 'fill-success' : 'fill-warning'} stroke-background`}
             strokeWidth={radius * 0.3}
           >
             <title>{`${name} (visibility ${formatNumber(lm.visibility, 2)})`}</title>
