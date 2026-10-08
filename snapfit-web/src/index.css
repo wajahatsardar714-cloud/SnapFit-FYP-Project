@@ -21,4 +21,31 @@
   ::selection {
     background-color: var(--color-primary-soft);
   }
+
+  /* Keyboard focus for anything without its own focus ring (zero specificity,
+     so components' focus-visible:ring utilities still win). */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid rgb(var(--color-primary) / 0.4);
+    outline-offset: 2px;
+  }
+
+  /* Short colour cross-fade while switching themes (ThemeContext adds the
+     class for a moment); none for users who prefer reduced motion. */
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition-property: color, background-color, border-color, fill, stroke !important;
+    transition-duration: 150ms !important;
+    transition-timing-function: ease !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.theme-transition,
+    html.theme-transition *,
+    html.theme-transition *::before,
+    html.theme-transition *::after {
+      transition: none !important;
+    }
+  }
 }

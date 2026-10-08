@@ -66,7 +66,7 @@ function ProfileTab() {
       </Card.Header>
       <Card.Body>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Email" value={merchant.email} readOnly />
+          <Input id="profile-email" label="Email" value={merchant.email} readOnly />
           <div />
           <Input
             id="profile-name"

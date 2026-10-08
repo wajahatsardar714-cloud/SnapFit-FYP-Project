@@ -32,8 +32,16 @@ function storePreference(preference) {
   }
 }
 
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
+// How long the theme-transition class (index.css) stays on <html> after a switch.
+const TRANSITION_MS = 200;
+
+function applyTheme(theme, { animate = false } = {}) {
+  const root = document.documentElement;
+  if (animate && root.getAttribute('data-theme') !== theme) {
+    root.classList.add('theme-transition');
+    window.setTimeout(() => root.classList.remove('theme-transition'), TRANSITION_MS);
+  }
+  root.setAttribute('data-theme', theme);
 }
 
 const ThemeContext = createContext(null);
@@ -50,7 +58,7 @@ export function ThemeProvider({ children }) {
   // so components reading theme colours (e.g. charts) on the re-render would
   // otherwise still see the old palette.
   const setTheme = useCallback((next) => {
-    applyTheme(resolveTheme(next));
+    applyTheme(resolveTheme(next), { animate: true });
     setPreference(next);
     storePreference(next);
   }, []);
