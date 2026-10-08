@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { AlertTriangle, KeyRound, User } from 'lucide-react';
+import { AlertTriangle, KeyRound, Moon, Palette, Sun, User } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
@@ -15,6 +16,7 @@ const BUSINESS_TYPE_OPTIONS = ['clothing', 'footwear', 'accessories'];
 const TABS = [
   { key: 'profile', label: 'Profile', icon: User },
   { key: 'security', label: 'Security', icon: KeyRound },
+  { key: 'appearance', label: 'Appearance', icon: Palette },
   { key: 'danger', label: 'Danger Zone', icon: AlertTriangle },
 ];
 
@@ -274,13 +276,61 @@ function DangerZoneTab() {
   );
 }
 
+const THEME_OPTIONS = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+];
+
+export function AppearanceTab() {
+  const { theme, setTheme } = useTheme();
+
+  function choose(value) {
+    if (value === theme) return;
+    setTheme(value);
+    toast.success(`Switched to ${value} mode`);
+  }
+
+  return (
+    <Card>
+      <Card.Header>
+        <h2 className="text-sm font-semibold text-foreground">Appearance</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Choose how the dashboard looks on this device. The shopper widget always stays light.
+        </p>
+      </Card.Header>
+      <Card.Body>
+        <div role="radiogroup" aria-label="Theme" className="inline-flex rounded-lg border border-border bg-surface-2 p-1">
+          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+            const selected = theme === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => choose(value)}
+                className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                  selected ? 'bg-background text-primary shadow-card' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon size={16} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
 function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
 
   return (
     <div>
       <h1 className="text-xl font-semibold text-foreground">Settings</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Manage your profile, security, and account.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Manage your profile, security, appearance, and account.</p>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4">
         <Card className="h-fit lg:col-span-1">
@@ -304,6 +354,7 @@ function SettingsPage() {
         <div className="lg:col-span-3">
           {activeTab === 'profile' && <ProfileTab />}
           {activeTab === 'security' && <SecurityTab />}
+          {activeTab === 'appearance' && <AppearanceTab />}
           {activeTab === 'danger' && <DangerZoneTab />}
         </div>
       </div>
