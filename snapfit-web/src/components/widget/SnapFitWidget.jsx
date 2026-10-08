@@ -145,55 +145,55 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
         onClick={openModal}
         disabled={!isConfigured}
         title={isConfigured ? undefined : 'Set an API key and product ID to enable this'}
-        className="rounded-md bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
         {buttonLabel}
       </button>
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={closeModal} aria-hidden="true" />
+          <div className="absolute inset-0 bg-overlay/50" onClick={closeModal} aria-hidden="true" />
 
-          <div className="relative w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <div className="relative w-full max-w-md rounded-xl bg-background p-6 shadow-xl">
             <button
               type="button"
               onClick={closeModal}
               disabled={step === 'loading'}
-              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 disabled:opacity-40"
+              className="absolute right-4 top-4 text-muted-foreground hover:text-muted-foreground disabled:opacity-40"
             >
               <X size={18} />
             </button>
 
             {step === 'form' && (
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Find your size</h2>
-                <p className="mt-1 text-sm text-gray-500">Take or upload a full-body photo and we'll estimate your best fit.</p>
+                <h2 className="text-lg font-semibold text-foreground">Find your size</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Take or upload a full-body photo and we'll estimate your best fit.</p>
 
                 {!inputMode && (
                   <div className={`mt-5 grid gap-3 ${isDesktop ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     <button
                       type="button"
                       onClick={() => setInputMode('camera')}
-                      className="flex flex-col items-center gap-2 rounded-lg border border-gray-300 py-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      className="flex flex-col items-center gap-2 rounded-lg border border-border py-5 text-sm font-medium text-foreground hover:bg-surface-2"
                     >
-                      <Camera size={22} className="text-gray-500" />
+                      <Camera size={22} className="text-muted-foreground" />
                       Take a Photo
                     </button>
                     <button
                       type="button"
                       onClick={() => setInputMode('upload')}
-                      className="flex flex-col items-center gap-2 rounded-lg border border-gray-300 py-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      className="flex flex-col items-center gap-2 rounded-lg border border-border py-5 text-sm font-medium text-foreground hover:bg-surface-2"
                     >
-                      <ImagePlus size={22} className="text-gray-500" />
+                      <ImagePlus size={22} className="text-muted-foreground" />
                       Upload a Photo
                     </button>
                     {isDesktop && (
                       <button
                         type="button"
                         onClick={() => setInputMode('phone')}
-                        className="flex flex-col items-center gap-2 rounded-lg border border-gray-300 py-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        className="flex flex-col items-center gap-2 rounded-lg border border-border py-5 text-sm font-medium text-foreground hover:bg-surface-2"
                       >
-                        <Smartphone size={22} className="text-gray-500" />
+                        <Smartphone size={22} className="text-muted-foreground" />
                         Use My Phone
                       </button>
                     )}
@@ -202,7 +202,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
                 {inputMode === 'phone' && !file && (
                   <div className="mt-4">
-                    <Suspense fallback={<p className="py-10 text-center text-sm text-gray-500">Loading…</p>}>
+                    <Suspense fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>}>
                       <MobileHandoff
                         apiKey={apiKey}
                         apiUrl={apiUrl}
@@ -218,15 +218,15 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
                 {inputMode === 'phone' && file && (
                   <div className="mt-4">
-                    <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-3">
+                    <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-border p-3">
                       <img src={previewUrl} alt="Photo from your phone" className="h-48 w-48 rounded-md object-cover" />
-                      <span className="text-xs text-gray-500">Received from your phone</span>
+                      <span className="text-xs text-muted-foreground">Received from your phone</span>
                     </div>
                     <div className="mt-3 flex items-center justify-center gap-4 text-xs">
                       <button
                         type="button"
                         onClick={() => setFile(null)}
-                        className="font-medium text-gray-600 underline hover:text-gray-900"
+                        className="font-medium text-muted-foreground underline hover:text-foreground"
                       >
                         Retake
                       </button>
@@ -237,7 +237,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                           setFormError('');
                           setInputMode('upload');
                         }}
-                        className="font-medium text-gray-600 underline hover:text-gray-900"
+                        className="font-medium text-muted-foreground underline hover:text-foreground"
                       >
                         Or upload a photo instead
                       </button>
@@ -248,7 +248,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                 {inputMode === 'camera' && (
                   <div className="mt-4">
                     <Suspense
-                      fallback={<p className="py-10 text-center text-sm text-gray-500">Loading camera…</p>}
+                      fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading camera…</p>}
                     >
                       <LiveCapture
                         file={file}
@@ -277,7 +277,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                       onDrop={handleDrop}
                       onClick={() => fileInputRef.current?.click()}
                       className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition ${
-                        dragActive ? 'border-gray-900 bg-gray-50' : 'border-gray-300'
+                        dragActive ? 'border-primary bg-surface-2' : 'border-border'
                       }`}
                     >
                       <input
@@ -290,13 +290,13 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                       {previewUrl ? (
                         <div className="flex flex-col items-center gap-2">
                           <img src={previewUrl} alt="Selected preview" className="h-32 w-32 rounded-md object-cover" />
-                          <span className="text-xs text-gray-500">{file.name} — click to change</span>
+                          <span className="text-xs text-muted-foreground">{file.name} — click to change</span>
                         </div>
                       ) : (
                         <>
-                          <ImagePlus size={28} className="text-gray-400" />
-                          <p className="mt-2 text-sm text-gray-600">Drag & drop your photo here, or click to browse</p>
-                          <p className="mt-1 text-xs text-gray-400">JPG or PNG, up to 10MB</p>
+                          <ImagePlus size={28} className="text-muted-foreground" />
+                          <p className="mt-2 text-sm text-muted-foreground">Drag & drop your photo here, or click to browse</p>
+                          <p className="mt-1 text-xs text-muted-foreground">JPG or PNG, up to 10MB</p>
                         </>
                       )}
                     </div>
@@ -308,7 +308,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                           setFormError('');
                           setInputMode('camera');
                         }}
-                        className="font-medium text-gray-600 underline hover:text-gray-900"
+                        className="font-medium text-muted-foreground underline hover:text-foreground"
                       >
                         Or take a photo instead
                       </button>
@@ -316,28 +316,28 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                   </div>
                 )}
 
-                {formError && <p className="mt-2 text-sm text-red-600">{formError}</p>}
+                {formError && <p className="mt-2 text-sm text-danger">{formError}</p>}
 
                 {inputMode && (
                   <>
                     <div className="mt-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                         <Ruler size={16} />
                         Height (optional, improves accuracy)
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <div className="flex rounded-md border border-gray-300 p-0.5 text-xs">
+                        <div className="flex rounded-md border border-border p-0.5 text-xs">
                           <button
                             type="button"
                             onClick={() => setHeightUnit('cm')}
-                            className={`rounded px-2 py-1 ${heightUnit === 'cm' ? 'bg-gray-900 text-white' : 'text-gray-600'}`}
+                            className={`rounded px-2 py-1 ${heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
                           >
                             cm
                           </button>
                           <button
                             type="button"
                             onClick={() => setHeightUnit('ft')}
-                            className={`rounded px-2 py-1 ${heightUnit === 'ft' ? 'bg-gray-900 text-white' : 'text-gray-600'}`}
+                            className={`rounded px-2 py-1 ${heightUnit === 'ft' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
                           >
                             ft/in
                           </button>
@@ -350,7 +350,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                             placeholder="e.g. 178"
                             value={heightCm}
                             onChange={(e) => setHeightCm(e.target.value)}
-                            className="w-24 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                            className="w-24 rounded-md border border-border px-2 py-1.5 text-sm"
                           />
                         ) : (
                           <div className="flex items-center gap-1">
@@ -360,7 +360,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                               placeholder="ft"
                               value={heightFeet}
                               onChange={(e) => setHeightFeet(e.target.value)}
-                              className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                              className="w-16 rounded-md border border-border px-2 py-1.5 text-sm"
                             />
                             <input
                               type="number"
@@ -368,7 +368,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                               placeholder="in"
                               value={heightInches}
                               onChange={(e) => setHeightInches(e.target.value)}
-                              className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                              className="w-16 rounded-md border border-border px-2 py-1.5 text-sm"
                             />
                           </div>
                         )}
@@ -379,7 +379,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                       type="button"
                       onClick={handleSubmit}
                       disabled={!file}
-                      className="mt-5 w-full rounded-md bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="mt-5 w-full rounded-md bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Get My Size
                     </button>
@@ -390,9 +390,9 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
             {step === 'loading' && (
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <Loader2 size={32} className="animate-spin text-gray-900" />
-                <p className="mt-4 text-sm font-medium text-gray-700">Analyzing your photo...</p>
-                <p className="mt-1 text-xs text-gray-400">Measuring you and preparing your preview — this takes a few seconds.</p>
+                <Loader2 size={32} className="animate-spin text-foreground" />
+                <p className="mt-4 text-sm font-medium text-foreground">Analyzing your photo...</p>
+                <p className="mt-1 text-xs text-muted-foreground">Measuring you and preparing your preview — this takes a few seconds.</p>
               </div>
             )}
 
@@ -407,9 +407,9 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                 )}
 
                 <div className="mt-5 border-t pt-4">
-                  <p className="text-xs font-medium text-gray-500">How did it fit?</p>
+                  <p className="text-xs font-medium text-muted-foreground">How did it fit?</p>
                   {feedback ? (
-                    <p className="mt-2 text-sm text-gray-600">Thanks for your feedback!</p>
+                    <p className="mt-2 text-sm text-muted-foreground">Thanks for your feedback!</p>
                   ) : (
                     <div className="mt-2 flex justify-center gap-2">
                       {[
@@ -421,7 +421,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                           key={option.key}
                           type="button"
                           onClick={() => setFeedback(option.key)}
-                          className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-surface-2"
                         >
                           {option.label}
                         </button>
@@ -433,7 +433,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                 <button
                   type="button"
                   onClick={resetFlow}
-                  className="mt-5 w-full rounded-md border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="mt-5 w-full rounded-md border border-border py-2 text-sm font-medium text-foreground hover:bg-surface-2"
                 >
                   Check another photo
                 </button>
@@ -442,10 +442,10 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
             {step === 'error' && (
               <div className="flex flex-col items-center py-6 text-center">
-                <AlertTriangle size={28} className="text-amber-500" />
-                <p className="mt-3 text-sm font-medium text-gray-800">{errorMessage}</p>
+                <AlertTriangle size={28} className="text-warning" />
+                <p className="mt-3 text-sm font-medium text-foreground">{errorMessage}</p>
                 {poseChecks.length > 1 && (
-                  <ul className="mt-3 space-y-1 text-left text-xs text-gray-600">
+                  <ul className="mt-3 space-y-1 text-left text-xs text-muted-foreground">
                     {poseChecks.map((check) => (
                       <li key={check.id} className="flex gap-2">
                         <span aria-hidden="true">•</span>
@@ -457,7 +457,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                 <button
                   type="button"
                   onClick={() => setStep('form')}
-                  className="mt-5 rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
+                  className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
                 >
                   Try Again
                 </button>

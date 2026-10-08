@@ -411,7 +411,7 @@ function AnalyticsDashboardPage() {
                   type="button"
                   onClick={() => handlePeriodChange(opt.key)}
                   className={`rounded-md px-2.5 py-1 font-medium transition-colors duration-150 ${
-                    period === opt.key ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-gray-50'
+                    period === opt.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-surface-2'
                   }`}
                 >
                   {opt.label}

@@ -160,7 +160,7 @@ function CameraCapture({ onCapture, onClose }) {
             autoPlay
             playsInline
             muted
-            className="w-full rounded-lg bg-black"
+            className="w-full rounded-lg bg-overlay"
             style={MIRROR_PREVIEW ? { transform: 'scaleX(-1)' } : undefined}
           />
           {canSwitch && (
@@ -168,7 +168,7 @@ function CameraCapture({ onCapture, onClose }) {
               type="button"
               onClick={switchCamera}
               aria-label="Switch camera"
-              className="absolute right-2 top-2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+              className="absolute right-2 top-2 rounded-full bg-overlay/50 p-2 text-primary-foreground hover:bg-overlay/70"
             >
               <SwitchCamera size={16} />
             </button>
@@ -198,7 +198,7 @@ function PoseOverlay({ imageUrl, dimensions, landmarks }) {
   const point = (name) => landmarks[name] && { x: landmarks[name].x * width, y: landmarks[name].y * height };
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border bg-gray-100">
+    <div className="relative overflow-hidden rounded-lg border border-border bg-surface-2">
       <img src={imageUrl} alt="Analyzed" className="block w-full" />
       <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full">
         {SKELETON.map(([a, b]) => {
@@ -282,7 +282,7 @@ function SizeRecommendation({ recommendation, alternativeSize, fitNotes }) {
         {scores.map(([label, score]) => (
           <div key={label} className="flex items-center gap-3 text-sm">
             <span className="w-10 font-medium text-foreground">{label}</span>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
               <div
                 className={`h-full rounded-full ${label === recommendation.recommended_size ? 'bg-primary' : 'bg-primary/30'}`}
                 style={{ width: `${Math.round(score * 100)}%` }}
@@ -409,14 +409,14 @@ function AiTestPage() {
                 <p className="text-xs text-muted-foreground">Full body, facing the camera, head to ankles visible.</p>
               </Card.Header>
               <Card.Body padding="sm" className="space-y-3">
-                <div className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
+                <div className="grid grid-cols-3 gap-1 rounded-lg bg-surface-2 p-1">
                   {PHOTO_SOURCES.map(({ key, label, Icon }) => (
                     <button
                       key={key}
                       type="button"
                       onClick={() => setSource(key)}
                       className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                        source === key ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                        source === key ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       <Icon size={14} />
@@ -536,7 +536,7 @@ function AiTestPage() {
                 {error?.kind === 'try-on' && <Alert variant="danger" title="Try-on failed" description={error.message} />}
                 {tryOnImage && (
                   <div className="space-y-2">
-                    <div className="flex gap-1 rounded-lg bg-gray-100 p-1" role="group" aria-label="Try-on view">
+                    <div className="flex gap-1 rounded-lg bg-surface-2 p-1" role="group" aria-label="Try-on view">
                       {[
                         ['tryOn', 'Try-on'],
                         ['original', 'Original'],
@@ -547,7 +547,7 @@ function AiTestPage() {
                           aria-pressed={tryOnView === key}
                           onClick={() => setTryOnView(key)}
                           className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${
-                            tryOnView === key ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                            tryOnView === key ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
                           }`}
                         >
                           {label}
@@ -650,7 +650,7 @@ function AiTestPage() {
                 <Card>
                   <details>
                     <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-foreground">Raw JSON response</summary>
-                    <pre className="max-h-96 overflow-auto border-t border-border bg-gray-50 p-4 text-xs text-foreground">
+                    <pre className="max-h-96 overflow-auto border-t border-border bg-surface-2 p-4 text-xs text-foreground">
                       {JSON.stringify(result.body, null, 2)}
                     </pre>
                   </details>

@@ -30,6 +30,10 @@ export default {
         danger: { DEFAULT: token('danger'), soft: 'var(--color-danger-soft)' },
         overlay: token('overlay'),
       },
+      // Focus-ring offsets take the page background instead of always white.
+      ringOffsetColor: {
+        DEFAULT: 'rgb(var(--color-background))',
+      },
       borderRadius: {
         xl: '0.875rem',
       },

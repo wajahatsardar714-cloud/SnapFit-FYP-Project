@@ -152,7 +152,7 @@ function ParamsTable({ rows }) {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <tr className="bg-surface-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <th className="px-4 py-2">Field</th>
               <th className="px-4 py-2">Type</th>
               <th className="px-4 py-2">Description</th>
@@ -185,13 +185,13 @@ function statusVariant(status) {
 function ErrorTable({ caption, rows }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="border-b border-border bg-gray-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="border-b border-border bg-surface-2 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {caption}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <tr className="bg-surface-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2">Message</th>
               <th className="px-4 py-2">Meaning</th>
@@ -617,7 +617,7 @@ else:
                 key={s.id}
                 href={`#${s.id}`}
                 className={`block rounded-lg px-3 py-2 transition-colors duration-150 ${
-                  activeId === s.id ? 'bg-primary-soft font-medium text-primary-hover' : 'text-foreground hover:bg-gray-50'
+                  activeId === s.id ? 'bg-primary-soft font-medium text-primary' : 'text-foreground hover:bg-surface-2'
                 }`}
               >
                 {s.label}
@@ -652,7 +652,7 @@ else:
                 to authenticate requests.
               </li>
               <li>
-                Call <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">POST /api/recommend</code>{' '}
+                Call <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">POST /api/recommend</code>{' '}
                 from your storefront — either with the{' '}
                 <a href="#widget-integration" className="font-medium text-primary underline">
                   embeddable widget
@@ -665,7 +665,7 @@ else:
               </li>
               <li>
                 Optionally, submit{' '}
-                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">POST /api/feedback</code> to
+                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">POST /api/feedback</code> to
                 track fit accuracy over time.
               </li>
             </ol>
@@ -674,10 +674,10 @@ else:
           <Section id="authentication" title="Authentication">
             <p>
               Customer-facing endpoints (
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">/api/recommend</code> and{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">/api/feedback</code>) are
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">/api/recommend</code> and{' '}
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">/api/feedback</code>) are
               authenticated with a single API key sent in the{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">x-api-key</code> header. This is
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">x-api-key</code> header. This is
               separate from the session token your dashboard login uses.
             </p>
             <CodeBlock code={`x-api-key: sk_live_a1b2c3d4e5f6...`} lang="bash" label="Header" />
@@ -691,8 +691,8 @@ else:
                 API Key page
               </Link>
               . A missing or invalid key returns{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">401</code>; an inactive or
-              expired plan returns <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">403</code>{' '}
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">401</code>; an inactive or
+              expired plan returns <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">403</code>{' '}
               — see{' '}
               <a href="#error-codes" className="font-medium text-primary underline">
                 Error Codes
@@ -790,9 +790,9 @@ else:
           <Section id="widget-integration" title="Widget Integration">
             <p>
               The fastest way to add SnapFit to a React storefront is the{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">SnapFitWidget</code> component —
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">SnapFitWidget</code> component —
               it handles the upload UI, loading/result/error states, and calls{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">/api/recommend</code> for you.
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">/api/recommend</code> for you.
             </p>
             <CodeBlock code={widgetExample} lang="javascript" label="React" />
             <ParamsTable
@@ -834,7 +834,7 @@ else:
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Performance</p>
               <p>
                 The live pose model (
-                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">@mediapipe/tasks-vision</code>
+                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">@mediapipe/tasks-vision</code>
                 , ~150KB gzipped of JS plus a WASM binary) is dynamically imported only when a shopper opens the
                 &quot;Take a Photo&quot; tab — it is never fetched on initial widget load, so merchants whose shoppers
                 only use file upload pay nothing extra.
@@ -843,14 +843,14 @@ else:
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">HTTPS &amp; iframe embeds</p>
               <p>
                 Camera access requires a secure context — your storefront must be served over HTTPS (or{' '}
-                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">localhost</code> during
+                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">localhost</code> during
                 development).{' '}
-                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">getUserMedia</code> is
+                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">getUserMedia</code> is
                 blocked outright on plain HTTP, and the widget automatically falls back to the upload-only flow in
                 that case. If your storefront is itself embedded in an{' '}
-                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">&lt;iframe&gt;</code> (for
+                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">&lt;iframe&gt;</code> (for
                 example inside a page builder or app store), that iframe also needs an explicit{' '}
-                <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">allow=&quot;camera&quot;</code>{' '}
+                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">allow=&quot;camera&quot;</code>{' '}
                 attribute — without it, the browser blocks camera access inside the frame even on HTTPS, before the
                 shopper is ever asked for permission:
               </p>
@@ -868,27 +868,27 @@ else:
 
           <Section id="error-codes" title="Error Codes">
             <p>
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">/api/recommend</code> errors
-              include <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">success: false</code>{' '}
-              alongside <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">message</code>.
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">/api/recommend</code> errors
+              include <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">success: false</code>{' '}
+              alongside <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">message</code>.
               Auth-layer errors (the x-api-key check) and every{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">/api/feedback</code> error
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">/api/feedback</code> error
               return just{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">{'{ "message": "..." }'}</code>,
-              with no <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">success</code> field.
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">{'{ "message": "..." }'}</code>,
+              with no <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">success</code> field.
             </p>
             <ErrorTable caption="Authentication & Quota" rows={AUTH_ERRORS} />
             <ErrorTable caption="Request Validation — /api/recommend" rows={RECOMMEND_VALIDATION_ERRORS} />
             <ErrorTable caption="Photo Validation" rows={PHOTO_VALIDATION_ERRORS} />
 
             <div className="overflow-hidden rounded-xl border border-border bg-surface">
-              <div className="border-b border-border bg-gray-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="border-b border-border bg-surface-2 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 AI Service & Size-Matching Failures
               </div>
               <div className="px-4 pt-3">
                 <p className="text-sm text-foreground">
                   Several distinct backend-side conditions all return the same message —{' '}
-                  <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs text-foreground">
+                  <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-xs text-foreground">
                     &quot;{AI_SERVICE_GENERIC_MESSAGE}&quot;
                   </code>{' '}
                   — so use the HTTP status (and, if you&apos;re inspecting your own recommendation logs, the internal
@@ -898,7 +898,7 @@ else:
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <tr className="bg-surface-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       <th className="px-4 py-2">Status</th>
                       <th className="px-4 py-2">Internal Cause</th>
                       <th className="px-4 py-2">Meaning</th>
@@ -926,9 +926,9 @@ else:
             <p>
               Every request that passes API key validation counts against your plan&apos;s monthly limit — once
               it&apos;s reached,{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">/api/recommend</code> and{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">/api/feedback</code> return{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">/api/recommend</code> and{' '}
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">/api/feedback</code> return{' '}
+              <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">
                 403 Monthly request limit reached
               </code>{' '}
               until you{' '}
@@ -942,7 +942,7 @@ else:
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <tr className="bg-surface-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         <th className="px-4 py-2">Plan</th>
                         <th className="px-4 py-2">Price</th>
                         <th className="px-4 py-2">Requests / mo</th>

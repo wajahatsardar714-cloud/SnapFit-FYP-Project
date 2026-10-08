@@ -8,13 +8,13 @@ import { alignmentState, primaryInstruction } from '../../utils/poseValidation';
 import PoseGuideOverlay from './PoseGuideOverlay';
 
 const TONE_STYLES = {
-  aligned: { border: 'border-green-500', text: 'text-green-700' },
-  partial: { border: 'border-amber-500', text: 'text-amber-700' },
-  searching: { border: 'border-gray-300', text: 'text-gray-700' },
+  aligned: { border: 'border-success', text: 'text-success' },
+  partial: { border: 'border-warning', text: 'text-warning' },
+  searching: { border: 'border-border', text: 'text-foreground' },
   // Low-end-device fallback: pose model failed to load or is taking too long.
   // Capture is enabled but unvalidated here (the server still checks the pose).
-  degraded: { border: 'border-amber-500', text: 'text-amber-700' },
-  loading: { border: 'border-gray-300', text: 'text-gray-500' },
+  degraded: { border: 'border-warning', text: 'text-warning' },
+  loading: { border: 'border-border', text: 'text-muted-foreground' },
 };
 
 function getStatus({ isModelReady, validation, poseError, countdown }) {
@@ -31,7 +31,7 @@ function getStatus({ isModelReady, validation, poseError, countdown }) {
 function UploadInsteadLink({ onClick }) {
   return (
     <div className="mt-3 text-center text-xs">
-      <button type="button" onClick={onClick} className="font-medium text-gray-600 underline hover:text-gray-900">
+      <button type="button" onClick={onClick} className="font-medium text-muted-foreground underline hover:text-foreground">
         Or upload a photo instead
       </button>
     </div>
@@ -154,16 +154,16 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   if (file) {
     return (
       <div>
-        <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-3">
+        <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-border p-3">
           <img src={previewUrl} alt="Captured preview" className="h-48 w-48 rounded-md object-cover" />
-          <span className="text-xs text-gray-500">Photo captured</span>
+          <span className="text-xs text-muted-foreground">Photo captured</span>
         </div>
         <div className="mt-3 flex items-center justify-center gap-4 text-xs">
-          <button type="button" onClick={onRetake} className="flex items-center gap-1 font-medium text-gray-600 underline hover:text-gray-900">
+          <button type="button" onClick={onRetake} className="flex items-center gap-1 font-medium text-muted-foreground underline hover:text-foreground">
             <RefreshCw size={12} />
             Retake
           </button>
-          <button type="button" onClick={onSwitchToUpload} className="font-medium text-gray-600 underline hover:text-gray-900">
+          <button type="button" onClick={onSwitchToUpload} className="font-medium text-muted-foreground underline hover:text-foreground">
             Or upload a photo instead
           </button>
         </div>
@@ -174,7 +174,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   if (cameraStatus === 'requesting' || cameraStatus === 'idle') {
     return (
       <div>
-        <p className="py-10 text-center text-sm text-gray-500">Requesting camera access…</p>
+        <p className="py-10 text-center text-sm text-muted-foreground">Requesting camera access…</p>
         <UploadInsteadLink onClick={onSwitchToUpload} />
       </div>
     );
@@ -182,7 +182,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   if (cameraStatus === 'denied' || cameraStatus === 'unavailable') {
     return (
       <div>
-        <p className="py-10 text-center text-sm text-gray-500">{cameraError || 'Camera unavailable.'}</p>
+        <p className="py-10 text-center text-sm text-muted-foreground">{cameraError || 'Camera unavailable.'}</p>
         <UploadInsteadLink onClick={onSwitchToUpload} />
       </div>
     );
@@ -195,7 +195,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   return (
     <div>
       <div
-        className={`relative mx-auto overflow-hidden rounded-lg border-4 bg-gray-900 transition-colors ${borderClass}`}
+        className={`relative mx-auto overflow-hidden rounded-lg border-4 bg-primary transition-colors ${borderClass}`}
         style={{ aspectRatio: aspect, width: `min(100%, calc(65vh * ${aspect}))` }}
       >
         <div className="absolute inset-0" style={MIRROR_PREVIEW ? { transform: 'scaleX(-1)' } : undefined}>
@@ -217,7 +217,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
 
         {countdown != null && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span className="text-7xl font-bold text-white drop-shadow-lg" aria-live="assertive">
+            <span className="text-7xl font-bold text-primary-foreground drop-shadow-lg" aria-live="assertive">
               {countdown}
             </span>
           </div>
@@ -228,7 +228,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
             type="button"
             onClick={switchCamera}
             aria-label="Switch camera"
-            className="absolute right-2 top-2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+            className="absolute right-2 top-2 rounded-full bg-overlay/50 p-2 text-primary-foreground hover:bg-overlay/70"
           >
             <SwitchCamera size={18} />
           </button>
@@ -239,13 +239,13 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
       <p className={`mt-2 text-center text-sm font-medium ${textClass}`} aria-live="polite">
         {status.text}
       </p>
-      {captureError && <p className="mt-1 text-center text-xs text-red-600">{captureError}</p>}
+      {captureError && <p className="mt-1 text-center text-xs text-danger">{captureError}</p>}
 
       <button
         type="button"
         onClick={handleCapture}
         disabled={!canCapture}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Camera size={16} />
         Capture

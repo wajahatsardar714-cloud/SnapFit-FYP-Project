@@ -31,7 +31,7 @@ function CodeBlock({ children, copyText }) {
         size="sm"
         icon={copied ? <Check size={13} /> : <Copy size={13} />}
         onClick={handleCopy}
-        className="absolute right-2 top-2 !bg-white/10 !text-gray-100 hover:!bg-white/20"
+        className="absolute right-2 top-2 !bg-background/10 !text-muted hover:!bg-background/20"
       >
         {copied ? 'Copied' : 'Copy'}
       </Button>
@@ -160,9 +160,9 @@ function ApiKeyPage() {
       <div className="mt-8">
         <h2 className="text-sm font-semibold text-foreground">Quick start</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pass your key in the <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">x-api-key</code>{' '}
+          Pass your key in the <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">x-api-key</code>{' '}
           header when calling{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-foreground">POST {API_BASE}/recommend</code>.
+          <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-foreground">POST {API_BASE}/recommend</code>.
         </p>
 
         <div className="mt-4">

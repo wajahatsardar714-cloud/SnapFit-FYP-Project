@@ -66,7 +66,7 @@ function QuickActionCard({ to, icon: Icon, label, description }) {
 
 function ChecklistItem({ done, label, to }) {
   return (
-    <Link to={to} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 hover:bg-gray-50">
+    <Link to={to} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 hover:bg-surface-2">
       {done ? (
         <CheckCircle2 size={18} className="shrink-0 text-success" />
       ) : (
@@ -247,7 +247,7 @@ function DashboardHomePage() {
               {usage.requestsLimit != null && <span>{pct}%</span>}
             </div>
             {usage.requestsLimit != null && (
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-2">
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
               </div>
             )}

@@ -126,7 +126,7 @@ function SubscriptionStatusPage() {
             </span>
           </div>
           {usage.requestsLimit != null && (
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-2">
               <div className={`h-full rounded-full transition-all ${usageBarColor(pct)}`} style={{ width: `${pct}%` }} />
             </div>
           )}

@@ -114,7 +114,7 @@ function SizeChartsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <tr className="bg-surface-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <th className="px-6 py-3">Name</th>
                   <th className="px-6 py-3">Category</th>
                   <th className="px-6 py-3">Gender</th>
@@ -125,7 +125,7 @@ function SizeChartsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {charts.map((chart) => (
-                  <tr key={chart._id} className="text-sm text-foreground transition-colors duration-150 hover:bg-gray-50">
+                  <tr key={chart._id} className="text-sm text-foreground transition-colors duration-150 hover:bg-surface-2">
                     <td className="px-6 py-3 font-medium text-foreground">{chart.name}</td>
                     <td className="px-6 py-3 capitalize">{chart.category}</td>
                     <td className="px-6 py-3 capitalize">{chart.gender || '—'}</td>

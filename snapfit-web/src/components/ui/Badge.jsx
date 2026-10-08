@@ -3,7 +3,7 @@ const VARIANT_CLASSES = {
   danger: 'bg-danger-soft text-danger border-danger/30',
   warning: 'bg-warning-soft text-warning border-warning/30',
   info: 'bg-primary-soft text-primary border-primary/30',
-  neutral: 'bg-gray-100 text-foreground border-border',
+  neutral: 'bg-surface-2 text-foreground border-border',
 };
 
 function Badge({ variant = 'neutral', children, className = '' }) {

@@ -58,7 +58,7 @@ function DashboardLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-white">
+      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface">
         <div className="px-5 py-5 text-lg font-bold text-primary">SnapFit</div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
@@ -68,13 +68,17 @@ function DashboardLayout() {
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
-                  isActive ? 'bg-primary-soft font-medium text-primary-hover' : 'text-foreground hover:bg-gray-50'
+                `group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
+                  isActive ? 'bg-primary-soft font-medium text-primary' : 'text-foreground hover:bg-surface-2'
                 }`
               }
             >
-              <Icon size={18} />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <Icon size={18} className={isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} />
+                  {label}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -89,25 +93,25 @@ function DashboardLayout() {
           <button
             type="button"
             onClick={() => navigate('/dashboard/settings')}
-            className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
-              isSettingsActive ? 'bg-primary-soft font-medium text-primary-hover' : 'text-foreground hover:bg-gray-50'
+            className={`group mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
+              isSettingsActive ? 'bg-primary-soft font-medium text-primary' : 'text-foreground hover:bg-surface-2'
             }`}
           >
-            <Settings size={18} />
+            <Settings size={18} className={isSettingsActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} />
             Settings
           </button>
         </div>
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-6">
           <h1 className="text-base font-semibold text-foreground">{pageTitle}</h1>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
               aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -115,7 +119,7 @@ function DashboardLayout() {
             <button
               type="button"
               onClick={() => notifyInfo("You're all caught up — no new notifications.")}
-              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
               aria-label="Notifications"
             >
               <Bell size={18} />
@@ -125,11 +129,11 @@ function DashboardLayout() {
               <button
                 type="button"
                 onClick={() => setMenuOpen((open) => !open)}
-                className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+                className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
                 aria-haspopup="true"
                 aria-expanded={menuOpen}
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-hover">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
                   {getInitials(merchant?.businessName || merchant?.name)}
                 </span>
                 <ChevronDown size={14} className="text-muted-foreground" />
@@ -138,7 +142,7 @@ function DashboardLayout() {
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                  <div className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-border bg-white p-1 shadow-card">
+                  <div className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-border bg-surface p-1 shadow-card">
                     <div className="px-3 py-2">
                       <p className="truncate text-sm font-medium text-foreground">{merchant?.businessName}</p>
                       <p className="truncate text-xs text-muted-foreground">{merchant?.email}</p>
@@ -150,7 +154,7 @@ function DashboardLayout() {
                         setMenuOpen(false);
                         navigate('/dashboard/settings');
                       }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors duration-150 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
                     >
                       <Settings size={16} />
                       Settings

@@ -29,17 +29,17 @@ function SizeCheckDemo() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-surface-2 p-6">
       <div className="mx-auto max-w-3xl">
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Tester config</p>
-          <p className="mt-1 text-xs text-gray-400">
+        <div className="rounded-xl border border-dashed border-border bg-background p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tester config</p>
+          <p className="mt-1 text-xs text-muted-foreground">
             Fill these in with a real API key and mapped product ID from your dashboard to test the widget below as an
             external merchant site would.
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-gray-600">API Key</label>
+              <label className="text-xs font-medium text-muted-foreground">API Key</label>
               <input
                 type="text"
                 value={apiKey}
@@ -48,11 +48,11 @@ function SizeCheckDemo() {
                   persist({ apiKey: e.target.value, productId });
                 }}
                 placeholder="sk_live_..."
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+                className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm font-mono"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600">Product ID</label>
+              <label className="text-xs font-medium text-muted-foreground">Product ID</label>
               <input
                 type="text"
                 value={productId}
@@ -61,25 +61,25 @@ function SizeCheckDemo() {
                   persist({ apiKey, productId: e.target.value });
                 }}
                 placeholder="prod-123"
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+                className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm font-mono"
               />
             </div>
           </div>
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex h-72 items-center justify-center bg-gray-100">
+        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+          <div className="flex h-72 items-center justify-center bg-surface-2">
             {DEMO_PRODUCT_IMAGE ? (
               <img src={DEMO_PRODUCT_IMAGE} alt={DEMO_PRODUCT_NAME} className="h-full object-contain p-4" />
             ) : (
-              <ShirtIcon size={64} className="text-gray-300" />
+              <ShirtIcon size={64} className="text-muted" />
             )}
           </div>
           <div className="p-6">
-            <p className="text-xs uppercase tracking-wide text-gray-400">Everyday Essentials</p>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900">{DEMO_PRODUCT_NAME}</h1>
-            <p className="mt-2 text-xl font-semibold text-gray-900">$24.00</p>
-            <p className="mt-3 text-sm text-gray-500">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Everyday Essentials</p>
+            <h1 className="mt-1 text-2xl font-bold text-foreground">{DEMO_PRODUCT_NAME}</h1>
+            <p className="mt-2 text-xl font-semibold text-foreground">$24.00</p>
+            <p className="mt-3 text-sm text-muted-foreground">
               A soft, breathable everyday tee. Not sure which size to order? Use SnapFit to get a personalized
               recommendation from a photo.
             </p>
@@ -88,7 +88,7 @@ function SizeCheckDemo() {
               <SnapFitWidget apiKey={apiKey} productId={productId} apiUrl={apiUrl} />
               <button
                 type="button"
-                className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                className="rounded-md border border-border px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-surface-2"
               >
                 Add to Cart
               </button>

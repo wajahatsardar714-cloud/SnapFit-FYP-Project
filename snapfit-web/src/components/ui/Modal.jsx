@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 
-// Flat overlay -- solid bg-black/40, no backdrop-blur -- per the theme's
+// Flat overlay -- solid bg-overlay/50, no backdrop-blur -- per the theme's
 // no-glassmorphism constraint.
 function Modal({ open, onClose, title, children, className = '' }) {
   return (
@@ -16,7 +16,7 @@ function Modal({ open, onClose, title, children, className = '' }) {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/40" aria-hidden="true" />
+          <div className="fixed inset-0 bg-overlay/50" aria-hidden="true" />
         </TransitionChild>
 
         <div className="fixed inset-0 flex items-center justify-center p-4">
@@ -29,7 +29,7 @@ function Modal({ open, onClose, title, children, className = '' }) {
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <DialogPanel className={`w-full max-w-sm rounded-xl bg-surface p-6 shadow-card ${className}`}>
+            <DialogPanel className={`w-full max-w-sm rounded-xl border border-border bg-surface p-6 shadow-card ${className}`}>
               {title && <DialogTitle className="text-base font-semibold text-foreground">{title}</DialogTitle>}
               {children}
             </DialogPanel>

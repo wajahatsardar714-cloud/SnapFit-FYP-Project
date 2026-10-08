@@ -118,8 +118,8 @@ function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload, sessionsPa
   if (status === 'creating') {
     return (
       <div className="flex flex-col items-center gap-2 py-10">
-        <Loader2 className="animate-spin text-gray-400" size={24} />
-        <p className="text-sm text-gray-500">Preparing your phone handoff…</p>
+        <Loader2 className="animate-spin text-muted-foreground" size={24} />
+        <p className="text-sm text-muted-foreground">Preparing your phone handoff…</p>
       </div>
     );
   }
@@ -127,11 +127,11 @@ function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload, sessionsPa
   if (status === 'error') {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <p className="text-sm text-red-600">{errorMessage}</p>
+        <p className="text-sm text-danger">{errorMessage}</p>
         <button
           type="button"
           onClick={startSession}
-          className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-2"
         >
           <RefreshCw size={14} />
           Try again
@@ -143,11 +143,11 @@ function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload, sessionsPa
   if (status === 'expired') {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <p className="text-sm text-gray-600">This QR code expired.</p>
+        <p className="text-sm text-muted-foreground">This QR code expired.</p>
         <button
           type="button"
           onClick={startSession}
-          className="flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
         >
           <RefreshCw size={14} />
           Generate a new code
@@ -158,19 +158,19 @@ function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload, sessionsPa
 
   return (
     <div className="flex flex-col items-center gap-3 py-2 text-center">
-      <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+      <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
         <Smartphone size={16} />
         Scan with your phone
       </div>
-      {qrDataUrl && <img src={qrDataUrl} alt="QR code to continue on your phone" className="h-44 w-44 rounded-lg border border-gray-200 p-2" />}
-      <p className="flex items-center gap-1.5 text-xs text-gray-500">
+      {qrDataUrl && <img src={qrDataUrl} alt="QR code to continue on your phone" className="h-44 w-44 rounded-lg border border-border p-2" />}
+      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Loader2 size={12} className="animate-spin" />
         Waiting for your phone…
       </p>
-      <p className="max-w-xs text-xs text-gray-400">
+      <p className="max-w-xs text-xs text-muted-foreground">
         Point your phone&apos;s camera app at this code. It&apos;ll open a page to take your photo — no app needed.
       </p>
-      <button type="button" onClick={onSwitchToUpload} className="text-xs font-medium text-gray-600 underline hover:text-gray-900">
+      <button type="button" onClick={onSwitchToUpload} className="text-xs font-medium text-muted-foreground underline hover:text-foreground">
         Or upload a photo instead
       </button>
     </div>

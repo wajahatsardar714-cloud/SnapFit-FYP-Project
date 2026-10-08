@@ -1,10 +1,10 @@
 import { Loader2 } from 'lucide-react';
 
 const VARIANT_CLASSES = {
-  primary: 'bg-primary text-white shadow-sm hover:bg-primary-hover',
-  secondary: 'bg-white border border-border text-foreground shadow-sm hover:bg-gray-50',
-  danger: 'bg-danger text-white shadow-sm hover:bg-danger',
-  ghost: 'bg-transparent text-foreground hover:bg-gray-100',
+  primary: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover',
+  secondary: 'bg-surface border border-border text-foreground shadow-sm hover:bg-surface-2',
+  danger: 'bg-danger text-primary-foreground shadow-sm hover:bg-danger/90',
+  ghost: 'bg-transparent text-primary hover:bg-primary-soft',
 };
 
 const SIZE_CLASSES = {

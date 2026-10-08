@@ -76,37 +76,37 @@ function MobileCapturePage() {
 
   if (status === 'done') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gray-50 p-6 text-center">
-        <CheckCircle2 size={40} className="text-green-600" />
-        <p className="text-lg font-semibold text-gray-900">Photo sent!</p>
-        <p className="text-sm text-gray-500">Return to your computer to see your size recommendation.</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface-2 p-6 text-center">
+        <CheckCircle2 size={40} className="text-success" />
+        <p className="text-lg font-semibold text-foreground">Photo sent!</p>
+        <p className="text-sm text-muted-foreground">Return to your computer to see your size recommendation.</p>
       </div>
     );
   }
 
   if (status === 'expired') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gray-50 p-6 text-center">
-        <p className="text-lg font-semibold text-gray-900">This link has expired</p>
-        <p className="text-sm text-gray-500">Go back to your computer and generate a new QR code.</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface-2 p-6 text-center">
+        <p className="text-lg font-semibold text-foreground">This link has expired</p>
+        <p className="text-sm text-muted-foreground">Go back to your computer and generate a new QR code.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-surface-2 p-4">
       <div className="mx-auto max-w-sm">
-        <h1 className="text-center text-lg font-semibold text-gray-900">Take your photo</h1>
-        <p className="mt-1 text-center text-sm text-gray-500">This is sent straight to your computer.</p>
+        <h1 className="text-center text-lg font-semibold text-foreground">Take your photo</h1>
+        <p className="mt-1 text-center text-sm text-muted-foreground">This is sent straight to your computer.</p>
 
         {status === 'uploading' ? (
           <div className="mt-6 flex flex-col items-center gap-2 py-10">
-            <Loader2 className="animate-spin text-gray-500" size={28} />
-            <p className="text-sm text-gray-500">Sending photo...</p>
+            <Loader2 className="animate-spin text-muted-foreground" size={28} />
+            <p className="text-sm text-muted-foreground">Sending photo...</p>
           </div>
         ) : mode === 'camera' ? (
           <div className="mt-4">
-            <Suspense fallback={<p className="py-10 text-center text-sm text-gray-500">Loading camera…</p>}>
+            <Suspense fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading camera…</p>}>
               <LiveCapture
                 file={capturedFile}
                 previewUrl={previewUrl}
@@ -122,7 +122,7 @@ function MobileCapturePage() {
               <button
                 type="button"
                 onClick={() => sendPhoto(capturedFile)}
-                className="mt-3 w-full rounded-md bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+                className="mt-3 w-full rounded-md bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
               >
                 Send Photo
               </button>
@@ -130,23 +130,23 @@ function MobileCapturePage() {
           </div>
         ) : (
           <div className="mt-4">
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-8 text-center hover:bg-white">
-              <ImagePlus size={28} className="text-gray-400" />
-              <p className="mt-2 text-sm text-gray-600">Tap to choose a photo</p>
-              <p className="mt-1 text-xs text-gray-400">JPG or PNG, up to 10MB</p>
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 text-center hover:bg-background">
+              <ImagePlus size={28} className="text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">Tap to choose a photo</p>
+              <p className="mt-1 text-xs text-muted-foreground">JPG or PNG, up to 10MB</p>
               <input type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
             </label>
             <button
               type="button"
               onClick={() => setMode('camera')}
-              className="mt-3 w-full text-center text-xs font-medium text-gray-600 underline"
+              className="mt-3 w-full text-center text-xs font-medium text-muted-foreground underline"
             >
               Or use your camera instead
             </button>
           </div>
         )}
 
-        {error && <p className="mt-3 text-center text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-center text-sm text-danger">{error}</p>}
       </div>
     </div>
   );

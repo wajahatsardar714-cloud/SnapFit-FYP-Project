@@ -10,7 +10,7 @@ function Select({ label, error, id, className = '', children, ...rest }) {
           {label}
         </label>
       )}
-      <select id={selectId} className={getFieldClasses(error, `bg-white ${className}`)} {...rest}>
+      <select id={selectId} className={getFieldClasses(error, `bg-background ${className}`)} {...rest}>
         {children}
       </select>
       {error && <p className="mt-1 text-xs text-danger">{error}</p>}

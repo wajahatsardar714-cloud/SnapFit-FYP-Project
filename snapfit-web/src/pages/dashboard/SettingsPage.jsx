@@ -341,7 +341,7 @@ function SettingsPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150 ${
-                  activeTab === tab.key ? 'bg-primary-soft font-medium text-primary-hover' : 'text-foreground hover:bg-gray-50'
+                  activeTab === tab.key ? 'bg-primary-soft font-medium text-primary' : 'text-foreground hover:bg-surface-2'
                 }`}
               >
                 <tab.icon size={16} />

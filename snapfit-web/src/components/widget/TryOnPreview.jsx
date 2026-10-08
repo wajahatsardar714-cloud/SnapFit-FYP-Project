@@ -9,7 +9,7 @@ function TryOnPreview({ tryOn, originalUrl, size }) {
 
   if (tryOn?.status === 'failed') {
     return (
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-muted-foreground">
         We couldn&apos;t create a preview on your photo this time. {tryOn.message}
       </p>
     );
@@ -18,14 +18,14 @@ function TryOnPreview({ tryOn, originalUrl, size }) {
 
   const showTryOn = view === 'tryOn' || !originalUrl;
   const toggleClass = (active) =>
-    `rounded px-3 py-1 text-xs font-medium ${active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:text-gray-900'}`;
+    `rounded px-3 py-1 text-xs font-medium ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`;
 
   return (
     <div>
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-900">See it on you</p>
+        <p className="text-sm font-semibold text-foreground">See it on you</p>
         {originalUrl && (
-          <div className="flex rounded-md border border-gray-300 p-0.5" role="group" aria-label="Preview view">
+          <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="Preview view">
             <button type="button" aria-pressed={!showTryOn} onClick={() => setView('original')} className={toggleClass(!showTryOn)}>
               Original
             </button>
@@ -42,12 +42,12 @@ function TryOnPreview({ tryOn, originalUrl, size }) {
           className="mx-auto max-h-80 rounded-md object-contain"
         />
         {showTryOn && (
-          <span className="absolute left-2 top-2 rounded bg-gray-900/80 px-2 py-0.5 text-xs font-semibold text-white">
+          <span className="absolute left-2 top-2 rounded bg-primary/80 px-2 py-0.5 text-xs font-semibold text-primary-foreground">
             Size {size}
           </span>
         )}
       </div>
-      <p className="mt-2 text-[11px] text-gray-400">Preview is approximate and does not reflect fabric drape or exact fit.</p>
+      <p className="mt-2 text-[11px] text-muted-foreground">Preview is approximate and does not reflect fabric drape or exact fit.</p>
     </div>
   );
 }

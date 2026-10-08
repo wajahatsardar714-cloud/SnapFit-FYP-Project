@@ -2,8 +2,8 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 
 function PublicLayout() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <header className="border-b border-border bg-white">
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="border-b border-border bg-background">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link to="/login" className="text-lg font-bold text-primary">
             SnapFit
@@ -13,7 +13,7 @@ function PublicLayout() {
               to="/login"
               className={({ isActive }) =>
                 `rounded-lg px-3 py-2 transition-colors duration-150 ${
-                  isActive ? 'font-medium text-foreground' : 'text-foreground hover:text-foreground'
+                  isActive ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`
               }
             >
@@ -21,7 +21,7 @@ function PublicLayout() {
             </NavLink>
             <Link
               to="/register"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-150 hover:bg-primary-hover"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors duration-150 hover:bg-primary-hover"
             >
               Get Started
             </Link>

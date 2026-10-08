@@ -54,7 +54,7 @@ function AnchorMarker({ point, label, color, containerRef, onDrag }) {
       onPointerMove={handlePointerMove}
       title={label}
       style={{ left: `${point.x * 100}%`, top: `${point.y * 100}%`, backgroundColor: color }}
-      className="absolute z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-full border-2 border-white shadow-card ring-1 ring-black/10"
+      className="absolute z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-full border-2 border-white shadow-card ring-1 ring-overlay/10"
     />
   );
 }
@@ -172,7 +172,7 @@ function AnchorPointsPage() {
         <>
           <div
             ref={containerRef}
-            className="relative mt-6 select-none overflow-hidden rounded-lg border border-border bg-gray-50"
+            className="relative mt-6 select-none overflow-hidden rounded-lg border border-border bg-surface-2"
           >
             <img src={imagePreviewUrl} alt="Product flat-lay" className="pointer-events-none block w-full" draggable={false} />
             {ANCHOR_POINTS.map(({ key, label, color }) => (

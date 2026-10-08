@@ -36,7 +36,7 @@ function TryOnCell({ mapping, busy, onUpload, onRemoveImage }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-gray-50">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-surface-2">
         {imageUrl ? (
           <img src={imageUrl} alt={`${mapping.productId} product`} className="h-full w-full object-contain" />
         ) : (
@@ -337,7 +337,7 @@ function ProductMappingPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <tr className="bg-surface-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       <th className="px-6 py-3">Product ID</th>
                       <th className="px-6 py-3">Product Name</th>
                       <th className="px-6 py-3">Size Chart</th>
@@ -349,7 +349,7 @@ function ProductMappingPage() {
                     {mappings.map((mapping) => (
                       <tr
                         key={mapping._id}
-                        className="text-sm text-foreground transition-colors duration-150 hover:bg-gray-50"
+                        className="text-sm text-foreground transition-colors duration-150 hover:bg-surface-2"
                       >
                         <td className="px-6 py-3 font-mono text-xs">{mapping.productId}</td>
                         <td className="px-6 py-3">{mapping.productName || '—'}</td>
