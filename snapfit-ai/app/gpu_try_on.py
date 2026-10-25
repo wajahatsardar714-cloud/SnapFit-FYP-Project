@@ -16,10 +16,14 @@ from app.try_on import TryOnError, body_bands, body_masks
 from app.try_on_compositing import (
     PERSON_JPEG_QUALITY,
     composite_garment,
+    correct_garment_colour,
     encode_jpeg,
     fit_within,
     from_model_frame,
+    on_body,
+    product_garment_colour,
     to_model_frame,
+    torso_core,
 )
 from app.utils import decode_image
 
@@ -106,6 +110,7 @@ async def generate_gpu_try_on(customer_image_bytes, product_image_bytes, pose, e
     photo = fit_within(photo)
     height, width = photo.shape[:2]
     mask = clothing_mask(landmarks, width, height, ease)
+    product_colour = product_garment_colour(product_image_bytes)
     files = {
         "person": ("person.jpg", encode_jpeg(to_model_frame(photo, cv2.BORDER_REPLICATE), PERSON_JPEG_QUALITY), "image/jpeg"),
         "garment": ("garment.png", garment_on_white(product_image_bytes), "image/png"),
@@ -126,4 +131,6 @@ async def generate_gpu_try_on(customer_image_bytes, product_image_bytes, pose, e
         raise TryOnError(f"GPU_ERROR:{response.status_code}")
 
     generated = from_model_frame(generated, width, height)
+    region = cv2.min(mask, on_body(landmarks, width, height, ease))
+    generated = correct_garment_colour(generated, region, torso_core(landmarks, width, height), product_colour)
     return encode_jpeg(composite_garment(photo, generated, mask))

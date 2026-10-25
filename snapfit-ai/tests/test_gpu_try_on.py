@@ -133,21 +133,24 @@ class TestGenerateGpuTryOn:
         assert _decode(seen["person"]).shape == (H, W, 3)
         assert _decode(result).shape == (expected[1], expected[0], 3)
 
-    def test_blends_the_garment_into_the_original_photo(self, monkeypatch, a_pose):
+    def test_blends_a_colour_corrected_garment_into_the_original_photo(self, monkeypatch, a_pose):
         # A smooth, lossless photo, so only the returned JPEG adds error.
         ramp = np.linspace(60, 190, W, dtype=np.float32)
         photo = np.dstack([np.tile(ramp, (H, 1))] * 3).astype(np.uint8)
+        white_tee = np.zeros((500, 400, 4), np.uint8)
+        white_tee[40:460, 60:340] = (245, 245, 245, 255)
         _patch_transport(monkeypatch, _fake_gpu({}))
 
         result = _decode(
-            asyncio.run(generate_gpu_try_on(_encode(photo, ".png"), _garment_png(), _pose(a_pose), config=CONFIG))
+            asyncio.run(generate_gpu_try_on(_encode(photo, ".png"), _encode(white_tee, ".png"), _pose(a_pose), config=CONFIG))
         ).astype(int)
 
         mask = clothing_mask(a_pose["landmarks"], W, H)
         clear_of_seam = cv2.dilate(mask, np.ones((17, 17), np.uint8)) == 0
         assert np.abs(result - photo)[clear_of_seam].max() <= 6
         garment = cv2.erode(mask, np.ones((41, 41), np.uint8)) > 0
-        assert np.abs(result - (240, 220, 200))[garment].mean() < 6
+        blue_minus_red = result[..., 0] - result[..., 2]
+        assert blue_minus_red[garment].mean() < 0.5 * (240 - 200)
 
     def test_an_exif_rotated_photo_is_sent_upright(self, monkeypatch, a_pose):
         upright = np.full((H, W, 3), 128, np.uint8)
