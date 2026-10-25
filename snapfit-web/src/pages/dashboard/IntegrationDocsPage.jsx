@@ -617,7 +617,7 @@ else:
     ],
     "fitNotes": ["Chest is near the top of M; consider L for a looser fit."],
     "photoTips": [
-      { "id": "dim_light", "message": "Your photo looks dark — stand somewhere brighter for a more accurate size." }
+      { "id": "dim_light", "message": "Your photo is quite dark. Retake it in brighter, even light for a more accurate size." }
     ],
     "warnings": []
   },
