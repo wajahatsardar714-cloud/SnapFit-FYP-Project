@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import io
+import re
 
 import cv2
 import httpx
@@ -14,7 +15,6 @@ from app.gpu_try_on import clothing_mask, garment_on_white, generate_gpu_try_on
 from app.try_on import TryOnError
 
 W, H = 768, 1024
-JPEG = b"\xff\xd8\xff\xe0fake-jpeg"
 CONFIG = ("https://gpu.test", "secret-token")
 
 
@@ -24,8 +24,12 @@ def _encode(array, fmt):
     return buf.tobytes()
 
 
-def _photo():
-    return _encode(np.full((H, W, 3), 128, np.uint8), ".jpg")
+def _decode(data, flags=cv2.IMREAD_COLOR):
+    return cv2.imdecode(np.frombuffer(data, np.uint8), flags)
+
+
+def _photo(width=W, height=H):
+    return _encode(np.full((height, width, 3), 128, np.uint8), ".jpg")
 
 
 def _garment_png():
@@ -81,24 +85,88 @@ def _patch_transport(monkeypatch, handler):
     )
 
 
+def _form_fields(request):
+    boundary = request.headers["content-type"].split("boundary=")[1].encode()
+    fields = {}
+    for part in request.content.split(b"--" + boundary)[1:-1]:
+        head, _, body = part.partition(b"\r\n\r\n")
+        fields[re.search(rb'name="([^"]+)"', head).group(1).decode()] = body[: -len(b"\r\n")]
+    return fields
+
+
+def _fake_gpu(seen, paint=(240, 220, 200)):
+    """Stands in for the CatVTON server: records the request, paints the mask
+    region of the person frame it got (pale blue: a drifted white garment) and
+    returns that frame as a JPEG."""
+
+    def handler(request):
+        fields = _form_fields(request)
+        seen.update(fields, url=str(request.url), token=request.headers.get("x-token"))
+        person = _decode(fields["person"])
+        person[_decode(fields["mask"], cv2.IMREAD_GRAYSCALE) > 127] = paint
+        return httpx.Response(200, content=_encode(person, ".jpg"))
+
+    return handler
+
+
 class TestGenerateGpuTryOn:
     def test_sends_photo_garment_mask_and_token(self, monkeypatch, a_pose):
         seen = {}
-
-        def handler(request):
-            seen["url"] = str(request.url)
-            seen["token"] = request.headers.get("x-token")
-            seen["body"] = request.content
-            return httpx.Response(200, content=JPEG)
-
-        _patch_transport(monkeypatch, handler)
+        _patch_transport(monkeypatch, _fake_gpu(seen))
         result = asyncio.run(generate_gpu_try_on(_photo(), _garment_png(), _pose(a_pose), config=CONFIG))
 
-        assert result == JPEG
+        assert result.startswith(b"\xff\xd8")
         assert seen["url"] == "https://gpu.test/tryon"
         assert seen["token"] == "secret-token"
-        for field in (b'name="person"', b'name="garment"', b'name="mask"', b'name="steps"'):
-            assert field in seen["body"]
+        assert seen["steps"] == b"30"
+        assert seen["guidance"] == b"2.5"
+        assert _decode(seen["person"]).shape == (H, W, 3)
+        assert _decode(seen["mask"], cv2.IMREAD_GRAYSCALE).shape == (H, W)
+        assert _decode(seen["garment"]).shape == (500, 400, 3)
+
+    @pytest.mark.parametrize("size, expected", [((900, 1000), (900, 1000)), ((2400, 3200), (1200, 1600))])
+    def test_returns_the_whole_photo_frame_capped_in_size(self, monkeypatch, a_pose, size, expected):
+        seen = {}
+        _patch_transport(monkeypatch, _fake_gpu(seen))
+        result = asyncio.run(generate_gpu_try_on(_photo(*size), _garment_png(), _pose(a_pose), config=CONFIG))
+
+        assert _decode(seen["person"]).shape == (H, W, 3)
+        assert _decode(result).shape == (expected[1], expected[0], 3)
+
+    def test_blends_the_garment_into_the_original_photo(self, monkeypatch, a_pose):
+        # A smooth, lossless photo, so only the returned JPEG adds error.
+        ramp = np.linspace(60, 190, W, dtype=np.float32)
+        photo = np.dstack([np.tile(ramp, (H, 1))] * 3).astype(np.uint8)
+        _patch_transport(monkeypatch, _fake_gpu({}))
+
+        result = _decode(
+            asyncio.run(generate_gpu_try_on(_encode(photo, ".png"), _garment_png(), _pose(a_pose), config=CONFIG))
+        ).astype(int)
+
+        mask = clothing_mask(a_pose["landmarks"], W, H)
+        clear_of_seam = cv2.dilate(mask, np.ones((17, 17), np.uint8)) == 0
+        assert np.abs(result - photo)[clear_of_seam].max() <= 6
+        garment = cv2.erode(mask, np.ones((41, 41), np.uint8)) > 0
+        assert np.abs(result - (240, 220, 200))[garment].mean() < 6
+
+    def test_an_exif_rotated_photo_is_sent_upright(self, monkeypatch, a_pose):
+        upright = np.full((H, W, 3), 128, np.uint8)
+        upright[:100] = (0, 0, 255)
+        exif = Image.Exif()
+        exif[0x0112] = 6  # stored rotated a quarter turn: "rotate 90 CW to display"
+        stored = io.BytesIO()
+        Image.fromarray(cv2.cvtColor(np.ascontiguousarray(np.rot90(upright)), cv2.COLOR_BGR2RGB)).save(
+            stored, "JPEG", exif=exif.tobytes()
+        )
+        seen = {}
+        _patch_transport(monkeypatch, _fake_gpu(seen))
+
+        result = asyncio.run(generate_gpu_try_on(stored.getvalue(), _garment_png(), _pose(a_pose), config=CONFIG))
+
+        person = _decode(seen["person"])
+        assert person.shape == (H, W, 3)
+        assert tuple(person[50, W // 2]) == pytest.approx((0, 0, 255), abs=12)
+        assert _decode(result).shape == (H, W, 3)
 
     @pytest.mark.parametrize(
         "handler, code",
