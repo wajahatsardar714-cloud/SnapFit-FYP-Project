@@ -11,6 +11,8 @@ const AI_ERROR_MESSAGES = {
   INVALID_IMAGE: 'This file could not be read as an image. Please upload a JPG or PNG photo.',
   FILE_TOO_LARGE: 'This image is too large. Please upload a photo under 10MB.',
   RESOLUTION_TOO_LOW: 'This image resolution is too low. Please upload a higher-resolution photo.',
+  INVALID_USER_HEIGHT: 'Please enter your height between 100 and 230 cm.',
+  INVALID_CLOTHING_FIT: 'Please choose how your clothes fit: fitted, regular or loose.',
 };
 
 // Shapes an AI-service failure into the widget's error response:

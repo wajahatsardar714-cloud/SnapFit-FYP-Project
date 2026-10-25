@@ -16,7 +16,7 @@ const recommendationSchema = new mongoose.Schema(
       chestWidthNorm: { type: Number },
     },
     // Estimated body measurements in cm (numbers only -- the photo itself is
-    // never stored). Absent when no height was given.
+    // never stored).
     measurements: {
       shoulderWidth: { type: Number },
       chest: { type: Number },
@@ -27,6 +27,8 @@ const recommendationSchema = new mongoose.Schema(
     },
     sizeScores: [{ _id: false, label: { type: String }, score: { type: Number } }],
     userHeight: { type: Number },
+    // How the clothes the shopper wears in the photo fit.
+    clothingFit: { type: String, enum: ['fitted', 'regular', 'loose'], default: 'regular' },
     status: { type: String, enum: ['success', 'failed', 'low_confidence'] },
     errorMessage: { type: String },
     ipAddress: { type: String },

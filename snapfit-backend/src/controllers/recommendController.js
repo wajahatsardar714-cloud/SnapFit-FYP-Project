@@ -5,6 +5,9 @@ const { analyzeImage } = require('../services/aiService');
 const { aiErrorResponse, TRY_ON_ERROR_MESSAGES, TRY_ON_FALLBACK_MESSAGE } = require('../utils/aiErrors');
 
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
+const MIN_USER_HEIGHT_CM = 100;
+const MAX_USER_HEIGHT_CM = 230;
+const CLOTHING_FITS = Recommendation.schema.path('clothingFit').enumValues;
 
 const RECOMMEND_FALLBACK_MESSAGE =
   'We could not process your photo right now. Please try again with a clear, front-facing full-body photo.';
@@ -26,10 +29,29 @@ async function cleanupUpload(file) {
   }
 }
 
+// The shopper's own inputs: height in cm (required) and how the clothes in the
+// photo fit (default 'regular'). Returns { error } when one is invalid.
+function parseShopperInputs(body) {
+  const rawUserHeight = body.userHeight;
+  if (rawUserHeight == null || String(rawUserHeight).trim() === '') {
+    return { error: 'userHeight is required' };
+  }
+  const userHeight = Number(rawUserHeight);
+  if (Number.isNaN(userHeight) || userHeight < MIN_USER_HEIGHT_CM || userHeight > MAX_USER_HEIGHT_CM) {
+    return { error: `userHeight must be between ${MIN_USER_HEIGHT_CM} and ${MAX_USER_HEIGHT_CM} cm` };
+  }
+
+  const clothingFit = body.clothingFit || 'regular';
+  if (!CLOTHING_FITS.includes(clothingFit)) {
+    return { error: 'clothingFit must be fitted, regular or loose' };
+  }
+
+  return { userHeight, clothingFit };
+}
+
 async function recommend(req, res) {
   const merchant = req.merchant;
   const { productId } = req.body;
-  const rawUserHeight = req.body.userHeight;
   // Optional: also render the virtual try-on in the same call -- one upload,
   // one pose detection, and one request against the plan's quota.
   const includeTryOn = String(req.body.includeTryOn) === 'true';
@@ -43,13 +65,10 @@ async function recommend(req, res) {
     return res.status(400).json({ success: false, message: 'productId is required' });
   }
 
-  let userHeight;
-  if (rawUserHeight != null && rawUserHeight !== '') {
-    userHeight = Number(rawUserHeight);
-    if (Number.isNaN(userHeight) || userHeight <= 0) {
-      await cleanupUpload(req.file);
-      return res.status(400).json({ success: false, message: 'userHeight must be a positive number' });
-    }
+  const { userHeight, clothingFit, error } = parseShopperInputs(req.body);
+  if (error) {
+    await cleanupUpload(req.file);
+    return res.status(400).json({ success: false, message: error });
   }
 
   let mapping;
@@ -75,12 +94,11 @@ async function recommend(req, res) {
   let aiResult;
   try {
     const imageBuffer = await fs.readFile(req.file.path);
-    aiResult = await analyzeImage(
-      imageBuffer,
-      sizeChart.toObject(),
+    aiResult = await analyzeImage(imageBuffer, sizeChart.toObject(), {
       userHeight,
-      requestTryOn ? { merchantId: merchant._id, productId } : null
-    );
+      clothingFit,
+      tryOn: requestTryOn ? { merchantId: merchant._id, productId } : null,
+    });
   } catch (err) {
     await cleanupUpload(req.file);
 
@@ -89,6 +107,7 @@ async function recommend(req, res) {
       productId,
       sizeChartId: sizeChart._id,
       userHeight,
+      clothingFit,
       status: 'failed',
       errorMessage: err.message,
       ipAddress: req.ip,
@@ -108,6 +127,7 @@ async function recommend(req, res) {
       sizeChartId: sizeChart._id,
       confidence: aiResult.confidence,
       userHeight,
+      clothingFit,
       status: 'failed',
       errorMessage: 'NO_SIZE_RECOMMENDATION',
       ipAddress: req.ip,
@@ -137,6 +157,7 @@ async function recommend(req, res) {
     measurements: Object.fromEntries(Object.entries(measurements).map(([name, m]) => [name, m.value])),
     sizeScores: sizeComparison.map(({ label, score }) => ({ label, score })),
     userHeight,
+    clothingFit,
     status,
     ipAddress: req.ip,
   });
@@ -153,6 +174,8 @@ async function recommend(req, res) {
       measurements,
       sizeComparison,
       fitNotes: aiResult.fitNotes || [],
+      photoTips: aiResult.photoTips || [],
+      warnings: aiResult.warnings || [],
     },
     product,
     ...(includeTryOn && { tryOn: tryOnResult(aiResult.tryOn, requestTryOn) }),

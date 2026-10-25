@@ -19,6 +19,7 @@ const CSV_COLUMNS = [
   { header: 'Status', get: (r) => r.status },
   { header: 'Error', get: (r) => r.errorMessage },
   { header: 'User Height (cm)', get: (r) => r.userHeight },
+  { header: 'Clothing Fit', get: (r) => r.clothingFit },
 ];
 
 function startOfMonth() {

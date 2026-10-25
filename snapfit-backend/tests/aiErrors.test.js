@@ -13,6 +13,40 @@ beforeEach(() => {
   process.env.AI_SERVICE_URL = 'http://ai.test';
 });
 
+describe('analyzeImage request', () => {
+  const formField = (body, name) => body.match(new RegExp(`name="${name}"\\r\\n\\r\\n([^\\r]*)`))?.[1];
+
+  it('sends the height and clothing fit as form fields', async () => {
+    axios.post.mockResolvedValue({ data: { ok: true } });
+
+    await analyzeImage(Buffer.from('img'), { sizes: [] }, { userHeight: 172.5, clothingFit: 'fitted' });
+
+    const [url, form, options] = axios.post.mock.calls.at(-1);
+    const body = form.getBuffer().toString();
+    expect(url).toBe('http://ai.test/analyze');
+    expect(formField(body, 'user_height')).toBe('172.5');
+    expect(formField(body, 'clothing_fit')).toBe('fitted');
+    expect(formField(body, 'try_on_product_id')).toBeUndefined();
+    expect(options.timeout).toBe(30000);
+  });
+
+  it('adds the try-on fields and the longer timeout when a try-on is requested', async () => {
+    axios.post.mockResolvedValue({ data: { ok: true } });
+
+    await analyzeImage(Buffer.from('img'), { sizes: [] }, {
+      userHeight: 180,
+      clothingFit: 'regular',
+      tryOn: { merchantId: 'm1', productId: 'SKU-1' },
+    });
+
+    const [, form, options] = axios.post.mock.calls.at(-1);
+    const body = form.getBuffer().toString();
+    expect(formField(body, 'try_on_product_id')).toBe('SKU-1');
+    expect(formField(body, 'merchant_id')).toBe('m1');
+    expect(options.timeout).toBe(150000);
+  });
+});
+
 describe('aiService error mapping', () => {
   it('keeps the code and failed checks from a structured POSE_INVALID detail', async () => {
     axios.post.mockRejectedValue({
@@ -64,6 +98,16 @@ describe('aiErrorResponse', () => {
     expect(respond('PRODUCT_ANCHOR_POINTS_NOT_FOUND')).toBe('Not set up');
     expect(respond('NO_BODY_DETECTED')).toMatch(/could not detect a person/);
     expect(respond('MISSING_ANCHOR_POINT:hipLeft')).toBe('Fallback');
+  });
+
+  it('explains rejected shopper inputs instead of blaming the photo', () => {
+    const respond = (code) => aiErrorResponse(new AiServiceError(code, 400), { fallback: 'Fallback' });
+
+    expect(respond('INVALID_USER_HEIGHT')).toEqual({
+      status: 400,
+      body: { success: false, message: 'Please enter your height between 100 and 230 cm.' },
+    });
+    expect(respond('INVALID_CLOTHING_FIT').body.message).toBe('Please choose how your clothes fit: fitted, regular or loose.');
   });
 
   it('defaults non-AI errors to 502', () => {
