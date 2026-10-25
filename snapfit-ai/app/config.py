@@ -46,6 +46,26 @@ WAIST_DEPTH_PER_BREADTH = 0.7
 # Measurements that can't be read directly off a front photo.
 ESTIMATED_MEASUREMENTS = frozenset({"chest", "waist", "hip"})
 
+# Clothing allowance, from what the shopper says they are wearing. BlazePose
+# finds joints, not the body outline, so clothing mainly makes joint placement
+# less certain; loose clothing also nudges the detected shoulder and hip joints
+# outward, widening those spans a little. Width and circumference measurements
+# are scaled by the width factor (lengths are unaffected) and the size
+# recommendation's confidence by the confidence factor. Provisional judgement
+# values until volunteer calibration.
+CLOTHING_FITS = ("fitted", "regular", "loose")
+DEFAULT_CLOTHING_FIT = "regular"
+CLOTHING_WIDTH_FACTOR = {"fitted": 1.0, "regular": 0.99, "loose": 0.97}
+CLOTHING_CONFIDENCE_FACTOR = {"fitted": 1.0, "regular": 1.0, "loose": 0.9}
+
+# Heights (cm) outside this range are treated as typos and rejected.
+USER_HEIGHT_MIN_CM = 100
+USER_HEIGHT_MAX_CM = 230
+# Below this height the shopper is probably a child, and merchant size charts
+# are adult charts: the recommendation is flagged and its confidence scaled.
+CHILD_HEIGHT_CM = 145
+CHILD_CONFIDENCE_FACTOR = 0.6
+
 # --- Size matching (size_matcher.py) ------------------------------------------
 # A measurement inside a size's range scores 1; outside, the score falls to 0
 # at this fraction of the range midpoint away from the nearest edge.
@@ -62,3 +82,30 @@ CATEGORY_WEIGHTS = {
     "dresses": {"chest": 0.35, "waist": 0.35, "hip": 0.3},
 }
 DEFAULT_WEIGHTS = {"chest": 1, "shoulderWidth": 1, "waist": 1, "hip": 1, "torsoLength": 1, "inseam": 1}
+
+# --- Photo tips (photo_quality.py) --------------------------------------------
+# Soft, non-blocking advice layered above the pose gate's hard brightness
+# limits (pose_rules.json brightness_min / brightness_max). Measured on a
+# downscale whose longest side is PHOTO_ANALYSIS_SIDE px.
+PHOTO_ANALYSIS_SIDE = 512
+# Mean luma (0-255) below which a photo that passed the gate is still dim
+# enough for joints to be placed less reliably.
+DIM_LIGHT_BRIGHTNESS = 70
+# Luma at or above which a pixel is blown out (no detail left), and the share
+# of the torso (the shoulder-to-hip joint box, which lies inside the body
+# outline) that may be blown out before a retake is suggested. Judged on the
+# torso, not the whole frame, so a white studio backdrop doesn't count.
+BLOWN_OUT_LUMA = 250
+GLARE_AREA_SHARE = 0.06
+# Body box = the visible landmarks' bounds, padded on every side by this
+# fraction of its width / height for the body outline and head around them.
+BODY_BOX_PADDING = 0.12
+# Share of background (outside the body box) pixels that are Canny edges above
+# which the background counts as busy: a plain wall is close to 0, one with a
+# door frame and a picture about 0.03, a cluttered room 0.08 or more.
+CLUTTER_EDGE_DENSITY = 0.05
+# Canny hysteresis thresholds, run after a light blur so sensor noise and JPEG
+# artefacts on a plain wall don't count as edges.
+CANNY_LOW, CANNY_HIGH = 50, 150
+# Below this share of the frame there is too little background to judge.
+MIN_BACKGROUND_SHARE = 0.1
