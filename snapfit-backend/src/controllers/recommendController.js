@@ -55,6 +55,8 @@ async function recommend(req, res) {
   // Optional: also render the virtual try-on in the same call -- one upload,
   // one pose detection, and one request against the plan's quota.
   const includeTryOn = String(req.body.includeTryOn) === 'true';
+  // 'admin_demo' when a super admin runs this from the admin panel.
+  const source = req.recommendationSource || 'widget';
 
   if (!req.file) {
     await cleanupUpload(req);
@@ -115,6 +117,7 @@ async function recommend(req, res) {
       status: 'failed',
       errorMessage: err.message,
       ipAddress: req.ip,
+      source,
     });
 
     const { status: statusCode, body } = aiErrorResponse(err, { fallback: RECOMMEND_FALLBACK_MESSAGE });
@@ -137,6 +140,7 @@ async function recommend(req, res) {
       status: 'failed',
       errorMessage: 'NO_SIZE_RECOMMENDATION',
       ipAddress: req.ip,
+      source,
     });
     return res.status(502).json({ success: false, message: 'A size recommendation could not be produced for this photo.' });
   }
@@ -167,6 +171,7 @@ async function recommend(req, res) {
     framesUsed,
     status,
     ipAddress: req.ip,
+    source,
   });
 
   return res.status(200).json({

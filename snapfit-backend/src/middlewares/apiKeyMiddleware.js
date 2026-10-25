@@ -14,6 +14,11 @@ async function resolveMerchant(req, res, { countUsage }) {
     return null;
   }
 
+  if (merchant.status === 'suspended') {
+    res.status(403).json({ message: 'Merchant account is suspended' });
+    return null;
+  }
+
   const { subscription } = merchant;
 
   if (subscription.status !== 'active') {

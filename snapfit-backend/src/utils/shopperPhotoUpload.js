@@ -6,6 +6,9 @@ const multer = require('multer');
 // deleted (never persisted). Overridable so tests can watch the folder.
 const SHOPPER_TMP_DIR = process.env.UPLOAD_TMP_DIR || path.join(__dirname, '..', '..', 'uploads', 'tmp');
 const MAX_SHOPPER_PHOTO_BYTES = 10 * 1024 * 1024;
+// Extra live-camera frames (~200 ms apart) a recommendation accepts besides the
+// main photo.
+const MAX_EXTRA_FRAMES = 4;
 
 fs.mkdirSync(SHOPPER_TMP_DIR, { recursive: true });
 
@@ -69,4 +72,4 @@ function uploadShopperPhoto({
   };
 }
 
-module.exports = { uploadShopperPhoto, SHOPPER_TMP_DIR };
+module.exports = { uploadShopperPhoto, SHOPPER_TMP_DIR, MAX_EXTRA_FRAMES };

@@ -13,6 +13,7 @@ const tryOnRoutes = require('./routes/tryOnRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const handoffRoutes = require('./routes/handoffRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const { PRODUCTS_DIR } = require('./utils/productImageUpload');
 
 const app = express();
@@ -63,5 +64,6 @@ app.use('/api/try-on', tryOnRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/handoff', handoffRoutes);
+app.use('/api/admin', adminRoutes);
 
 module.exports = app;

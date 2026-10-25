@@ -34,6 +34,9 @@ const recommendationSchema = new mongoose.Schema(
     status: { type: String, enum: ['success', 'failed', 'low_confidence'] },
     errorMessage: { type: String },
     ipAddress: { type: String },
+    // 'admin_demo': a super admin testing the merchant's setup from the admin
+    // panel -- kept out of every analytics figure.
+    source: { type: String, enum: ['widget', 'admin_demo'], default: 'widget' },
   },
   { timestamps: true }
 );
@@ -41,4 +44,10 @@ const recommendationSchema = new mongoose.Schema(
 recommendationSchema.index({ merchantId: 1 });
 recommendationSchema.index({ createdAt: 1 });
 
-module.exports = mongoose.model('Recommendation', recommendationSchema);
+const Recommendation = mongoose.model('Recommendation', recommendationSchema);
+
+// Query filter for real shopper traffic. Records stored before `source` existed
+// have no value and count as widget traffic.
+Recommendation.EXCLUDE_DEMO = { source: { $ne: 'admin_demo' } };
+
+module.exports = Recommendation;

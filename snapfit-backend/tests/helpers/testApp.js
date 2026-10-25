@@ -3,11 +3,15 @@ const os = require('os');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryServer, MongoMemoryReplSet } = require('mongodb-memory-server');
+
+// Starting mongod can take a while when several test files boot one at once.
+const DB_STARTUP_TIMEOUT_MS = 60000;
 
 // Call at the top of a test file, before requiring the app: isolates uploads in
-// a temp folder and gives every file its own in-memory MongoDB.
-function setupTestEnv() {
+// a temp folder and gives every file its own in-memory MongoDB. Pass
+// { replSet: true } for code that uses transactions (e.g. deleting a merchant).
+function setupTestEnv({ replSet = false } = {}) {
   const uploadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'snapfit-products-'));
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'snapfit-tmp-'));
   process.env.PRODUCT_UPLOAD_DIR = uploadDir;
@@ -17,9 +21,9 @@ function setupTestEnv() {
 
   let mongo;
   beforeAll(async () => {
-    mongo = await MongoMemoryServer.create();
+    mongo = replSet ? await MongoMemoryReplSet.create({ replSet: { count: 1 } }) : await MongoMemoryServer.create();
     await mongoose.connect(mongo.getUri());
-  });
+  }, DB_STARTUP_TIMEOUT_MS);
   afterEach(async () => {
     await Promise.all(Object.values(mongoose.connection.collections).map((c) => c.deleteMany({})));
     // Each test checks only its own files.
@@ -40,7 +44,7 @@ function setupTestEnv() {
 }
 
 function tokenFor(merchant) {
-  return jwt.sign({ merchantId: merchant._id, email: merchant.email }, process.env.JWT_SECRET);
+  return jwt.sign({ merchantId: merchant._id, email: merchant.email, role: merchant.role }, process.env.JWT_SECRET);
 }
 
 let merchantCount = 0;
@@ -54,6 +58,17 @@ async function createMerchant(overrides = {}) {
     businessName: 'Test Shop',
     apiKey: `sk_test_${merchantCount}_${Date.now()}`,
     subscription: { plan: 'basic', status: 'active', requestsLimit: 500, requestsUsed: 0 },
+    ...overrides,
+  });
+}
+
+async function createSuperAdmin(overrides = {}) {
+  const Merchant = require('../../src/models/Merchant');
+  return Merchant.create({
+    name: 'Super Admin',
+    email: 'admin@snapfit.test',
+    password: 'hashed',
+    role: 'superadmin',
     ...overrides,
   });
 }
@@ -74,4 +89,4 @@ async function createChart(merchant, overrides = {}) {
   });
 }
 
-module.exports = { setupTestEnv, tokenFor, createMerchant, createChart };
+module.exports = { setupTestEnv, tokenFor, createMerchant, createSuperAdmin, createChart };

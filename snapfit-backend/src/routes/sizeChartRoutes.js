@@ -1,5 +1,5 @@
 const express = require('express');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, requireMerchant } = require('../middlewares/authMiddleware');
 const {
   createChart,
   getCharts,
@@ -10,7 +10,7 @@ const {
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, requireMerchant);
 
 router.post('/', createChart);
 router.get('/', getCharts);

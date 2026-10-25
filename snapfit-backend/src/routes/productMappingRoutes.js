@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, param } = require('express-validator');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, requireMerchant } = require('../middlewares/authMiddleware');
 const ProductMapping = require('../models/ProductMapping');
 const { uploadProductImage } = require('../utils/productImageUpload');
 const {
@@ -40,7 +40,7 @@ const mapValidation = [
 // shared internal secret or network-level isolation instead.
 router.get('/anchor-points', getAnchorPointsForProduct);
 
-router.use(protect);
+router.use(protect, requireMerchant);
 
 // Accepts JSON, or multipart with an optional `image` (the product photo).
 router.post('/map', uploadProductImage(), mapValidation, mapProduct);

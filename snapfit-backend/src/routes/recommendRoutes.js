@@ -1,10 +1,7 @@
 const express = require('express');
 const { validateApiKey } = require('../middlewares/apiKeyMiddleware');
 const { recommend } = require('../controllers/recommendController');
-const { uploadShopperPhoto } = require('../utils/shopperPhotoUpload');
-
-// Extra live-camera frames (~200 ms apart) allowed besides the main photo.
-const MAX_EXTRA_FRAMES = 4;
+const { uploadShopperPhoto, MAX_EXTRA_FRAMES } = require('../utils/shopperPhotoUpload');
 
 const router = express.Router();
 

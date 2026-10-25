@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { updateProfile, changePassword, deleteAccount } = require('../controllers/merchantController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, requireMerchant } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
@@ -19,8 +19,10 @@ const passwordValidation = [
   body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
 ];
 
-router.put('/profile', protect, profileValidation, updateProfile);
-router.put('/password', protect, passwordValidation, changePassword);
-router.delete('/account', protect, deleteAccount);
+router.use(protect, requireMerchant);
+
+router.put('/profile', profileValidation, updateProfile);
+router.put('/password', passwordValidation, changePassword);
+router.delete('/account', deleteAccount);
 
 module.exports = router;

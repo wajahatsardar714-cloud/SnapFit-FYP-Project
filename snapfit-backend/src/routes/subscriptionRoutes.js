@@ -1,5 +1,5 @@
 const express = require('express');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, requireMerchant } = require('../middlewares/authMiddleware');
 const {
   getPlans,
   selectPlan,
@@ -10,8 +10,8 @@ const {
 const router = express.Router();
 
 router.get('/plans', getPlans);
-router.post('/select', protect, selectPlan);
-router.get('/status', protect, getSubscriptionStatus);
-router.post('/cancel', protect, cancelSubscription);
+router.post('/select', protect, requireMerchant, selectPlan);
+router.get('/status', protect, requireMerchant, getSubscriptionStatus);
+router.post('/cancel', protect, requireMerchant, cancelSubscription);
 
 module.exports = router;

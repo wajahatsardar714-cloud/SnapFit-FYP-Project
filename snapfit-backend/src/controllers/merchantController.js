@@ -6,10 +6,35 @@ const SizeChart = require('../models/SizeChart');
 const ProductMapping = require('../models/ProductMapping');
 const Recommendation = require('../models/Recommendation');
 const Feedback = require('../models/Feedback');
+const { removeProductImage } = require('../utils/productImageUpload');
 
 function sanitizeMerchant(merchant) {
   const { password, ...rest } = merchant.toObject();
   return rest;
+}
+
+// Deletes a merchant together with everything they own: size charts, product
+// mappings (and their stored product photos), recommendations and feedback.
+async function deleteMerchantWithData(merchantId) {
+  const productImages = (await ProductMapping.find({ merchantId, productImage: { $ne: null } }).select('productImage'))
+    .map((mapping) => mapping.productImage);
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await SizeChart.deleteMany({ merchantId }, { session });
+      await ProductMapping.deleteMany({ merchantId }, { session });
+      await Recommendation.deleteMany({ merchantId }, { session });
+      await Feedback.deleteMany({ merchantId }, { session });
+      await Merchant.deleteOne({ _id: merchantId }, { session });
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  // Files go only once the records are gone, so a failed transaction never
+  // leaves mappings pointing at missing photos.
+  await Promise.all(productImages.map(removeProductImage));
 }
 
 async function updateProfile(req, res) {
@@ -80,19 +105,7 @@ async function deleteAccount(req, res) {
       return res.status(400).json({ message: 'Business name does not match' });
     }
 
-    const merchantId = merchant._id;
-    const session = await mongoose.startSession();
-    try {
-      await session.withTransaction(async () => {
-        await SizeChart.deleteMany({ merchantId }, { session });
-        await ProductMapping.deleteMany({ merchantId }, { session });
-        await Recommendation.deleteMany({ merchantId }, { session });
-        await Feedback.deleteMany({ merchantId }, { session });
-        await Merchant.deleteOne({ _id: merchantId }, { session });
-      });
-    } finally {
-      await session.endSession();
-    }
+    await deleteMerchantWithData(merchant._id);
 
     return res.status(200).json({ message: 'Account deleted' });
   } catch (err) {
@@ -100,4 +113,4 @@ async function deleteAccount(req, res) {
   }
 }
 
-module.exports = { updateProfile, changePassword, deleteAccount };
+module.exports = { updateProfile, changePassword, deleteAccount, deleteMerchantWithData };

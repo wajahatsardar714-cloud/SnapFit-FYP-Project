@@ -2,12 +2,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const Merchant = require('../models/Merchant');
+const { ACCOUNT_SUSPENDED_MESSAGE } = require('../middlewares/authMiddleware');
 
 const JWT_EXPIRY = '7d';
 
 function generateToken(merchant) {
   return jwt.sign(
-    { merchantId: merchant._id, email: merchant.email },
+    { merchantId: merchant._id, email: merchant.email, role: merchant.role },
     process.env.JWT_SECRET,
     { expiresIn: JWT_EXPIRY }
   );
@@ -24,6 +25,8 @@ async function register(req, res) {
     return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
   }
 
+  // Only these fields are read, so a body can never set role or status: every
+  // registered account is an active merchant.
   const { name, email, password, businessName, phone, businessType } = req.body;
 
   try {
@@ -68,6 +71,10 @@ async function login(req, res) {
     const isMatch = await bcrypt.compare(password, merchant.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    if (merchant.status === 'suspended') {
+      return res.status(403).json({ message: ACCOUNT_SUSPENDED_MESSAGE });
     }
 
     const token = generateToken(merchant);

@@ -73,4 +73,4 @@ async function regenerateApiKey(req, res) {
   }
 }
 
-module.exports = { generateApiKey, getApiKey, regenerateApiKey };
+module.exports = { generateApiKey, getApiKey, regenerateApiKey, assignUniqueApiKey, maskApiKey };

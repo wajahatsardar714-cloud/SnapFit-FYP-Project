@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Merchant = require('../models/Merchant');
 const Recommendation = require('../models/Recommendation');
 
+const { EXCLUDE_DEMO } = Recommendation;
+
 const PERIOD_DAYS = { '7d': 7, '30d': 30, '90d': 90 };
 
 const CONFIDENCE_BUCKETS = [
@@ -41,6 +43,18 @@ function toCsvValue(value) {
   return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 }
 
+// Sends `records` as a dated CSV download, one column per { header, get }.
+function sendCsv(res, columns, records, filenamePrefix) {
+  const headerRow = columns.map((c) => c.header).join(',');
+  const rows = records.map((r) => columns.map((c) => toCsvValue(c.get(r))).join(','));
+  const csv = [headerRow, ...rows].join('\n');
+
+  const filenameDate = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${filenamePrefix}-${filenameDate}.csv"`);
+  return res.status(200).send(csv);
+}
+
 async function getDashboardStats(req, res) {
   try {
     const merchantId = req.merchant.merchantId;
@@ -56,16 +70,20 @@ async function getDashboardStats(req, res) {
       sizeAgg,
     ] = await Promise.all([
       Merchant.findById(merchantId),
-      Recommendation.countDocuments({ merchantId }),
-      Recommendation.countDocuments({ merchantId, createdAt: { $gte: startOfMonth() } }),
-      Recommendation.countDocuments({ merchantId, createdAt: { $gte: startOfLastMonth(), $lt: startOfMonth() } }),
-      Recommendation.countDocuments({ merchantId, status: 'success' }),
+      Recommendation.countDocuments({ merchantId, ...EXCLUDE_DEMO }),
+      Recommendation.countDocuments({ merchantId, ...EXCLUDE_DEMO, createdAt: { $gte: startOfMonth() } }),
+      Recommendation.countDocuments({
+        merchantId,
+        ...EXCLUDE_DEMO,
+        createdAt: { $gte: startOfLastMonth(), $lt: startOfMonth() },
+      }),
+      Recommendation.countDocuments({ merchantId, ...EXCLUDE_DEMO, status: 'success' }),
       Recommendation.aggregate([
-        { $match: { merchantId: merchantObjectId, confidence: { $ne: null } } },
+        { $match: { merchantId: merchantObjectId, ...EXCLUDE_DEMO, confidence: { $ne: null } } },
         { $group: { _id: null, avgConfidence: { $avg: '$confidence' } } },
       ]),
       Recommendation.aggregate([
-        { $match: { merchantId: merchantObjectId, recommendedSize: { $ne: null } } },
+        { $match: { merchantId: merchantObjectId, ...EXCLUDE_DEMO, recommendedSize: { $ne: null } } },
         { $group: { _id: '$recommendedSize', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]),
@@ -105,12 +123,13 @@ async function getUsageOverTime(req, res) {
     const period = PERIOD_DAYS[req.query.period] ? req.query.period : '30d';
     const days = PERIOD_DAYS[period];
 
+    // UTC days, matching the $dateToString grouping below.
     const startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
-    startDate.setDate(startDate.getDate() - (days - 1));
+    startDate.setUTCHours(0, 0, 0, 0);
+    startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
 
     const results = await Recommendation.aggregate([
-      { $match: { merchantId, createdAt: { $gte: startDate } } },
+      { $match: { merchantId, ...EXCLUDE_DEMO, createdAt: { $gte: startDate } } },
       { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
     ]);
 
@@ -118,7 +137,7 @@ async function getUsageOverTime(req, res) {
     const data = [];
     for (let i = 0; i < days; i += 1) {
       const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
+      d.setUTCDate(d.getUTCDate() + i);
       const key = d.toISOString().slice(0, 10);
       data.push({ date: key, count: countsByDate.get(key) || 0 });
     }
@@ -135,12 +154,12 @@ async function getRecommendationBreakdown(req, res) {
 
     const [sizeAgg, confidenceAgg, errorAgg] = await Promise.all([
       Recommendation.aggregate([
-        { $match: { merchantId, recommendedSize: { $ne: null } } },
+        { $match: { merchantId, ...EXCLUDE_DEMO, recommendedSize: { $ne: null } } },
         { $group: { _id: '$recommendedSize', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]),
       Recommendation.aggregate([
-        { $match: { merchantId, confidence: { $ne: null } } },
+        { $match: { merchantId, ...EXCLUDE_DEMO, confidence: { $ne: null } } },
         {
           $bucket: {
             groupBy: '$confidence',
@@ -150,7 +169,7 @@ async function getRecommendationBreakdown(req, res) {
         },
       ]),
       Recommendation.aggregate([
-        { $match: { merchantId, status: 'failed', errorMessage: { $ne: null } } },
+        { $match: { merchantId, ...EXCLUDE_DEMO, status: 'failed', errorMessage: { $ne: null } } },
         { $group: { _id: '$errorMessage', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]),
@@ -176,7 +195,7 @@ async function getRecentRecommendations(req, res) {
   try {
     const merchantId = req.merchant.merchantId;
 
-    const recommendations = await Recommendation.find({ merchantId })
+    const recommendations = await Recommendation.find({ merchantId, ...EXCLUDE_DEMO })
       .sort({ createdAt: -1 })
       .limit(10)
       .select('productId recommendedSize confidence status createdAt')
@@ -191,7 +210,7 @@ async function getRecentRecommendations(req, res) {
 async function exportReport(req, res) {
   try {
     const merchantId = req.merchant.merchantId;
-    const filter = { merchantId };
+    const filter = { merchantId, ...EXCLUDE_DEMO };
 
     if (req.query.startDate) {
       const start = new Date(req.query.startDate);
@@ -210,14 +229,7 @@ async function exportReport(req, res) {
 
     const recommendations = await Recommendation.find(filter).sort({ createdAt: 1 }).lean();
 
-    const headerRow = CSV_COLUMNS.map((c) => c.header).join(',');
-    const rows = recommendations.map((r) => CSV_COLUMNS.map((c) => toCsvValue(c.get(r))).join(','));
-    const csv = [headerRow, ...rows].join('\n');
-
-    const filenameDate = new Date().toISOString().slice(0, 10);
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="recommendations-${filenameDate}.csv"`);
-    return res.status(200).send(csv);
+    return sendCsv(res, CSV_COLUMNS, recommendations, 'recommendations');
   } catch (err) {
     return res.status(500).json({ message: 'Failed to export report', error: err.message });
   }
@@ -229,4 +241,6 @@ module.exports = {
   getRecommendationBreakdown,
   getRecentRecommendations,
   exportReport,
+  sendCsv,
+  CSV_COLUMNS,
 };
