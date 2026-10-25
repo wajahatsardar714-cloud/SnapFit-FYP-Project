@@ -162,6 +162,9 @@ function SizeResult({ result }) {
         <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-2">
           <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${pct}%` }} />
         </div>
+        {result.framesUsed > 1 && (
+          <p className="mt-1 text-xs text-muted-foreground">Measured from {result.framesUsed} camera frames</p>
+        )}
       </div>
 
       {result.bodyType && (

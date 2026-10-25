@@ -51,6 +51,8 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
   const [step, setStep] = useState('form'); // form | loading | result | error
   const [inputMode, setInputMode] = useState(null); // null | 'camera' | 'upload'
   const [file, setFile] = useState(null);
+  // Extra live-camera frames taken with `file`; replaced or cleared with it.
+  const [extraFrames, setExtraFrames] = useState([]);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [formError, setFormError] = useState('');
@@ -92,10 +94,15 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  function clearPhoto() {
+    setFile(null);
+    setExtraFrames([]);
+  }
+
   function resetFlow() {
     setStep('form');
     setInputMode(null);
-    setFile(null);
+    clearPhoto();
     setFormError('');
     setHeightTouched(false);
     setClothingFit('regular');
@@ -116,7 +123,8 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
     setIsOpen(false);
   }
 
-  function onFilesSelected(fileList) {
+  // `frames`: extra frames captured with this photo (live camera only).
+  function onFilesSelected(fileList, frames = []) {
     const selected = fileList?.[0];
     if (!selected) return;
     if (!selected.type.startsWith('image/')) {
@@ -129,6 +137,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
     }
     setFormError('');
     setFile(selected);
+    setExtraFrames(frames);
   }
 
   function handleDrop(e) {
@@ -147,6 +156,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
     const formData = new FormData();
     formData.append('image', file);
+    extraFrames.forEach((frame) => formData.append('frames', frame));
     formData.append('productId', productId);
     formData.append('userHeight', String(heightValue));
     formData.append('clothingFit', clothingFit);
@@ -266,7 +276,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                     <div className="mt-3 flex items-center justify-center gap-4 text-xs">
                       <button
                         type="button"
-                        onClick={() => setFile(null)}
+                        onClick={clearPhoto}
                         className="font-medium text-muted-foreground underline hover:text-foreground"
                       >
                         Retake
@@ -274,7 +284,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                       <button
                         type="button"
                         onClick={() => {
-                          setFile(null);
+                          clearPhoto();
                           setFormError('');
                           setInputMode('upload');
                         }}
@@ -294,10 +304,10 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                       <LiveCapture
                         file={file}
                         previewUrl={previewUrl}
-                        onCapture={(capturedFile) => onFilesSelected([capturedFile])}
-                        onRetake={() => setFile(null)}
+                        onCapture={(capturedFile, frames) => onFilesSelected([capturedFile], frames)}
+                        onRetake={clearPhoto}
                         onSwitchToUpload={() => {
-                          setFile(null);
+                          clearPhoto();
                           setFormError('');
                           setInputMode('upload');
                         }}
@@ -328,7 +338,8 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                         className="hidden"
                         onChange={(e) => onFilesSelected(e.target.files)}
                       />
-                      {previewUrl ? (
+                      {/* previewUrl trails `file` by a render (set in an effect), so check both. */}
+                      {file && previewUrl ? (
                         <div className="flex flex-col items-center gap-2">
                           <img src={previewUrl} alt="Selected preview" className="h-32 w-32 rounded-md object-cover" />
                           <span className="text-xs text-muted-foreground">{file.name} — click to change</span>
@@ -345,7 +356,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                       <button
                         type="button"
                         onClick={() => {
-                          setFile(null);
+                          clearPhoto();
                           setFormError('');
                           setInputMode('camera');
                         }}

@@ -64,6 +64,12 @@ export const DETECTION_INTERVAL_MS = 150;
 // capture automatically.
 export const AUTO_CAPTURE_COUNTDOWN_S = 2;
 
+// After a capture passes its recheck, grab this many more frames this far apart
+// (~1 s burst). The server takes the per-landmark median across every photo,
+// which steadies a single frame's jitter. At most 4: the API rejects more.
+export const EXTRA_CAPTURE_FRAMES = 4;
+export const FRAME_INTERVAL_MS = 200;
+
 // A pose that just passed stays "passing" through failures shorter than this,
 // so one jittery detection frame doesn't reset the countdown.
 export const PASS_GRACE_MS = 600;

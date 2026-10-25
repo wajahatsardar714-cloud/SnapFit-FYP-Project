@@ -76,6 +76,19 @@ describe('SizeResult', () => {
     expect(screen.queryByText('Tips for a better photo')).toBeNull();
   });
 
+  it('says how many camera frames were combined', () => {
+    render(<SizeResult result={{ ...RESULT, framesUsed: 5 }} />);
+    expect(screen.getByText('Measured from 5 camera frames')).toBeTruthy();
+  });
+
+  it('says nothing about frames for a single photo', () => {
+    const { rerender } = render(<SizeResult result={{ ...RESULT, framesUsed: 1 }} />);
+    expect(screen.queryByText(/camera frames/)).toBeNull();
+
+    rerender(<SizeResult result={RESULT} />);
+    expect(screen.queryByText(/camera frames/)).toBeNull();
+  });
+
   it('still renders a legacy result without measurements', () => {
     render(<SizeResult result={{ size: 'S', confidence: 0.4, notes: 'Proportions only.' }} />);
     expect(screen.queryByRole('table')).toBeNull();
