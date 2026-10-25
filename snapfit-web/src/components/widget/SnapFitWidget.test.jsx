@@ -2,6 +2,30 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SnapFitWidget from './SnapFitWidget';
 
+const { CAMERA_PHOTO, CAMERA_FRAMES } = vi.hoisted(() => ({
+  CAMERA_PHOTO: new File(['main'], 'capture.jpg', { type: 'image/jpeg' }),
+  CAMERA_FRAMES: [1, 2].map((n) => new File([`frame ${n}`], `frame-${n}.jpg`, { type: 'image/jpeg' })),
+}));
+
+// Stand-in camera: one click "captures" a photo plus its extra frames.
+vi.mock('./LiveCapture', () => ({
+  default: ({ file, onCapture, onRetake, onSwitchToUpload }) =>
+    file ? (
+      <>
+        <button type="button" onClick={onRetake}>
+          Retake
+        </button>
+        <button type="button" onClick={onSwitchToUpload}>
+          Or upload a photo instead
+        </button>
+      </>
+    ) : (
+      <button type="button" onClick={() => onCapture(CAMERA_PHOTO, CAMERA_FRAMES)}>
+        Capture
+      </button>
+    ),
+}));
+
 const RECOMMENDATION = { size: 'M', confidence: 0.9, notes: 'M fits.', fitNotes: [] };
 const HEIGHT_RANGE_ERROR = 'Height must be between 100 and 230 cm (3 ft 4 in – 7 ft 6 in).';
 
@@ -9,23 +33,41 @@ function respondWith(body, recommendation = RECOMMENDATION) {
   globalThis.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ success: true, recommendation, ...body }) }));
 }
 
-// Opens the widget and picks a photo, leaving the form ready to submit.
-function choosePhoto() {
+function openWidget() {
   render(<SnapFitWidget apiKey="sk_live_test" productId="SKU-1" apiUrl="https://api.test/api" />);
   fireEvent.click(screen.getByRole('button', { name: 'Check My Size' }));
-  fireEvent.click(screen.getByRole('button', { name: /Upload a Photo/ }));
+}
+
+function uploadPhoto() {
   const input = document.querySelector('input[type="file"]');
   fireEvent.change(input, { target: { files: [new File(['photo'], 'me.jpg', { type: 'image/jpeg' })] } });
+}
+
+// Opens the widget and picks a photo, leaving the form ready to submit.
+function choosePhoto() {
+  openWidget();
+  fireEvent.click(screen.getByRole('button', { name: /Upload a Photo/ }));
+  uploadPhoto();
+}
+
+async function captureFromCamera() {
+  openWidget();
+  fireEvent.click(screen.getByRole('button', { name: /Take a Photo/ }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Capture' }));
 }
 
 const enterHeightCm = (value) => fireEvent.change(screen.getByLabelText('Height in cm'), { target: { value } });
 const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Get My Size' }));
 
-async function getMySize() {
-  choosePhoto();
+async function submitForm() {
   enterHeightCm('178');
   submit();
   await screen.findByText('M fits.');
+}
+
+async function getMySize() {
+  choosePhoto();
+  await submitForm();
 }
 
 beforeEach(() => {
@@ -86,6 +128,43 @@ describe('SnapFitWidget result', () => {
     await getMySize();
 
     expect(screen.getByRole('button', { name: 'Check another photo' })).toBeTruthy();
+  });
+});
+
+describe('SnapFitWidget camera frames', () => {
+  it('sends each extra camera frame as a repeated frames field', async () => {
+    respondWith({});
+    await captureFromCamera();
+    await submitForm();
+
+    const { body } = fetch.mock.calls[0][1];
+    expect(body.get('image').name).toBe('capture.jpg');
+    expect(body.getAll('frames').map((frame) => frame.name)).toEqual(['frame-1.jpg', 'frame-2.jpg']);
+  });
+
+  it('sends no frames with an uploaded photo', async () => {
+    respondWith({});
+    await getMySize();
+
+    const { body } = fetch.mock.calls[0][1];
+    expect(body.get('image').name).toBe('me.jpg');
+    expect(body.getAll('frames')).toEqual([]);
+  });
+
+  it('drops the frames on retake and when switching to upload', async () => {
+    respondWith({});
+    await captureFromCamera();
+    fireEvent.click(screen.getByRole('button', { name: 'Retake' }));
+    expect(screen.getByRole('button', { name: 'Get My Size' }).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Capture' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Or upload a photo instead' }));
+    uploadPhoto();
+    await submitForm();
+
+    const { body } = fetch.mock.calls[0][1];
+    expect(body.get('image').name).toBe('me.jpg');
+    expect(body.getAll('frames')).toEqual([]);
   });
 });
 

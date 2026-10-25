@@ -47,6 +47,18 @@ describe('IntegrationDocsPage /api/recommend', () => {
     expect(fit.textContent).toMatch(/fitted, regular \(default\) or loose/);
   });
 
+  it('documents the optional camera frames and how many were used', () => {
+    renderPage();
+
+    const frames = recommendFieldRow('frames');
+    expect(within(frames).queryByText('*')).toBeNull();
+    expect(frames.textContent).toMatch(/Up to 4 extra JPEG frames/);
+    expect(screen.getByText('At most 4 extra frames are allowed')).toBeTruthy();
+
+    const example = [...document.querySelectorAll('code')].find((el) => el.textContent.includes('"recommendation": {'));
+    expect(example.textContent).toContain('"framesUsed": 5');
+  });
+
   it('lists the new validation errors', () => {
     renderPage();
 

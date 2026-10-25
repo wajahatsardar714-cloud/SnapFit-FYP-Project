@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, RefreshCw, SwitchCamera } from 'lucide-react';
-import { AUTO_CAPTURE_COUNTDOWN_S, MIRROR_PREVIEW } from '../../config/poseConfig';
+import {
+  AUTO_CAPTURE_COUNTDOWN_S,
+  EXTRA_CAPTURE_FRAMES,
+  FRAME_INTERVAL_MS,
+  MIRROR_PREVIEW,
+} from '../../config/poseConfig';
 import { useCameraStream } from '../../hooks/useCameraStream';
 import { useLivePoseDetection } from '../../hooks/useLivePoseDetection';
 import { defaultFacingMode } from '../../utils/device';
@@ -17,7 +22,10 @@ const TONE_STYLES = {
   loading: { border: 'border-border', text: 'text-muted-foreground' },
 };
 
-function getStatus({ isModelReady, validation, poseError, countdown }) {
+const JPEG_QUALITY = 0.92;
+
+function getStatus({ isModelReady, validation, poseError, countdown, holdingStill }) {
+  if (holdingStill) return { tone: poseError ? 'degraded' : 'aligned', text: 'Hold still…' };
   if (poseError) {
     return { tone: 'degraded', text: 'Live pose guide unavailable on this device — line up a full-body shot and capture manually.' };
   }
@@ -26,6 +34,51 @@ function getStatus({ isModelReady, validation, poseError, countdown }) {
   if (countdown != null) return { tone: 'aligned', text: `Hold still — taking your photo in ${countdown}…` };
   if (validation.ok) return { tone: 'aligned', text: 'Perfect — hold still' };
   return { tone: alignmentState(validation), text: primaryInstruction(validation) || 'Adjust your position' };
+}
+
+function frameReady(video) {
+  return Boolean(video) && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0;
+}
+
+// Always the raw camera frame: never mirrored, whatever MIRROR_PREVIEW says.
+function drawFrame(video, canvas) {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+}
+
+// toBlob copies the canvas when called, so it can be redrawn while this encodes.
+// Resolves to a JPEG File, or null if encoding failed.
+function encodeJpeg(canvas, name) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob && new File([blob], name, { type: 'image/jpeg' })), 'image/jpeg', JPEG_QUALITY);
+  });
+}
+
+// Grabs EXTRA_CAPTURE_FRAMES more frames, FRAME_INTERVAL_MS apart, after the
+// main one already on `canvas`. A frame that can't be grabbed is dropped -- as is
+// one whose size changed (phone rotated), since its landmarks wouldn't line up
+// with the main frame's. `burst.timer` holds the pending timer so the caller can
+// cancel the burst.
+function grabExtraFrames(video, canvas, burst, name) {
+  const { width, height } = canvas;
+  const frames = [];
+  return new Promise((resolve) => {
+    function next(index) {
+      if (index > EXTRA_CAPTURE_FRAMES) {
+        resolve(Promise.all(frames));
+        return;
+      }
+      burst.timer = setTimeout(() => {
+        if (frameReady(video) && video.videoWidth === width && video.videoHeight === height) {
+          drawFrame(video, canvas);
+          frames.push(encodeJpeg(canvas, `${name}-frame-${index}.jpg`));
+        }
+        next(index + 1);
+      }, FRAME_INTERVAL_MS);
+    }
+    next(1);
+  });
 }
 
 function UploadInsteadLink({ onClick }) {
@@ -43,10 +96,12 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   const overlayRef = useRef(null);
   const canvasRef = useRef(null);
   const capturingRef = useRef(false);
+  const burstRef = useRef(null); // { timer, cancelled } of the burst in progress
   const [initialFacingMode] = useState(defaultFacingMode);
   const [videoSize, setVideoSize] = useState({ width: 0, height: 0 });
   const [countdown, setCountdown] = useState(null);
   const [captureError, setCaptureError] = useState('');
+  const [holdingStill, setHoldingStill] = useState(false);
 
   const cameraEnabled = !file;
   const {
@@ -87,6 +142,17 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     }
   }, [cameraStatus, onSwitchToUpload]);
 
+  // Unmounting mid-burst (e.g. switching to upload) drops that capture.
+  useEffect(
+    () => () => {
+      const burst = burstRef.current;
+      if (!burst) return;
+      burst.cancelled = true;
+      clearTimeout(burst.timer);
+    },
+    []
+  );
+
   // Degraded mode (pose model failed to load or timed out): let the shopper
   // capture manually rather than trap them behind a gate that can never pass.
   const canCapture = Boolean(validation?.ok) || Boolean(poseError);
@@ -95,13 +161,10 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     if (!canCapture || capturingRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
+    if (!canvas || !frameReady(video)) return;
 
     capturingRef.current = true;
-    // Always the raw camera frame: never mirrored, whatever MIRROR_PREVIEW says.
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    drawFrame(video, canvas);
 
     if (!poseError) {
       const recheck = checkFrame(canvas);
@@ -113,17 +176,21 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     }
 
     setCaptureError('');
-    canvas.toBlob(
-      (blob) => {
-        // Always release the guard once the async encode settles -- if the parent
-        // rejects this file (e.g. over the 10MB limit) `file` never changes.
-        capturingRef.current = false;
-        if (!blob) return;
-        onCapture(new File([blob], `snapfit-capture-${Date.now()}.jpg`, { type: 'image/jpeg' }));
-      },
-      'image/jpeg',
-      0.92
-    );
+    setHoldingStill(true);
+    const burst = { timer: null, cancelled: false };
+    burstRef.current = burst;
+    const name = `snapfit-capture-${Date.now()}`;
+    // The main frame is the one previewed and used for the try-on; the extra
+    // frames only steady the server's measurements.
+    Promise.all([encodeJpeg(canvas, `${name}.jpg`), grabExtraFrames(video, canvas, burst, name)]).then(([mainFile, frames]) => {
+      if (burst.cancelled) return;
+      burstRef.current = null;
+      // Always release the guard once the burst settles -- if the parent
+      // rejects this file (e.g. over the 10MB limit) `file` never changes.
+      capturingRef.current = false;
+      setHoldingStill(false);
+      if (mainFile) onCapture(mainFile, frames.filter(Boolean));
+    });
   }
 
   // All checks passing (stillness included) starts a countdown; any check
@@ -188,7 +255,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
     );
   }
 
-  const status = getStatus({ isModelReady, validation, poseError, countdown });
+  const status = getStatus({ isModelReady, validation, poseError, countdown, holdingStill });
   const { border: borderClass, text: textClass } = TONE_STYLES[status.tone];
   const aspect = videoSize.width && videoSize.height ? videoSize.width / videoSize.height : 3 / 4;
 
@@ -230,8 +297,9 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
           <button
             type="button"
             onClick={switchCamera}
+            disabled={holdingStill}
             aria-label="Switch camera"
-            className="absolute right-2 top-2 rounded-full bg-overlay/50 p-2 text-primary-foreground hover:bg-overlay/70"
+            className="absolute right-2 top-2 rounded-full bg-overlay/50 p-2 text-primary-foreground hover:bg-overlay/70 disabled:opacity-40"
           >
             <SwitchCamera size={18} />
           </button>
@@ -247,7 +315,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
       <button
         type="button"
         onClick={handleCapture}
-        disabled={!canCapture}
+        disabled={!canCapture || holdingStill}
         className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Camera size={16} />

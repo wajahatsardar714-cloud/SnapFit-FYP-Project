@@ -263,6 +263,11 @@ const RECOMMEND_VALIDATION_ERRORS = [
     meaning: 'The image exceeds the 10MB upload limit — rejected before reaching the AI service.',
   },
   {
+    code: 'At most 4 extra frames are allowed',
+    status: 400,
+    meaning: 'More than 4 frames fields were sent with the image.',
+  },
+  {
     code: 'No size chart is mapped to product "…"',
     status: 404,
     meaning: 'This productId has no size chart mapped yet — map it from Product Mapping first.',
@@ -539,6 +544,8 @@ function IntegrationDocsPage() {
   formData.append('productId', productId);
   formData.append('userHeight', '178'); // cm, 100–230
   formData.append('clothingFit', 'fitted'); // fitted | regular | loose
+  // From a live camera, optionally add up to 4 extra frames:
+  // extraFrames.forEach((frame) => formData.append('frames', frame));
 
   const res = await fetch('${API_BASE}/recommend', {
     method: 'POST',
@@ -619,7 +626,8 @@ else:
     "photoTips": [
       { "id": "dim_light", "message": "Your photo is quite dark. Retake it in brighter, even light for a more accurate size." }
     ],
-    "warnings": []
+    "warnings": [],
+    "framesUsed": 5
   },
   "product": { "productId": "SKU-1029", "productName": "Classic Crew Tee", "imageUrl": "https://…/uploads/products/…png", "tryOnReady": true },
   "tryOn": { "status": "success", "image": "data:image/jpeg;base64,…" }
@@ -754,6 +762,13 @@ else:
                 <ParamsTable
                   rows={[
                     { field: 'image', type: 'file', required: true, description: 'JPG or PNG photo, up to 10MB.' },
+                    {
+                      field: 'frames',
+                      type: 'file',
+                      required: false,
+                      description:
+                        'Up to 4 extra JPEG frames taken a moment after image from a live camera — repeat the frames field for each. Body landmarks are combined across all the photos, which steadies the measurements. Leave it out for an uploaded photo; image is still the photo used for the try-on.',
+                    },
                     { field: 'productId', type: 'string', required: true, description: 'Must already be mapped to a size chart.' },
                     {
                       field: 'userHeight',
@@ -795,6 +810,11 @@ else:
                   <code className="font-mono">cluttered_background</code>) suggest how a retake could improve accuracy;
                   the <code className="font-mono">possible_child</code> warning is added when{' '}
                   <code className="font-mono">userHeight</code> is under 145 cm.
+                </p>
+                <p>
+                  <code className="font-mono">framesUsed</code> is how many photos the measurements were combined from:{' '}
+                  <code className="font-mono">1</code> for a single photo, more when{' '}
+                  <code className="font-mono">frames</code> were sent.
                 </p>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Success response — 200</p>
                 <CodeBlock code={recommendSuccessExample} lang="json" />
