@@ -32,6 +32,11 @@ class PoseEstimationError(Exception):
     pass
 
 
+def key_landmarks_of(landmarks):
+    """The KEY_LANDMARKS subset of a full landmark dict."""
+    return {name: landmarks[name] for name in KEY_LANDMARKS}
+
+
 def _make_landmarker():
     options = vision.PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=MODEL_PATH),
@@ -70,11 +75,9 @@ def extract_landmarks(image_bytes):
         for i, landmark in enumerate(pose)
     }
 
-    key_landmarks = {name: landmarks[name] for name in KEY_LANDMARKS}
-
     return {
         "landmarks": landmarks,
-        "key_landmarks": key_landmarks,
+        "key_landmarks": key_landmarks_of(landmarks),
         "image_dimensions": {"height": height, "width": width},
         "brightness": mean_brightness(image),
     }

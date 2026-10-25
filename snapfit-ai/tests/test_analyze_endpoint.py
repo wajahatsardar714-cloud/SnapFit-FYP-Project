@@ -1,3 +1,4 @@
+import copy
 import io
 import json
 import os
@@ -8,6 +9,7 @@ from PIL import Image
 
 from app import main
 from app.measurement_engine import estimate_measurements
+from app.pose_estimator import PoseEstimationError
 
 REFERENCE_PHOTO = os.path.join(os.path.dirname(__file__), "..", "..", "pose.png")
 
@@ -191,3 +193,108 @@ class TestPossibleChild:
 
     def test_warns_without_a_chart_too(self, monkeypatch, a_pose):
         assert _analyze(monkeypatch, a_pose, {"user_height": "120"}).json()["warnings"][0]["id"] == "possible_child"
+
+
+def _shifted_shoulder(a_pose, dx):
+    """The A-pose with the left shoulder dx further out: a wider shoulder span."""
+    pose = copy.deepcopy(a_pose)
+    pose["landmarks"]["LEFT_SHOULDER"]["x"] += dx
+    return pose
+
+
+def _off_centre(a_pose):
+    pose = copy.deepcopy(a_pose)
+    for point in pose["landmarks"].values():
+        point["x"] += 0.22
+    return pose
+
+
+class TestMultiFrame:
+    """The main photo plus extra frames, each a distinct JPEG the fake
+    extract_landmarks maps to its own pose (or failure)."""
+
+    @staticmethod
+    def _photo(shade):
+        buffer = io.BytesIO()
+        Image.new("RGB", (768, 1024), (shade, shade, shade)).save(buffer, "JPEG")
+        return buffer.getvalue()
+
+    def _post(self, monkeypatch, main_pose, frame_results, data=None):
+        """frame_results: per extra frame, a pose fixture, an exception for pose
+        extraction to raise, or raw bytes to upload as-is."""
+        main_bytes = self._photo(100)
+        poses = {main_bytes: main_pose}
+        files = [("image", ("photo.jpg", main_bytes, "image/jpeg"))]
+        for index, result in enumerate(frame_results):
+            frame_bytes = result if isinstance(result, bytes) else self._photo(110 + 10 * index)
+            poses[frame_bytes] = result
+            files.append(("frames", (f"frame{index}.jpg", frame_bytes, "image/jpeg")))
+
+        def fake_extract(image_bytes):
+            result = poses[image_bytes]
+            if isinstance(result, Exception):
+                raise result
+            return _fake_pose(result)
+
+        monkeypatch.setattr(main, "extract_landmarks", fake_extract)
+        return client.post("/analyze", files=files, data=data or {})
+
+    def test_no_frames_uses_the_main_photo_alone(self, monkeypatch, a_pose):
+        body = self._post(monkeypatch, a_pose, [], {"user_height": "175"}).json()
+        assert body["framesUsed"] == 1
+        assert body["key_landmarks"] == a_pose["landmarks"]
+        assert body["measurements"] == estimate_measurements(a_pose["landmarks"], 768, 1024, 175)
+
+    def test_counts_every_usable_frame(self, monkeypatch, a_pose):
+        response = self._post(monkeypatch, a_pose, [a_pose] * 4)
+        assert response.status_code == 200
+        assert response.json()["framesUsed"] == 5
+
+    def test_rejects_more_than_four_frames(self, monkeypatch, a_pose):
+        response = self._post(monkeypatch, a_pose, [a_pose] * 5)
+        assert response.status_code == 400
+        assert response.json()["detail"] == "TOO_MANY_FRAMES"
+
+    def test_measures_the_median_pose(self, monkeypatch, a_pose):
+        # The main photo's shoulder is the outlier; the median is the 0.004 frame's.
+        median_pose = _shifted_shoulder(a_pose, 0.004)
+        frames = [_shifted_shoulder(a_pose, 0.0), median_pose]
+        body = self._post(monkeypatch, _shifted_shoulder(a_pose, 0.02), frames, {"user_height": "175"}).json()
+        assert body["framesUsed"] == 3
+        assert body["measurements"] == estimate_measurements(median_pose["landmarks"], 768, 1024, 175)
+        assert body["key_landmarks"]["LEFT_SHOULDER"] == median_pose["landmarks"]["LEFT_SHOULDER"]
+        assert set(body["key_landmarks"]) < set(a_pose["landmarks"])
+
+    def test_skips_frames_failing_pose_or_validation(self, monkeypatch, a_pose):
+        frames = [a_pose, _off_centre(a_pose), PoseEstimationError("NO_BODY_DETECTED"), b"not an image"]
+        response = self._post(monkeypatch, a_pose, frames)
+        assert response.status_code == 200
+        assert response.json()["framesUsed"] == 2
+
+    def test_skips_a_frame_of_a_different_size(self, monkeypatch, a_pose):
+        wider = {**a_pose, "image_width": 800}
+        assert self._post(monkeypatch, a_pose, [wider]).json()["framesUsed"] == 1
+
+    def test_a_bad_main_photo_still_fails_with_good_frames(self, monkeypatch, a_pose):
+        response = self._post(monkeypatch, _off_centre(a_pose), [a_pose, a_pose])
+        assert response.status_code == 422
+        assert response.json()["detail"]["code"] == "POSE_INVALID"
+
+    def test_try_on_and_photo_tips_use_the_main_photos_own_pose(self, monkeypatch, a_pose):
+        main_pose = _shifted_shoulder(a_pose, 0.02)
+        seen = {}
+
+        async def fake_render(_image_bytes, pose, *_args):
+            seen["try_on"] = pose["landmarks"]
+            return {"image": "data:image/jpeg;base64,", "engine": "warp"}
+
+        def fake_tips(_image, landmarks):
+            seen["tips"] = landmarks
+            return []
+
+        monkeypatch.setattr(main, "_render_try_on", fake_render)
+        monkeypatch.setattr(main, "photo_tips", fake_tips)
+        data = {"try_on_product_id": "SKU-1", "merchant_id": "m1"}
+        body = self._post(monkeypatch, main_pose, [a_pose, a_pose], data).json()
+        assert body["framesUsed"] == 3
+        assert seen == {"try_on": main_pose["landmarks"], "tips": main_pose["landmarks"]}

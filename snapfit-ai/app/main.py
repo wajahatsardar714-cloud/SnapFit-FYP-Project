@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import List, Optional
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -16,14 +16,16 @@ from app.config import (
     CLOTHING_CONFIDENCE_FACTOR,
     CLOTHING_FITS,
     DEFAULT_CLOTHING_FIT,
+    MAX_EXTRA_FRAMES,
     USER_HEIGHT_MAX_CM,
     USER_HEIGHT_MIN_CM,
 )
 from app.feature_engine import calculate_features
 from app.gpu_try_on import generate_gpu_try_on, gpu_health, gpu_try_on_config
 from app.measurement_engine import estimate_measurements
+from app.multi_frame import combine_landmarks
 from app.photo_quality import photo_tips
-from app.pose_estimator import PoseEstimationError, extract_landmarks
+from app.pose_estimator import PoseEstimationError, extract_landmarks, key_landmarks_of
 from app.pose_validator import PoseInvalidError, assert_valid_pose
 from app.size_matcher import SizeMatchError, recommend_size
 from app.try_on import TryOnError, fetch_image_bytes, fetch_product_anchor_data, garment_ease, generate_try_on
@@ -119,6 +121,30 @@ def _extract_valid_pose(image_bytes):
     return pose
 
 
+async def _usable_frame_landmarks(frames, image_dimensions):
+    """Landmarks of the extra frames that pass the same image and pose checks as
+    the main photo and share its dimensions (a different size means a different
+    camera or orientation). A bad frame is skipped, never an error: the main
+    photo alone can still be measured."""
+    usable = []
+    for index, frame in enumerate(frames):
+        frame_bytes = await frame.read()
+        validation = validate_image(frame_bytes)
+        if not validation["valid"]:
+            logger.info(f"Skipping extra frame {index}: {validation['error']}")
+            continue
+        try:
+            frame_pose = _extract_valid_pose(frame_bytes)
+        except (PoseEstimationError, PoseInvalidError) as e:
+            logger.info(f"Skipping extra frame {index}: {e}")
+            continue
+        if frame_pose["image_dimensions"] != image_dimensions:
+            logger.info(f"Skipping extra frame {index}: its size differs from the main photo")
+            continue
+        usable.append(frame_pose["landmarks"])
+    return usable
+
+
 TRY_ON_ERROR_STATUS = {"TRYON_NOT_AVAILABLE": 404, "BACKEND_UNREACHABLE": 502, "PRODUCT_IMAGE_UNREACHABLE": 502}
 
 
@@ -161,12 +187,21 @@ async def analyze(
     try_on_product_id: Optional[str] = Form(None),
     merchant_id: Optional[str] = Form(None),
     clothing_fit: str = Form(DEFAULT_CLOTHING_FIT),
+    frames: List[UploadFile] = File([]),
 ):
     """With try_on_product_id + merchant_id, also renders the virtual try-on from
     the same pose (one upload, one detection). A try-on failure never fails the
     analysis: it is reported as tryOn: {"error": CODE}. photoTips and warnings
-    are advice only and never fail it either."""
+    are advice only and never fail it either.
+
+    frames are up to MAX_EXTRA_FRAMES extra shots taken just after the main
+    photo. The landmarks of the usable ones are median-combined with the main
+    photo's for the measurements, features, size match and confidence
+    (framesUsed counts the photos combined); the try-on and photoTips stay on
+    the main photo, whose own pose matches its pixels."""
     _validate_sizing_inputs(user_height, clothing_fit)
+    if len(frames) > MAX_EXTRA_FRAMES:
+        raise HTTPException(status_code=400, detail="TOO_MANY_FRAMES")
     image_bytes = await image.read()
 
     validation = validate_image(image_bytes)
@@ -181,12 +216,17 @@ async def analyze(
         raise _pose_invalid_exception(e)
 
     image_dimensions = pose["image_dimensions"]
-    features = calculate_features(
-        pose["key_landmarks"], image_dimensions["height"], image_dimensions["width"], user_height
-    )
-    confidence = calculate_confidence(pose["landmarks"])
+    landmark_sets = [pose["landmarks"], *await _usable_frame_landmarks(frames, image_dimensions)]
+    if len(landmark_sets) > 1:
+        landmarks = combine_landmarks(landmark_sets)
+        key_landmarks = key_landmarks_of(landmarks)
+    else:
+        landmarks, key_landmarks = pose["landmarks"], pose["key_landmarks"]
+
+    features = calculate_features(key_landmarks, image_dimensions["height"], image_dimensions["width"], user_height)
+    confidence = calculate_confidence(landmarks)
     measurements = estimate_measurements(
-        pose["landmarks"], image_dimensions["width"], image_dimensions["height"], user_height, clothing_fit
+        landmarks, image_dimensions["width"], image_dimensions["height"], user_height, clothing_fit
     )
     tips = photo_tips(decode_image(image_bytes), pose["landmarks"])
     warnings, child_factor = _sizing_warnings(user_height)
@@ -214,7 +254,7 @@ async def analyze(
 
     return {
         "image_dimensions": image_dimensions,
-        "key_landmarks": pose["key_landmarks"],
+        "key_landmarks": key_landmarks,
         "confidence": confidence,
         "features": features,
         "size_recommendation": {key: match[key] for key in LEGACY_RECOMMENDATION_KEYS} if match else None,
@@ -226,6 +266,7 @@ async def analyze(
         "tryOn": try_on_result,
         "photoTips": tips,
         "warnings": warnings,
+        "framesUsed": len(landmark_sets),
     }
 
 
