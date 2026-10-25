@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Camera, ImagePlus, Loader2, Ruler, Smartphone, X } from 'lucide-react';
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
+import { AlertTriangle, Camera, ImagePlus, Ruler, Shirt, Smartphone, X } from 'lucide-react';
 import { isLikelyDesktop } from '../../utils/device';
+import AnalysisProgress from './AnalysisProgress';
 import SizeResult from './SizeResult';
 import TryOnPreview from './TryOnPreview';
 
@@ -13,14 +14,35 @@ const LiveCapture = lazy(() => import('./LiveCapture'));
 const MobileHandoff = lazy(() => import('./MobileHandoff'));
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MIN_HEIGHT_CM = 100;
+const MAX_HEIGHT_CM = 230;
+// Size + try-on in one call: one upload, billed as one request. The backend
+// only renders the try-on for try-on-ready products.
+const INCLUDE_TRY_ON = true;
 
+const CLOTHING_FIT_OPTIONS = [
+  { value: 'fitted', label: 'Fitted' },
+  { value: 'regular', label: 'Regular' },
+  { value: 'loose', label: 'Loose' },
+];
+
+// Height in cm (to one decimal), or undefined when nothing has been entered.
 function heightToCm(unit, cm, feet, inches) {
   if (unit === 'cm') {
     const value = parseFloat(cm);
-    return Number.isFinite(value) && value > 0 ? value : undefined;
+    return Number.isFinite(value) ? value : undefined;
   }
+  if (feet === '' && inches === '') return undefined;
   const totalCm = (parseFloat(feet) || 0) * 30.48 + (parseFloat(inches) || 0) * 2.54;
-  return totalCm > 0 ? totalCm : undefined;
+  return Math.round(totalCm * 10) / 10;
+}
+
+function heightError(heightValue) {
+  if (heightValue === undefined) return 'Please enter your height.';
+  if (heightValue < MIN_HEIGHT_CM || heightValue > MAX_HEIGHT_CM) {
+    return 'Height must be between 100 and 230 cm (3 ft 4 in – 7 ft 6 in).';
+  }
+  return '';
 }
 
 function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size', autoCapture = true }) {
@@ -36,14 +58,29 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
   const [heightCm, setHeightCm] = useState('');
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
+  const [heightTouched, setHeightTouched] = useState(false);
+  const [clothingFit, setClothingFit] = useState('regular');
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [poseChecks, setPoseChecks] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const [tryOn, setTryOn] = useState(null);
   const fileInputRef = useRef(null);
+  const fieldId = useId();
 
   const isConfigured = Boolean(apiKey && productId && apiUrl);
+  const heightValue = heightToCm(heightUnit, heightCm, heightFeet, heightInches);
+  const heightMessage = heightError(heightValue);
+  const showHeightError = heightTouched && Boolean(heightMessage);
+  const heightErrorId = `${fieldId}-height-error`;
+  const heightInputProps = {
+    type: 'number',
+    min: '0',
+    onBlur: () => setHeightTouched(true),
+    'aria-invalid': showHeightError,
+    'aria-describedby': showHeightError ? heightErrorId : undefined,
+    className: `rounded-md border px-2 py-1.5 text-sm ${showHeightError ? 'border-danger' : 'border-border'}`,
+  };
 
   useEffect(() => {
     if (!file) {
@@ -60,6 +97,8 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
     setInputMode(null);
     setFile(null);
     setFormError('');
+    setHeightTouched(false);
+    setClothingFit('regular');
     setResult(null);
     setErrorMessage('');
     setPoseChecks([]);
@@ -100,18 +139,18 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
   async function handleSubmit() {
     if (!file) return;
+    if (heightMessage) {
+      setHeightTouched(true);
+      return;
+    }
     setStep('loading');
 
-    const heightValue = heightToCm(heightUnit, heightCm, heightFeet, heightInches);
     const formData = new FormData();
     formData.append('image', file);
     formData.append('productId', productId);
-    if (heightValue) {
-      formData.append('userHeight', String(heightValue));
-    }
-    // Size + try-on in one call: one upload, billed as one request. The
-    // backend only renders the try-on for try-on-ready products.
-    formData.append('includeTryOn', 'true');
+    formData.append('userHeight', String(heightValue));
+    formData.append('clothingFit', clothingFit);
+    formData.append('includeTryOn', String(INCLUDE_TRY_ON));
 
     try {
       const res = await fetch(`${apiUrl.replace(/\/$/, '')}/recommend`, {
@@ -322,15 +361,16 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
                 {inputMode && (
                   <>
-                    <div className="mt-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <Ruler size={16} />
-                        Height (optional, improves accuracy)
+                    <div className="mt-4" role="group" aria-labelledby={`${fieldId}-height-label`}>
+                      <div id={`${fieldId}-height-label`} className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Ruler size={16} aria-hidden="true" />
+                        Height
                       </div>
                       <div className="mt-2 flex items-center gap-2">
                         <div className="flex rounded-md border border-border p-0.5 text-xs">
                           <button
                             type="button"
+                            aria-pressed={heightUnit === 'cm'}
                             onClick={() => setHeightUnit('cm')}
                             className={`rounded px-2 py-1 ${heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
                           >
@@ -338,6 +378,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                           </button>
                           <button
                             type="button"
+                            aria-pressed={heightUnit === 'ft'}
                             onClick={() => setHeightUnit('ft')}
                             className={`rounded px-2 py-1 ${heightUnit === 'ft' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
                           >
@@ -347,35 +388,68 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
 
                         {heightUnit === 'cm' ? (
                           <input
-                            type="number"
-                            min="0"
+                            {...heightInputProps}
+                            aria-label="Height in cm"
                             placeholder="e.g. 178"
                             value={heightCm}
                             onChange={(e) => setHeightCm(e.target.value)}
-                            className="w-24 rounded-md border border-border px-2 py-1.5 text-sm"
+                            className={`w-24 ${heightInputProps.className}`}
                           />
                         ) : (
                           <div className="flex items-center gap-1">
                             <input
-                              type="number"
-                              min="0"
+                              {...heightInputProps}
+                              aria-label="Height, feet"
                               placeholder="ft"
                               value={heightFeet}
                               onChange={(e) => setHeightFeet(e.target.value)}
-                              className="w-16 rounded-md border border-border px-2 py-1.5 text-sm"
+                              className={`w-16 ${heightInputProps.className}`}
                             />
                             <input
-                              type="number"
-                              min="0"
+                              {...heightInputProps}
+                              aria-label="Height, inches"
                               placeholder="in"
                               value={heightInches}
                               onChange={(e) => setHeightInches(e.target.value)}
-                              className="w-16 rounded-md border border-border px-2 py-1.5 text-sm"
+                              className={`w-16 ${heightInputProps.className}`}
                             />
                           </div>
                         )}
                       </div>
+                      {showHeightError && (
+                        <p id={heightErrorId} className="mt-1 text-xs text-danger">
+                          {heightMessage}
+                        </p>
+                      )}
                     </div>
+
+                    <fieldset className="mt-4">
+                      <legend className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Shirt size={16} aria-hidden="true" />
+                        What are you wearing?
+                      </legend>
+                      <div className="mt-2 flex rounded-md border border-border p-0.5 text-xs">
+                        {CLOTHING_FIT_OPTIONS.map((option) => (
+                          <label
+                            key={option.value}
+                            className={`flex-1 cursor-pointer rounded px-2 py-1 text-center focus-within:ring-2 focus-within:ring-primary ${
+                              clothingFit === option.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name={`${fieldId}-clothing-fit`}
+                              value={option.value}
+                              checked={clothingFit === option.value}
+                              onChange={() => setClothingFit(option.value)}
+                              className="sr-only"
+                            />
+                            {option.label}
+                          </label>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">Fitted clothes give the most accurate size.</p>
+                    </fieldset>
 
                     <button
                       type="button"
@@ -390,13 +464,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
               </div>
             )}
 
-            {step === 'loading' && (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <Loader2 size={32} className="animate-spin text-foreground" />
-                <p className="mt-4 text-sm font-medium text-foreground">Analyzing your photo...</p>
-                <p className="mt-1 text-xs text-muted-foreground">Measuring you and preparing your preview — this takes a few seconds.</p>
-              </div>
-            )}
+            {step === 'loading' && <AnalysisProgress includesTryOn={INCLUDE_TRY_ON} />}
 
             {step === 'result' && result && (
               <div className="text-center">
@@ -437,7 +505,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                   onClick={resetFlow}
                   className="mt-5 w-full rounded-md border border-border py-2 text-sm font-medium text-foreground hover:bg-surface-2"
                 >
-                  Check another photo
+                  {result.photoTips?.length ? 'Retake photo' : 'Check another photo'}
                 </button>
               </div>
             )}
