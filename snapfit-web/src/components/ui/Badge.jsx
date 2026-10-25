@@ -2,7 +2,7 @@ const VARIANT_CLASSES = {
   success: 'bg-success-soft text-success border-success/30',
   danger: 'bg-danger-soft text-danger border-danger/30',
   warning: 'bg-warning-soft text-warning border-warning/30',
-  info: 'bg-primary-soft text-primary border-primary/30',
+  info: 'bg-primary-soft text-link border-primary/30',
   neutral: 'bg-surface-2 text-foreground border-border',
 };
 

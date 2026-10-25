@@ -4,7 +4,7 @@ const VARIANT_CLASSES = {
   primary: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover',
   secondary: 'bg-surface border border-border text-foreground shadow-sm hover:bg-surface-2',
   danger: 'bg-danger text-primary-foreground shadow-sm hover:bg-danger/90',
-  ghost: 'bg-transparent text-primary hover:bg-primary-soft',
+  ghost: 'bg-transparent text-link hover:bg-primary-soft',
 };
 
 const SIZE_CLASSES = {
@@ -30,7 +30,7 @@ function Button({
     <button
       type={type}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...rest}
     >
       {leading}

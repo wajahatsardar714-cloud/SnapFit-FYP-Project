@@ -4,7 +4,7 @@ const VARIANT_CONFIG = {
   success: { classes: 'bg-success-soft border-success/30 text-success', Icon: CheckCircle2 },
   danger: { classes: 'bg-danger-soft border-danger/30 text-danger', Icon: AlertCircle },
   warning: { classes: 'bg-warning-soft border-warning/30 text-warning', Icon: AlertTriangle },
-  info: { classes: 'bg-primary-soft border-primary/30 text-primary', Icon: InfoIcon },
+  info: { classes: 'bg-primary-soft border-primary/30 text-link', Icon: InfoIcon },
 };
 
 // A persistent inline banner (top of a form/page) -- not a toast. See ./toast.jsx

@@ -9,6 +9,21 @@ export default {
   darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
+      // Manrope (loaded in index.html) for the whole app, with a system stack
+      // while it loads or if it can't.
+      fontFamily: {
+        sans: [
+          'Manrope',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+        ],
+      },
       colors: {
         primary: {
           DEFAULT: token('primary'),
@@ -16,15 +31,27 @@ export default {
           soft: 'var(--color-primary-soft)',
           foreground: token('primary-foreground'),
         },
+        link: token('link'),
         background: token('background'),
         surface: {
           DEFAULT: token('surface'),
           2: token('surface-2'),
         },
         foreground: token('foreground'),
+        body: token('body'),
         'muted-foreground': token('muted-foreground'),
         muted: token('muted'),
         border: token('border'),
+        navy: {
+          DEFAULT: token('navy'),
+          raised: token('navy-raised'),
+        },
+        'deep-blue': token('deep-blue'),
+        inverse: {
+          DEFAULT: token('inverse'),
+          muted: token('inverse-muted'),
+          accent: token('inverse-accent'),
+        },
         success: { DEFAULT: token('success'), soft: 'var(--color-success-soft)' },
         warning: { DEFAULT: token('warning'), soft: 'var(--color-warning-soft)' },
         danger: { DEFAULT: token('danger'), soft: 'var(--color-danger-soft)' },
@@ -45,6 +72,10 @@ export default {
       boxShadow: {
         // The only shadow allowed on default-state cards (none in dark mode).
         card: 'var(--shadow-card)',
+      },
+      maxWidth: {
+        // Comfortable reading measure for long-form text.
+        reading: '70ch',
       },
     },
   },

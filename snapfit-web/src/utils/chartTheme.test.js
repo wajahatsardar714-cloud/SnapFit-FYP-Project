@@ -18,20 +18,20 @@ describe('getChartTheme', () => {
   const dark = getChartTheme(readerFor("[data-theme='dark']"));
 
   it('uses the primary blue for the main series in both themes', () => {
-    expect(light.primary).toBe('rgb(26 113 184)');
-    expect(dark.primary).toBe('rgb(26 113 184)');
+    expect(light.primary).toBe('rgb(55 125 255)');
+    expect(dark.primary).toBe('rgb(55 125 255)');
     expect(light.series[0]).toBe(light.primary);
   });
 
   it('gives axis text and grid lines different colours per theme', () => {
-    expect(light.axis).toBe('rgb(102 112 133)');
+    expect(light.axis).toBe('rgb(100 116 139)');
     expect(dark.axis).toBe('rgb(173 173 173)');
-    expect(light.grid).toBe('rgb(217 226 234)');
+    expect(light.grid).toBe('rgb(226 232 240)');
     expect(dark.grid).toBe('rgb(51 51 51)');
   });
 
   it('keeps series on-brand: blue tints and neutral greys only', () => {
-    const allowed = /^rgb\((26 113 184|102 112 133|152 162 179)( \/ 0\.\d+)?\)$/;
+    const allowed = /^rgb\((55 125 255|100 116 139|148 163 184)( \/ 0\.\d+)?\)$/;
     light.series.forEach((colour) => expect(colour).toMatch(allowed));
   });
 });

@@ -1,16 +1,18 @@
 /**
  * SnapFit theme tokens -- the only place colours are defined. Mapped once into
  * Tailwind (tailwind.config.js) as semantic classes: bg-background, bg-surface,
- * text-foreground, text-muted-foreground, border-border, bg-primary, ...
+ * text-foreground, text-body, text-muted-foreground, border-border, bg-primary,
+ * text-link, bg-navy, bg-deep-blue, text-inverse, ...
  *
- * Colours are RGB channel triplets ("26 113 184") so Tailwind opacity
+ * Colours are RGB channel triplets ("55 125 255") so Tailwind opacity
  * modifiers work (bg-primary/10). The *-soft tokens are complete colours
  * instead, because dark mode defines them with their own transparency; they
  * don't take opacity modifiers.
  *
  * Light is the default (:root). Dark applies under [data-theme="dark"], set on
  * <html> by ThemeContext. [data-theme="light"] re-applies the light palette to
- * a subtree -- the shopper widget uses it to stay light inside a dark app.
+ * a subtree -- the shopper widget and the public site use it to stay light
+ * inside a dark app.
  *
  * Flat design: no gradients, no heavy shadows.
  */
@@ -18,28 +20,43 @@
 [data-theme='light'] {
   color-scheme: light;
 
-  --color-primary: 26 113 184; /* #1A71B8 */
-  --color-primary-hover: 21 95 156; /* #155F9C */
-  --color-primary-soft: rgb(229 242 252); /* #E5F2FC */
+  /* Electric Blue: primary buttons, focus rings, borders of highlighted items. */
+  --color-primary: 55 125 255; /* #377DFF */
+  --color-primary-hover: 26 86 199; /* #1A56C7 */
+  /* Soft Blue: feature highlights, active states, icon chips. */
+  --color-primary-soft: rgb(234 242 255); /* #EAF2FF */
   --color-primary-foreground: 255 255 255; /* #FFFFFF */
+  /* Text links on light backgrounds: the primary blue deepened to pass AA. */
+  --color-link: 31 100 224; /* #1F64E0 */
 
-  --color-background: 255 255 255; /* #FFFFFF */
-  --color-surface: 247 250 252; /* #F7FAFC */
-  --color-surface-2: 238 246 252; /* #EEF6FC */
-  --color-foreground: 23 33 43; /* #17212B */
-  --color-muted-foreground: 102 112 133; /* #667085 */
-  --color-muted: 152 162 179; /* #98A2B3 */
-  --color-border: 217 226 234; /* #D9E2EA */
+  --color-background: 248 250 252; /* #F8FAFC */
+  --color-surface: 255 255 255; /* #FFFFFF */
+  --color-surface-2: 241 245 249; /* #F1F5F9 */
+  --color-foreground: 23 32 51; /* #172033 */
+  --color-body: 71 85 105; /* #475569 */
+  --color-muted-foreground: 100 116 139; /* #64748B */
+  --color-muted: 148 163 184; /* #94A3B8 */
+  --color-border: 226 232 240; /* #E2E8F0 */
 
-  --color-success: 4 120 87; /* #047857 */
-  --color-success-soft: rgb(236 253 245); /* #ECFDF5 */
+  /* Midnight Navy: hero, footer, navigation accents (navy-raised for panels
+     on it). Deep Blue: secondary headings, table headers. Inverse: text on
+     those dark brand surfaces. */
+  --color-navy: 16 29 44; /* #101D2C */
+  --color-navy-raised: 29 46 68; /* #1D2E44 */
+  --color-deep-blue: 29 53 87; /* #1D3557 */
+  --color-inverse: 255 255 255; /* #FFFFFF */
+  --color-inverse-muted: 182 194 209; /* #B6C2D1 */
+  --color-inverse-accent: 157 194 255; /* #9DC2FF */
+
+  --color-success: 15 118 110; /* #0F766E */
+  --color-success-soft: rgb(240 253 250); /* #F0FDFA */
   --color-warning: 180 83 9; /* #B45309 */
   --color-warning-soft: rgb(255 251 235); /* #FFFBEB */
   --color-danger: 185 28 28; /* #B91C1C */
   --color-danger-soft: rgb(254 242 242); /* #FEF2F2 */
 
   /* Scrims behind modals and controls over camera video. */
-  --color-overlay: 23 33 43; /* #17212B */
+  --color-overlay: 16 29 44; /* #101D2C */
 
   /* Super admin console accent: keeps /admin visibly apart from the merchant
      dashboard's blue. */
@@ -47,27 +64,36 @@
   --color-admin-soft: rgb(245 243 255); /* #F5F3FF */
   --color-admin-foreground: 255 255 255; /* #FFFFFF */
 
-  --shadow-card: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+  --shadow-card: 0 1px 2px 0 rgb(16 29 44 / 0.05);
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --color-primary: 26 113 184; /* #1A71B8 */
-  --color-primary-hover: 37 134 208; /* #2586D0 */
-  --color-primary-soft: rgb(26 113 184 / 0.16);
+  --color-primary: 55 125 255; /* #377DFF */
+  --color-primary-hover: 90 147 255; /* #5A93FF */
+  --color-primary-soft: rgb(55 125 255 / 0.16);
   --color-primary-foreground: 255 255 255; /* #FFFFFF */
+  --color-link: 122 167 255; /* #7AA7FF */
 
   --color-background: 18 18 18; /* #121212 */
   --color-surface: 28 28 28; /* #1C1C1C */
   --color-surface-2: 36 36 36; /* #242424 */
   --color-foreground: 255 255 255; /* #FFFFFF */
+  --color-body: 214 214 214; /* #D6D6D6 */
   --color-muted-foreground: 173 173 173; /* #ADADAD */
   --color-muted: 119 119 119; /* #777777 */
   --color-border: 51 51 51; /* #333333 */
 
-  --color-success: 52 211 153; /* #34D399 */
-  --color-success-soft: rgb(52 211 153 / 0.14);
+  --color-navy: 11 21 32; /* #0B1520 */
+  --color-navy-raised: 22 38 58; /* #16263A */
+  --color-deep-blue: 29 53 87; /* #1D3557 */
+  --color-inverse: 255 255 255; /* #FFFFFF */
+  --color-inverse-muted: 182 194 209; /* #B6C2D1 */
+  --color-inverse-accent: 157 194 255; /* #9DC2FF */
+
+  --color-success: 45 212 191; /* #2DD4BF */
+  --color-success-soft: rgb(45 212 191 / 0.14);
   --color-warning: 251 191 36; /* #FBBF24 */
   --color-warning-soft: rgb(251 191 36 / 0.14);
   --color-danger: 248 113 113; /* #F87171 */

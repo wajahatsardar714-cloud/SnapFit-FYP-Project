@@ -16,7 +16,7 @@ describe('UI kit uses theme tokens', () => {
     expect(classes).toEqual(expect.arrayContaining(['focus-visible:ring-2', 'focus-visible:ring-primary/40']));
   });
 
-  it('Button secondary and ghost use surface and primary tokens', () => {
+  it('Button secondary and ghost use surface and link tokens', () => {
     render(
       <>
         <Button variant="secondary">Cancel</Button>
@@ -26,7 +26,7 @@ describe('UI kit uses theme tokens', () => {
     expect(classesOf(screen.getByRole('button', { name: 'Cancel' }))).toEqual(
       expect.arrayContaining(['bg-surface', 'border-border', 'text-foreground'])
     );
-    expect(classesOf(screen.getByRole('button', { name: 'More' }))).toEqual(expect.arrayContaining(['text-primary']));
+    expect(classesOf(screen.getByRole('button', { name: 'More' }))).toEqual(expect.arrayContaining(['text-link']));
   });
 
   it('Card sits on the surface token with a border', () => {
@@ -34,17 +34,17 @@ describe('UI kit uses theme tokens', () => {
     expect(classesOf(screen.getByTestId('card'))).toEqual(expect.arrayContaining(['bg-surface', 'border-border']));
   });
 
-  it('Input uses background, border, muted placeholder and the primary focus ring', () => {
+  it('Input uses surface, border, muted placeholder and the primary focus ring', () => {
     render(<Input name="email" label="Email" />);
     const classes = classesOf(screen.getByLabelText('Email'));
     expect(classes).toEqual(
-      expect.arrayContaining(['bg-background', 'border-border', 'placeholder:text-muted', 'focus:ring-primary/40'])
+      expect.arrayContaining(['bg-surface', 'border-border', 'placeholder:text-muted', 'focus:ring-primary/40'])
     );
   });
 
-  it('Badge info uses primary soft', () => {
+  it('Badge info uses primary soft with link text', () => {
     render(<Badge variant="info">Pro</Badge>);
-    expect(classesOf(screen.getByText('Pro'))).toEqual(expect.arrayContaining(['bg-primary-soft', 'text-primary']));
+    expect(classesOf(screen.getByText('Pro'))).toEqual(expect.arrayContaining(['bg-primary-soft', 'text-link']));
   });
 
   it('none of them use raw palette classes', () => {

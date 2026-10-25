@@ -8,34 +8,54 @@ const css = readFileSync(resolve(process.cwd(), 'src/styles/theme.css'), 'utf8')
 // The brand palette, exactly as specified. Values are what each theme block
 // must define (triplets as hex, *-soft tokens as written).
 const LIGHT = {
-  primary: '#1A71B8',
-  'primary-hover': '#155F9C',
-  'primary-soft': 'rgb(229 242 252)',
+  primary: '#377DFF',
+  'primary-hover': '#1A56C7',
+  'primary-soft': 'rgb(234 242 255)',
   'primary-foreground': '#FFFFFF',
-  background: '#FFFFFF',
-  surface: '#F7FAFC',
-  'surface-2': '#EEF6FC',
-  foreground: '#17212B',
-  'muted-foreground': '#667085',
-  muted: '#98A2B3',
-  border: '#D9E2EA',
+  link: '#1F64E0',
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
+  'surface-2': '#F1F5F9',
+  foreground: '#172033',
+  body: '#475569',
+  'muted-foreground': '#64748B',
+  muted: '#94A3B8',
+  border: '#E2E8F0',
+  navy: '#101D2C',
+  'navy-raised': '#1D2E44',
+  'deep-blue': '#1D3557',
+  inverse: '#FFFFFF',
+  'inverse-muted': '#B6C2D1',
+  'inverse-accent': '#9DC2FF',
+  success: '#0F766E',
+  danger: '#B91C1C',
 };
 
 const DARK = {
-  primary: '#1A71B8',
-  'primary-hover': '#2586D0',
-  'primary-soft': 'rgb(26 113 184 / 0.16)',
+  primary: '#377DFF',
+  'primary-hover': '#5A93FF',
+  'primary-soft': 'rgb(55 125 255 / 0.16)',
   'primary-foreground': '#FFFFFF',
+  link: '#7AA7FF',
   background: '#121212',
   surface: '#1C1C1C',
   'surface-2': '#242424',
   foreground: '#FFFFFF',
+  body: '#D6D6D6',
   'muted-foreground': '#ADADAD',
   muted: '#777777',
   border: '#333333',
+  navy: '#0B1520',
+  'navy-raised': '#16263A',
+  'deep-blue': '#1D3557',
+  inverse: '#FFFFFF',
+  'inverse-muted': '#B6C2D1',
+  'inverse-accent': '#9DC2FF',
+  success: '#2DD4BF',
+  danger: '#F87171',
 };
 
-const SHARED_NAMES = ['success', 'success-soft', 'warning', 'warning-soft', 'danger', 'danger-soft', 'overlay'];
+const SHARED_NAMES = ['success-soft', 'warning', 'warning-soft', 'danger-soft', 'overlay'];
 // The super admin console's own accent (values differ per theme).
 const ADMIN_NAMES = ['admin', 'admin-soft', 'admin-foreground'];
 
