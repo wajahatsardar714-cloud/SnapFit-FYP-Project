@@ -260,7 +260,7 @@ const RECOMMEND_VALIDATION_ERRORS = [
   {
     code: 'File too large',
     status: 400,
-    meaning: 'The image exceeds the 10MB upload limit — rejected before reaching the AI service.',
+    meaning: 'The image or one of the frames exceeds the 10MB per-file upload limit — rejected before reaching the AI service.',
   },
   {
     code: 'At most 4 extra frames are allowed',
