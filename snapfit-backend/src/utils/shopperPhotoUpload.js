@@ -28,14 +28,41 @@ function makeUpload(filenamePrefix) {
   });
 }
 
+// Multer reports a `frames` count over maxCount as LIMIT_UNEXPECTED_FILE.
+function uploadErrorMessage(err, extraFrames) {
+  if (extraFrames > 0 && err.code === 'LIMIT_UNEXPECTED_FILE' && err.field === 'frames') {
+    return `At most ${extraFrames} extra frames are allowed`;
+  }
+  return err.message || 'Image upload failed';
+}
+
 // Multer middleware for a shopper photo in the `image` field. errorBody shapes
-// the 400 response so each route keeps its existing error format.
-function uploadShopperPhoto({ filenamePrefix = '', errorBody = (message) => ({ success: false, message }) } = {}) {
+// the 400 response so each route keeps its existing error format. extraFrames
+// (opt-in) also accepts up to that many extra live-camera frames in a repeatable
+// `frames` field, exposed as req.frames (always an array). On a rejected upload
+// multer deletes every file it already wrote.
+function uploadShopperPhoto({
+  filenamePrefix = '',
+  errorBody = (message) => ({ success: false, message }),
+  extraFrames = 0,
+} = {}) {
   const upload = makeUpload(filenamePrefix);
+  const parse =
+    extraFrames > 0
+      ? upload.fields([
+          { name: 'image', maxCount: 1 },
+          { name: 'frames', maxCount: extraFrames },
+        ])
+      : upload.single('image');
   return (req, res, next) => {
-    upload.single('image')(req, res, (err) => {
+    parse(req, res, (err) => {
       if (err) {
-        return res.status(400).json(errorBody(err.message || 'Image upload failed'));
+        return res.status(400).json(errorBody(uploadErrorMessage(err, extraFrames)));
+      }
+      if (extraFrames > 0) {
+        const { image = [], frames = [] } = req.files || {};
+        req.file = image[0];
+        req.frames = frames;
       }
       return next();
     });

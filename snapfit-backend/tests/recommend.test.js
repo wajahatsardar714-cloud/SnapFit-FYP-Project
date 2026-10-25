@@ -76,6 +76,7 @@ describe('POST /api/recommend', () => {
       fitNotes: [],
       photoTips: [],
       warnings: [],
+      framesUsed: 1,
     });
     expect(res.body.product).toEqual({ productId: 'SKU-1', productName: null, imageUrl: null, tryOnReady: false });
   });
@@ -88,7 +89,7 @@ describe('POST /api/recommend', () => {
     const [, chartSent] = analyzeImage.mock.calls[0];
     expect(chartSent.category).toBe('tops');
     expect(chartSent.sizes.map((s) => s.label)).toEqual(['S', 'M', 'L']);
-    expect(analyzeOptions()).toEqual({ userHeight: 178, clothingFit: 'loose', tryOn: null });
+    expect(analyzeOptions()).toEqual({ userHeight: 178, clothingFit: 'loose', tryOn: null, frames: [] });
   });
 
   it('passes the AI photo tips and warnings through', async () => {

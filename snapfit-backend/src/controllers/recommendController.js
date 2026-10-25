@@ -23,10 +23,10 @@ function tryOnResult(aiTryOn, requested) {
   return { status: 'failed', message: TRY_ON_ERROR_MESSAGES[code] || TRY_ON_FALLBACK_MESSAGE };
 }
 
-async function cleanupUpload(file) {
-  if (file) {
-    await fs.unlink(file.path).catch(() => {});
-  }
+// Deletes the request's temp photos: the main image and any extra frames.
+async function cleanupUpload(req) {
+  const files = [req.file, ...req.frames].filter(Boolean);
+  await Promise.all(files.map((file) => fs.unlink(file.path).catch(() => {})));
 }
 
 // The shopper's own inputs: height in cm (required) and how the clothes in the
@@ -57,17 +57,18 @@ async function recommend(req, res) {
   const includeTryOn = String(req.body.includeTryOn) === 'true';
 
   if (!req.file) {
+    await cleanupUpload(req);
     return res.status(400).json({ success: false, message: 'An image file is required' });
   }
 
   if (!productId || !String(productId).trim()) {
-    await cleanupUpload(req.file);
+    await cleanupUpload(req);
     return res.status(400).json({ success: false, message: 'productId is required' });
   }
 
   const { userHeight, clothingFit, error } = parseShopperInputs(req.body);
   if (error) {
-    await cleanupUpload(req.file);
+    await cleanupUpload(req);
     return res.status(400).json({ success: false, message: error });
   }
 
@@ -75,13 +76,13 @@ async function recommend(req, res) {
   try {
     mapping = await getMappingForProduct(merchant._id, productId);
   } catch (err) {
-    await cleanupUpload(req.file);
+    await cleanupUpload(req);
     return res.status(500).json({ success: false, message: 'Failed to look up product mapping', error: err.message });
   }
 
   const sizeChart = mapping?.sizeChartId;
   if (!sizeChart) {
-    await cleanupUpload(req.file);
+    await cleanupUpload(req);
     return res.status(404).json({
       success: false,
       message: `No size chart is mapped to product "${productId}". Map this product to a size chart before requesting a recommendation.`,
@@ -93,14 +94,17 @@ async function recommend(req, res) {
 
   let aiResult;
   try {
-    const imageBuffer = await fs.readFile(req.file.path);
+    const [imageBuffer, ...frameBuffers] = await Promise.all(
+      [req.file, ...req.frames].map((file) => fs.readFile(file.path))
+    );
     aiResult = await analyzeImage(imageBuffer, sizeChart.toObject(), {
       userHeight,
       clothingFit,
       tryOn: requestTryOn ? { merchantId: merchant._id, productId } : null,
+      frames: frameBuffers,
     });
   } catch (err) {
-    await cleanupUpload(req.file);
+    await cleanupUpload(req);
 
     await Recommendation.create({
       merchantId: merchant._id,
@@ -117,8 +121,9 @@ async function recommend(req, res) {
     return res.status(statusCode).json(body);
   }
 
-  await cleanupUpload(req.file);
+  await cleanupUpload(req);
 
+  const framesUsed = aiResult.framesUsed ?? 1;
   const sizeRecommendation = aiResult.size_recommendation;
   if (!sizeRecommendation) {
     await Recommendation.create({
@@ -128,6 +133,7 @@ async function recommend(req, res) {
       confidence: aiResult.confidence,
       userHeight,
       clothingFit,
+      framesUsed,
       status: 'failed',
       errorMessage: 'NO_SIZE_RECOMMENDATION',
       ipAddress: req.ip,
@@ -158,6 +164,7 @@ async function recommend(req, res) {
     sizeScores: sizeComparison.map(({ label, score }) => ({ label, score })),
     userHeight,
     clothingFit,
+    framesUsed,
     status,
     ipAddress: req.ip,
   });
@@ -176,6 +183,7 @@ async function recommend(req, res) {
       fitNotes: aiResult.fitNotes || [],
       photoTips: aiResult.photoTips || [],
       warnings: aiResult.warnings || [],
+      framesUsed,
     },
     product,
     ...(includeTryOn && { tryOn: tryOnResult(aiResult.tryOn, requestTryOn) }),
