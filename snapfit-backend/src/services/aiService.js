@@ -54,14 +54,19 @@ async function postForm(path, form, timeout = AI_REQUEST_TIMEOUT_MS) {
   }
 }
 
-// tryOn: optional { merchantId, productId } -- also renders the virtual try-on
-// from the same photo and pose in this one call (result in response.tryOn).
-async function analyzeImage(imageBuffer, sizeChart, userHeight, tryOn = null) {
+// userHeight: shopper height in cm. clothingFit: 'fitted' | 'regular' | 'loose',
+// how the clothes in the photo fit. tryOn: optional { merchantId, productId } --
+// also renders the virtual try-on from the same photo and pose in this one call
+// (result in response.tryOn).
+async function analyzeImage(imageBuffer, sizeChart, { userHeight, clothingFit, tryOn = null } = {}) {
   const form = new FormData();
   form.append('image', imageBuffer, { filename: 'upload.jpg' });
   form.append('size_chart', JSON.stringify(sizeChart));
   if (userHeight != null) {
     form.append('user_height', String(userHeight));
+  }
+  if (clothingFit) {
+    form.append('clothing_fit', clothingFit);
   }
   if (tryOn) {
     form.append('try_on_product_id', tryOn.productId);

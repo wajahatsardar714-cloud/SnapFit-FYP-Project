@@ -64,19 +64,21 @@ function post(path, productId, fields = {}) {
   return req;
 }
 
+const postRecommend = (productId, fields = {}) => post('/api/recommend', productId, { userHeight: '178', ...fields });
+
 const requestsUsed = async () => (await Merchant.findById(merchant._id)).subscription.requestsUsed;
 
 describe('POST /api/recommend with includeTryOn=true', () => {
   it('returns the size and the try-on from one AI call, billed once', async () => {
     analyzeImage.mockResolvedValue(aiResult({ image: TRY_ON_IMAGE, engine: 'catvton' }));
 
-    const res = await post('/api/recommend', 'SKU-READY', { includeTryOn: 'true' });
+    const res = await postRecommend('SKU-READY', { includeTryOn: 'true' });
 
     expect(res.status).toBe(200);
     expect(res.body.recommendation.size).toBe('M');
     expect(res.body.tryOn).toEqual({ status: 'success', image: TRY_ON_IMAGE, engine: 'catvton' });
     expect(analyzeImage).toHaveBeenCalledTimes(1);
-    expect(analyzeImage.mock.calls[0][3]).toEqual({ merchantId: merchant._id, productId: 'SKU-READY' });
+    expect(analyzeImage.mock.calls[0][2].tryOn).toEqual({ merchantId: merchant._id, productId: 'SKU-READY' });
     expect(tryOnImage).not.toHaveBeenCalled();
     expect(await requestsUsed()).toBe(1);
     expect(env.listTmpPhotos()).toEqual([]);
@@ -85,10 +87,10 @@ describe('POST /api/recommend with includeTryOn=true', () => {
   it('skips the try-on for a product that is not try-on ready', async () => {
     analyzeImage.mockResolvedValue(aiResult(null));
 
-    const res = await post('/api/recommend', 'SKU-PLAIN', { includeTryOn: 'true' });
+    const res = await postRecommend('SKU-PLAIN', { includeTryOn: 'true' });
 
     expect(res.status).toBe(200);
-    expect(analyzeImage.mock.calls[0][3]).toBeNull();
+    expect(analyzeImage.mock.calls[0][2].tryOn).toBeNull();
     expect(res.body.tryOn).toEqual({ status: 'unavailable' });
     expect(res.body.product.tryOnReady).toBe(false);
   });
@@ -96,7 +98,7 @@ describe('POST /api/recommend with includeTryOn=true', () => {
   it('keeps the size result when the try-on fails', async () => {
     analyzeImage.mockResolvedValue(aiResult({ error: 'ENCODE_FAILED' }));
 
-    const res = await post('/api/recommend', 'SKU-READY', { includeTryOn: 'true' });
+    const res = await postRecommend('SKU-READY', { includeTryOn: 'true' });
 
     expect(res.status).toBe(200);
     expect(res.body.recommendation.size).toBe('M');
@@ -109,7 +111,7 @@ describe('POST /api/recommend with includeTryOn=true', () => {
   it('deletes the photo and bills once when the analysis fails', async () => {
     analyzeImage.mockRejectedValue(new AiServiceError('NO_BODY_DETECTED', 422));
 
-    const res = await post('/api/recommend', 'SKU-READY', { includeTryOn: 'true' });
+    const res = await postRecommend('SKU-READY', { includeTryOn: 'true' });
 
     expect(res.status).toBe(422);
     expect(env.listTmpPhotos()).toEqual([]);
@@ -118,9 +120,9 @@ describe('POST /api/recommend with includeTryOn=true', () => {
 
   it('leaves the response shape unchanged without includeTryOn', async () => {
     analyzeImage.mockResolvedValue(aiResult(null));
-    const res = await post('/api/recommend', 'SKU-READY');
+    const res = await postRecommend('SKU-READY');
     expect(res.body).not.toHaveProperty('tryOn');
-    expect(analyzeImage.mock.calls[0][3]).toBeNull();
+    expect(analyzeImage.mock.calls[0][2].tryOn).toBeNull();
   });
 });
 
