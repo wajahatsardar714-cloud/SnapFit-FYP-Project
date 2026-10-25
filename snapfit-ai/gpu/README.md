@@ -65,7 +65,7 @@ and start the AI service with `--env-file .env`:
 
 - The tunnel URL changes on every notebook restart; update `.env` each time.
 - About 30 free GPU hours/week; stop the session when done.
-- ~10–25 s per try-on on a T4 (30 inference steps).
+- ~15–35 s per try-on on a T4 (40 inference steps).
 - SnapFit sends the photo letterboxed to 768x1024 (so the server's crop cuts
   nothing), then colour-corrects the generated garment toward the product
   photo and blends only the clothing region back into the shopper's own photo

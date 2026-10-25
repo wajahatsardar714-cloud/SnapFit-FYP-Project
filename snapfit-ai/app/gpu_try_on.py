@@ -35,7 +35,7 @@ MASK_ALLOWANCE = 0.12
 # shoulder-to-hip distance (about the crotch line; lower and the model starts
 # repainting trousers).
 HEM_BELOW_HIPS = 0.2
-INFERENCE_STEPS = 30
+INFERENCE_STEPS = 40
 GUIDANCE_SCALE = 2.5
 
 

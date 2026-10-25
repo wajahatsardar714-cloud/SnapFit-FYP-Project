@@ -118,7 +118,7 @@ class TestGenerateGpuTryOn:
         assert result.startswith(b"\xff\xd8")
         assert seen["url"] == "https://gpu.test/tryon"
         assert seen["token"] == "secret-token"
-        assert seen["steps"] == b"30"
+        assert seen["steps"] == b"40"
         assert seen["guidance"] == b"2.5"
         assert _decode(seen["person"]).shape == (H, W, 3)
         assert _decode(seen["mask"], cv2.IMREAD_GRAYSCALE).shape == (H, W)
