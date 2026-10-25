@@ -1,5 +1,6 @@
 const express = require('express');
 const { protect, requireMerchant } = require('../middlewares/authMiddleware');
+const { requireActiveSubscription } = require('../middlewares/subscriptionMiddleware');
 const {
   getDashboardStats,
   getUsageOverTime,
@@ -10,7 +11,7 @@ const {
 
 const router = express.Router();
 
-router.use(protect, requireMerchant);
+router.use(protect, requireMerchant, requireActiveSubscription);
 
 router.get('/dashboard', getDashboardStats);
 router.get('/usage', getUsageOverTime);

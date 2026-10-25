@@ -97,7 +97,7 @@ describe('POST /api/admin/demo/recommend', () => {
 
   it('keeps demo runs out of the merchant and admin analytics', async () => {
     analyzeImage.mockResolvedValue(AI_RESULT);
-    await Merchant.updateOne({ _id: merchant._id }, { status: 'active' });
+    await Merchant.updateOne({ _id: merchant._id }, { status: 'active', 'subscription.status': 'active' });
     await demoRecommend(merchant._id);
     await Recommendation.create({ merchantId: merchant._id, productId: 'SKU-1', recommendedSize: 'L', status: 'success' });
 

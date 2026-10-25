@@ -1,10 +1,11 @@
 const express = require('express');
 const { protect, requireMerchant } = require('../middlewares/authMiddleware');
+const { requireActiveSubscription } = require('../middlewares/subscriptionMiddleware');
 const { generateApiKey, getApiKey, regenerateApiKey } = require('../controllers/apiKeyController');
 
 const router = express.Router();
 
-router.use(protect, requireMerchant);
+router.use(protect, requireMerchant, requireActiveSubscription);
 
 router.post('/generate', generateApiKey);
 router.get('/', getApiKey);
