@@ -12,17 +12,27 @@ import cv2
 import httpx
 import numpy as np
 
-from app.try_on import TryOnError, body_bands, body_masks
+from app.try_on import TryOnError, arm_masks, body_bands, body_silhouette
 from app.utils import decode_image
 
 GPU_TIMEOUT_SECONDS = 120
 # Mask allowance beyond the body for the garment region, as a fraction of
 # shoulder span; scaled up by the size ease so a looser size gets more room.
 MASK_ALLOWANCE = 0.12
-# How far below the hip line a top may reach, as a fraction of the
-# shoulder-to-hip distance (about the crotch line; lower and the model starts
-# repainting trousers).
-HEM_BELOW_HIPS = 0.2
+# Where the mask's hem line sits for each garment length (the product
+# mapping's garmentLength), as a fraction of the shoulder-to-hip distance below
+# the hip line; negative is above it. A little past where such a garment ends:
+# the model needs room for the hem, but stretches the garment to fill a mask
+# that reaches much further.
+HEM_BELOW_HIPS = {
+    # Just under the waist band (0.35 above the hips, WAIST_BAND in try_on).
+    "cropped": -0.25,
+    # Past the crotch line (about 0.2), so the hem of the shopper's own top is
+    # repainted too instead of showing below the new garment.
+    "regular": 0.3,
+    # Mid-thigh is about 0.35-0.4 (hip-to-knee is 0.7-0.8 of shoulder-to-hip).
+    "long": 0.45,
+}
 INFERENCE_STEPS = 30
 GUIDANCE_SCALE = 2.5
 
@@ -40,24 +50,29 @@ def gpu_try_on_config():
     return (url, token) if url and token else None
 
 
-def clothing_mask(landmarks, width, height, ease=1.0):
-    """Upper-body garment region (torso + upper arms), as a PNG-ready uint8
-    mask: the area the model may repaint. Looser sizes (ease > 1) get a wider
-    mask so the generated garment can sit looser."""
+def clothing_mask(landmarks, width, height, ease=1.0, length="regular"):
+    """Garment region the model may repaint, as a PNG-ready uint8 mask: the
+    torso down to the hem line for the garment's length (unknown lengths count
+    as regular) and both whole arms, so old sleeves of any length are replaced;
+    never the face or the hands. Looser sizes (ease > 1) get a wider mask so
+    the generated garment can sit looser."""
     bands, shoulder_span = body_bands(landmarks, width, height, ease)
-    body, forearms = body_masks(landmarks, width, height, bands, shoulder_span)
+    arms, hands = arm_masks(landmarks, width, height, shoulder_span)
     allowance = max(1, int(shoulder_span * MASK_ALLOWANCE * ease))
-    grown = cv2.dilate(body, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * allowance + 1, 2 * allowance + 1)))
-    # Keep the face and the legs out of the repaint region: from the neck
-    # (halfway between mouth and shoulder line) down to the hem line.
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * allowance + 1, 2 * allowance + 1))
+    torso = cv2.dilate(body_silhouette(landmarks, width, height, bands, shoulder_span), kernel)
     shoulder_y = (bands[0][0][1] + bands[0][1][1]) / 2
     hip_y = (bands[-1][0][1] + bands[-1][1][1]) / 2
+    hem = HEM_BELOW_HIPS.get(length, HEM_BELOW_HIPS["regular"])
+    # The hem bounds the torso and legs only: in an A-pose the forearms reach
+    # below a cropped hem line.
+    torso[max(0, int(hip_y + hem * (hip_y - shoulder_y))) :, :] = 0
+    region = cv2.bitwise_or(torso, cv2.dilate(arms, kernel))
+    # Keep the face out: nothing above the neck (halfway between mouth and
+    # shoulder line).
     mouth_y = (landmarks["MOUTH_LEFT"]["y"] + landmarks["MOUTH_RIGHT"]["y"]) / 2 * height
-    head_limit = int(mouth_y + 0.5 * (shoulder_y - mouth_y))
-    hem_limit = int(hip_y + HEM_BELOW_HIPS * (hip_y - shoulder_y))
-    grown[: max(0, head_limit), :] = 0
-    grown[max(0, hem_limit) :, :] = 0
-    return cv2.bitwise_and(grown, cv2.bitwise_not(forearms))
+    region[: max(0, int(mouth_y + 0.5 * (shoulder_y - mouth_y))), :] = 0
+    return cv2.bitwise_and(region, cv2.bitwise_not(hands))
 
 
 def _png(array):
@@ -78,7 +93,7 @@ def garment_on_white(product_image_bytes):
     return _png(image)
 
 
-async def generate_gpu_try_on(customer_image_bytes, product_image_bytes, pose, ease=1.0, config=None):
+async def generate_gpu_try_on(customer_image_bytes, product_image_bytes, pose, ease=1.0, config=None, length="regular"):
     """JPEG bytes from the remote CatVTON server. Raises TryOnError on any
     failure (unconfigured, unreachable, timeout, bad response)."""
     config = config or gpu_try_on_config()
@@ -87,7 +102,7 @@ async def generate_gpu_try_on(customer_image_bytes, product_image_bytes, pose, e
     url, token = config
 
     dimensions = pose["image_dimensions"]
-    mask = clothing_mask(pose["landmarks"], dimensions["width"], dimensions["height"], ease)
+    mask = clothing_mask(pose["landmarks"], dimensions["width"], dimensions["height"], ease, length)
     files = {
         "person": ("person.jpg", customer_image_bytes, "image/jpeg"),
         "garment": ("garment.png", garment_on_white(product_image_bytes), "image/png"),

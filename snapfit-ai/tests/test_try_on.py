@@ -1,14 +1,23 @@
+import asyncio
 import base64
 import io
 
 import cv2
+import httpx
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from app import main, try_on
-from app.try_on import TryOnError, body_bands, garment_ease, generate_try_on, product_alpha
+from app.try_on import (
+    TryOnError,
+    body_bands,
+    fetch_product_anchor_data,
+    garment_ease,
+    generate_try_on,
+    product_alpha,
+)
 
 ANCHORS = {
     "shoulderLeft": {"x": 0.25, "y": 0.15},
@@ -142,6 +151,24 @@ def test_garment_ease_follows_the_recommended_size():
     assert garment_ease({"recommended_size": "M", "size_comparison": [{"label": "M", "perMeasurement": []}]}) == 1.0
 
 
+class TestFetchProductAnchorData:
+    REAL_ASYNC_CLIENT = httpx.AsyncClient
+
+    def _fetch(self, monkeypatch, payload):
+        real_client = self.REAL_ASYNC_CLIENT
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, json=payload))
+        monkeypatch.setattr(try_on.httpx, "AsyncClient", lambda **kwargs: real_client(transport=transport, **kwargs))
+        return asyncio.run(fetch_product_anchor_data("m1", "SKU-1"))
+
+    def test_returns_anchors_image_and_garment_length(self, monkeypatch):
+        payload = {"anchorPoints": ANCHORS, "imageUrl": "http://backend.test/tee.png", "garmentLength": "long"}
+        assert self._fetch(monkeypatch, payload) == (ANCHORS, "http://backend.test/tee.png", "long")
+
+    def test_backends_without_garment_lengths_mean_regular(self, monkeypatch):
+        payload = {"anchorPoints": ANCHORS, "imageUrl": "http://backend.test/tee.png"}
+        assert self._fetch(monkeypatch, payload)[2] == "regular"
+
+
 class TestEndpoints:
     client = TestClient(main.app)
 
@@ -155,7 +182,7 @@ class TestEndpoints:
         async def anchors(_merchant_id, _product_id):
             if anchor_error:
                 raise TryOnError(anchor_error)
-            return ANCHORS, "http://backend.test/uploads/products/tee.png"
+            return ANCHORS, "http://backend.test/uploads/products/tee.png", "regular"
 
         async def image_bytes(_url):
             return _product_png()

@@ -71,7 +71,7 @@ async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
     model when configured and falls back to the local warp if it fails.
     Raises TryOnError with a code when neither can produce an image."""
     try:
-        anchor_points, product_image_url = await fetch_product_anchor_data(merchant_id, product_id)
+        anchor_points, product_image_url, garment_length = await fetch_product_anchor_data(merchant_id, product_id)
     except httpx.HTTPError:
         raise TryOnError("BACKEND_UNREACHABLE")
     try:
@@ -83,7 +83,7 @@ async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
     result_bytes = None
     if gpu_try_on_config():
         try:
-            result_bytes = await generate_gpu_try_on(image_bytes, product_image_bytes, pose, ease)
+            result_bytes = await generate_gpu_try_on(image_bytes, product_image_bytes, pose, ease, length=garment_length)
             engine = "catvton"
         except TryOnError as e:
             logger.warning(f"GPU try-on failed ({e}); using the local warp")

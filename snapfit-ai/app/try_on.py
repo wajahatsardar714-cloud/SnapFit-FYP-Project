@@ -57,6 +57,13 @@ FABRIC_ALLOWANCE = 0.08
 # extended this fraction of the shoulder-to-hip distance below the hips.
 HEM_ALLOWANCE = 0.4
 VISIBLE = 0.5
+# Hand outline: BlazePose's pinky/index landmarks sit at the knuckles, so the
+# fingertips are estimated this fraction of the wrist-to-knuckle distance
+# beyond them (fingers are about 0.8 of the palm's length); the outline then
+# grows by HAND_MARGIN (fraction of shoulder span) for the hand's own
+# thickness and landmark jitter.
+FINGER_EXTENSION = 0.8
+HAND_MARGIN = 0.06
 
 # Plain-background detection for product photos without transparency.
 BACKGROUND_DISTANCE_THRESHOLD = 30.0
@@ -87,6 +94,8 @@ class TryOnError(Exception):
 
 
 async def fetch_product_anchor_data(merchant_id, product_id):
+    """(anchor points, product image URL, garment length). Backends that predate
+    garment lengths don't send one; their products are regular length."""
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
         response = await client.get(
             f"{BACKEND_API_URL}/products/anchor-points",
@@ -98,7 +107,7 @@ async def fetch_product_anchor_data(merchant_id, product_id):
     response.raise_for_status()
 
     data = response.json()
-    return data["anchorPoints"], data["imageUrl"]
+    return data["anchorPoints"], data["imageUrl"], data.get("garmentLength", "regular")
 
 
 async def fetch_image_bytes(url):
@@ -225,9 +234,9 @@ def _capsule(mask, a, b, width):
     cv2.line(mask, tuple(int(v) for v in a), tuple(int(v) for v in b), 255, max(1, int(width)), cv2.LINE_AA)
 
 
-def body_masks(landmarks, width, height, bands, shoulder_span):
-    """(body, forearms) uint8 masks built from landmarks: torso polygon through
-    the band edges plus neck, arms and thighs; forearms + hands separately."""
+def body_silhouette(landmarks, width, height, bands, shoulder_span):
+    """uint8 mask built from landmarks: torso polygon through the band edges
+    plus neck, upper arms and thighs, grown by the fabric allowance."""
     p = {name: _to_px(lm, width, height) for name, lm in landmarks.items()}
     body = np.zeros((height, width), np.uint8)
     hip_left, hip_right = bands[-1]
@@ -242,6 +251,14 @@ def body_masks(landmarks, width, height, bands, shoulder_span):
         _capsule(body, p[f"{side}_SHOULDER"], p[f"{side}_ELBOW"], shoulder_span * UPPER_ARM_WIDTH)
         _capsule(body, p[f"{side}_HIP"], p[f"{side}_KNEE"], shoulder_span * THIGH_WIDTH)
 
+    allowance = max(1, int(shoulder_span * FABRIC_ALLOWANCE))
+    return cv2.dilate(body, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * allowance + 1, 2 * allowance + 1)))
+
+
+def body_masks(landmarks, width, height, bands, shoulder_span):
+    """(body, forearms) uint8 masks built from landmarks: body_silhouette plus
+    forearms; forearms + hands separately."""
+    p = {name: _to_px(lm, width, height) for name, lm in landmarks.items()}
     forearms = np.zeros((height, width), np.uint8)
     for side in ("LEFT", "RIGHT"):
         # Only forearms the model can actually see (hidden ones, e.g. behind
@@ -251,9 +268,31 @@ def body_masks(landmarks, width, height, bands, shoulder_span):
         _capsule(forearms, p[f"{side}_ELBOW"], p[f"{side}_WRIST"], shoulder_span * FOREARM_WIDTH)
         cv2.circle(forearms, tuple(int(v) for v in p[f"{side}_WRIST"]), int(shoulder_span * HAND_RADIUS), 255, -1, cv2.LINE_AA)
 
-    allowance = max(1, int(shoulder_span * FABRIC_ALLOWANCE))
-    body = cv2.dilate(body, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * allowance + 1, 2 * allowance + 1)))
-    return cv2.bitwise_or(body, forearms), forearms
+    return cv2.bitwise_or(body_silhouette(landmarks, width, height, bands, shoulder_span), forearms), forearms
+
+
+def arm_masks(landmarks, width, height, shoulder_span):
+    """(arms, hands) uint8 masks built from landmarks: both arms from shoulder
+    to wrist, and the hands from the wrist to the estimated fingertips."""
+    p = {name: _to_px(lm, width, height) for name, lm in landmarks.items()}
+    arms = np.zeros((height, width), np.uint8)
+    hands = np.zeros((height, width), np.uint8)
+    for side in ("LEFT", "RIGHT"):
+        _capsule(arms, p[f"{side}_SHOULDER"], p[f"{side}_ELBOW"], shoulder_span * UPPER_ARM_WIDTH)
+        # A hidden wrist (e.g. hands behind the back) is only a guess: that
+        # forearm and hand are not in the photo, and drawing them would pull
+        # the arms over the torso below a cropped hem and cut a hand-shaped
+        # hole in the garment.
+        if landmarks[f"{side}_WRIST"]["visibility"] < VISIBLE:
+            continue
+        wrist = p[f"{side}_WRIST"]
+        _capsule(arms, p[f"{side}_ELBOW"], wrist, shoulder_span * FOREARM_WIDTH)
+        knuckles = [p[f"{side}_{finger}"] for finger in ("PINKY", "INDEX", "THUMB")]
+        tips = [knuckle + (knuckle - wrist) * FINGER_EXTENSION for knuckle in knuckles[:2]]
+        cv2.fillConvexPoly(hands, cv2.convexHull(np.array([wrist, *knuckles, *tips], np.int32)), 255, cv2.LINE_AA)
+
+    margin = max(1, int(shoulder_span * HAND_MARGIN))
+    return arms, cv2.dilate(hands, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * margin + 1, 2 * margin + 1)))
 
 
 # --- piecewise warp -----------------------------------------------------------
