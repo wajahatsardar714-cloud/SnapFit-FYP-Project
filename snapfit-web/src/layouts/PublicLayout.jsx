@@ -1,37 +1,34 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Outlet } from 'react-router-dom';
+import PageLoader from '../components/PageLoader';
+import ScrollToHash from '../components/public/ScrollToHash';
+import SiteFooter from '../components/public/SiteFooter';
+import SiteHeader from '../components/public/SiteHeader';
+import { brand, footer, header } from '../content/site';
 
+const MAIN_ID = 'main-content';
+
+// Public site shell (home, pricing, login, register): skip link, header, the
+// page, footer. Always the light palette, even when the dashboard is set to
+// dark. overflow-x-clip is only a safety net -- content must fit on its own --
+// and, unlike overflow-hidden, it keeps the sticky header working.
 function PublicLayout() {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-border bg-background">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/login" className="text-lg font-bold text-primary">
-            SnapFit
-          </Link>
-          <div className="flex items-center gap-4 text-sm">
-            <NavLink
-              to="/login"
-              className={({ isActive }) =>
-                `rounded-lg px-3 py-2 transition-colors duration-150 ${
-                  isActive ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              Sign in
-            </NavLink>
-            <Link
-              to="/register"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors duration-150 hover:bg-primary-hover"
-            >
-              Get Started
-            </Link>
-          </div>
-        </nav>
-      </header>
-
-      <main className="flex-1 bg-background">
-        <Outlet />
+    <div data-theme="light" className="flex min-h-screen flex-col overflow-x-clip bg-background">
+      <a
+        href={`#${MAIN_ID}`}
+        className="sr-only rounded-lg bg-surface px-4 py-2 font-semibold text-link shadow-card focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50"
+      >
+        {header.skipLink}
+      </a>
+      <SiteHeader brand={brand} nav={header} />
+      <main id={MAIN_ID} tabIndex={-1} className="flex-1 focus:outline-none">
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+          <ScrollToHash />
+        </Suspense>
       </main>
+      <SiteFooter brand={brand} footer={footer} />
     </div>
   );
 }

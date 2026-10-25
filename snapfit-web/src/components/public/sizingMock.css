@@ -1,0 +1,51 @@
+/* SizingMock loop (8s): measurement lines draw in, labels and the size chip
+   appear, then the shirt cross-fades to a second colour. transform/opacity
+   only. Without the animation (reduced motion) every part shows its final
+   state, so the art is complete when static. */
+.sf-mock-line,
+.sf-mock-chip {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sf-mock-line {
+    animation: sf-mock-draw 8s ease-out infinite both;
+  }
+  .sf-mock-line-2 {
+    animation-delay: 0.5s;
+  }
+  .sf-mock-label {
+    animation: sf-mock-fade 8s ease-out infinite both;
+  }
+  .sf-mock-chip {
+    animation: sf-mock-chip 8s ease-out infinite both;
+  }
+  .sf-mock-tryon {
+    animation: sf-mock-tryon 8s ease-in-out infinite both;
+  }
+}
+
+@keyframes sf-mock-draw {
+  0%, 8% { transform: scaleX(0); }
+  22%, 90% { transform: scaleX(1); }
+  100% { transform: scaleX(0); }
+}
+
+@keyframes sf-mock-fade {
+  0%, 24% { opacity: 0; }
+  32%, 90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes sf-mock-chip {
+  0%, 38% { opacity: 0; transform: translateY(12px); }
+  46%, 90% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(12px); }
+}
+
+@keyframes sf-mock-tryon {
+  0%, 55% { opacity: 0; }
+  66%, 90% { opacity: 1; }
+  100% { opacity: 0; }
+}
