@@ -2,6 +2,9 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 const AI_REQUEST_TIMEOUT_MS = 30000;
+// A photorealistic try-on runs on a remote GPU (10-70 s), so requests that ask
+// for one get longer. Must exceed the AI service's own GPU timeout.
+const AI_TRY_ON_TIMEOUT_MS = 150000;
 
 class AiServiceError extends Error {
   // details: extra structured data some codes carry, e.g. POSE_INVALID's list of
@@ -38,12 +41,12 @@ function toAiServiceError(err) {
   return new AiServiceError('AI_SERVICE_UNREACHABLE', 502);
 }
 
-async function postForm(path, form) {
+async function postForm(path, form, timeout = AI_REQUEST_TIMEOUT_MS) {
   const baseUrl = getBaseUrl();
   try {
     const response = await axios.post(`${baseUrl}${path}`, form, {
       headers: form.getHeaders(),
-      timeout: AI_REQUEST_TIMEOUT_MS,
+      timeout,
     });
     return response.data;
   } catch (err) {
@@ -64,7 +67,7 @@ async function analyzeImage(imageBuffer, sizeChart, userHeight, tryOn = null) {
     form.append('try_on_product_id', tryOn.productId);
     form.append('merchant_id', String(tryOn.merchantId));
   }
-  return postForm('/analyze', form);
+  return postForm('/analyze', form, tryOn ? AI_TRY_ON_TIMEOUT_MS : AI_REQUEST_TIMEOUT_MS);
 }
 
 async function tryOnImage(imageBuffer, merchantId, productId) {
@@ -72,7 +75,7 @@ async function tryOnImage(imageBuffer, merchantId, productId) {
   form.append('image', imageBuffer, { filename: 'upload.jpg' });
   form.append('product_id', productId);
   form.append('merchant_id', String(merchantId));
-  return postForm('/try-on', form);
+  return postForm('/try-on', form, AI_TRY_ON_TIMEOUT_MS);
 }
 
 module.exports = { analyzeImage, tryOnImage, AiServiceError };

@@ -15,7 +15,7 @@ import numpy as np
 from app.try_on import TryOnError, body_bands, body_masks
 from app.utils import decode_image
 
-GPU_TIMEOUT_SECONDS = 90
+GPU_TIMEOUT_SECONDS = 120
 # Mask allowance beyond the body for the garment region, as a fraction of
 # shoulder span; scaled up by the size ease so a looser size gets more room.
 MASK_ALLOWANCE = 0.12
