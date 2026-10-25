@@ -33,7 +33,7 @@ beforeEach(async () => {
   // A merchant whose widget would be refused: suspended, no active plan, quota used up.
   merchant = await createMerchant({
     status: 'suspended',
-    subscription: { plan: 'free', status: 'inactive', requestsLimit: 1, requestsUsed: 1 },
+    subscription: { plan: 'small', status: 'inactive', requestsLimit: 1, requestsUsed: 1 },
   });
   const chart = await createChart(merchant);
   await ProductMapping.create({ merchantId: merchant._id, productId: 'SKU-1', sizeChartId: chart._id });
@@ -126,7 +126,7 @@ describe('POST /api/admin/demo/recommend', () => {
     analyzeImage.mockResolvedValue(AI_RESULT);
     await Merchant.updateOne(
       { _id: merchant._id },
-      { status: 'active', subscription: { plan: 'basic', status: 'active', requestsLimit: 10, requestsUsed: 0 } }
+      { status: 'active', subscription: { plan: 'small', status: 'active', requestsLimit: 10, requestsUsed: 0 } }
     );
 
     const res = await request(app)

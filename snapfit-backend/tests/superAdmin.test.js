@@ -65,6 +65,21 @@ describe('ensureSuperAdmin', () => {
     expect(await bcrypt.compare('second-secret-pass', admins[0].password)).toBe(true);
   });
 
+  it('updates the password of a super admin stored with a retired plan id', async () => {
+    await Merchant.collection.insertOne({
+      name: 'Super Admin',
+      email: 'owner@snapfit.test',
+      password: await bcrypt.hash('old-secret-pass', 4),
+      role: 'superadmin',
+      subscription: { plan: 'free', status: 'inactive', requestsUsed: 0 },
+    });
+
+    await ensureSuperAdmin();
+
+    const [admin] = await findAdmins();
+    expect(await bcrypt.compare(PASSWORD, admin.password)).toBe(true);
+  });
+
   it.each([
     ['SUPERADMIN_EMAIL'],
     ['SUPERADMIN_PASSWORD'],

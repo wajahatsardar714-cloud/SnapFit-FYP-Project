@@ -79,7 +79,7 @@ describe('GET /api/admin/merchants', () => {
       status: 'active',
       suspendedAt: null,
       hasApiKey: true,
-      subscription: { plan: 'basic', status: 'active', requestsLimit: 500, requestsUsed: 0 },
+      subscription: { plan: 'small', status: 'active', requestsLimit: 500, requestsUsed: 0 },
       counts: { sizeCharts: 1, products: 0, recommendations: 1 },
     });
     expect(res.body.merchants[1]).toMatchObject({ _id: String(older._id), businessType: null, phone: null });
@@ -103,11 +103,11 @@ describe('GET /api/admin/merchants', () => {
   });
 
   it('filters by plan and account status', async () => {
-    await createMerchant({ name: 'Free', subscription: { plan: 'free', status: 'inactive' } });
-    await createMerchant({ name: 'Pro', subscription: { plan: 'pro', status: 'active' } });
+    await createMerchant({ name: 'Small', subscription: { plan: 'small', status: 'inactive' } });
+    await createMerchant({ name: 'Medium', subscription: { plan: 'medium', status: 'active' } });
     await createMerchant({ name: 'Suspended', status: 'suspended' });
 
-    expect((await get('/merchants?plan=pro')).body.merchants.map((m) => m.name)).toEqual(['Pro']);
+    expect((await get('/merchants?plan=medium')).body.merchants.map((m) => m.name)).toEqual(['Medium']);
     expect((await get('/merchants?status=suspended')).body.merchants.map((m) => m.name)).toEqual(['Suspended']);
     expect((await get('/merchants?status=active')).body.total).toBe(2);
   });
@@ -126,10 +126,11 @@ describe('GET /api/admin/merchants', () => {
   it.each([
     ['page=0', 'page must be a positive integer'],
     ['limit=101', 'limit must be an integer between 1 and 100'],
-    ['plan=gold', 'plan must be one of: free, basic, pro, enterprise'],
+    ['plan=gold', 'plan must be one of: small, medium, enterprise'],
+    ['plan=pro', 'plan must be one of: small, medium, enterprise'],
     ['status=deleted', 'status must be one of: active, suspended'],
     ['search=a&search=b', 'search must be given once'],
-    ['plan=pro&plan=free', 'plan must be given once'],
+    ['plan=medium&plan=small', 'plan must be given once'],
     ['status=active&status=suspended', 'status must be given once'],
     ['page=1&page=2', 'page must be given once'],
   ])('rejects %s', async (queryString, message) => {
@@ -207,7 +208,7 @@ describe('GET /api/admin/merchants/:id', () => {
 describe('PATCH /api/admin/merchants/:id/subscription', () => {
   it('updates the given fields and audits before/after', async () => {
     const merchant = await createMerchant({
-      subscription: { plan: 'basic', status: 'active', requestsLimit: 500, requestsUsed: 42 },
+      subscription: { plan: 'small', status: 'active', requestsLimit: 500, requestsUsed: 42 },
     });
 
     const res = await patch(`/merchants/${merchant._id}/subscription`, {
@@ -219,7 +220,7 @@ describe('PATCH /api/admin/merchants/:id/subscription', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.merchant.subscription).toMatchObject({
-      plan: 'basic',
+      plan: 'small',
       status: 'expired',
       requestsLimit: 900,
       requestsUsed: 0,
@@ -233,8 +234,8 @@ describe('PATCH /api/admin/merchants/:id/subscription', () => {
       targetId: merchant._id,
       targetLabel: merchant.businessName,
       details: {
-        before: { plan: 'basic', status: 'active', requestsLimit: 500, requestsUsed: 42, endDate: null },
-        after: { plan: 'basic', status: 'expired', requestsLimit: 900, requestsUsed: 0 },
+        before: { plan: 'small', status: 'active', requestsLimit: 500, requestsUsed: 42, endDate: null },
+        after: { plan: 'small', status: 'expired', requestsLimit: 900, requestsUsed: 0 },
       },
     });
     expectNoSecrets(res, [merchant]);
@@ -243,11 +244,11 @@ describe('PATCH /api/admin/merchants/:id/subscription', () => {
   it("applies the new plan's quota unless a limit is given, and null means unlimited", async () => {
     const merchant = await createMerchant();
 
-    const toPro = await patch(`/merchants/${merchant._id}/subscription`, { plan: 'pro' });
-    expect(toPro.body.merchant.subscription).toMatchObject({ plan: 'pro', requestsLimit: 5000 });
+    const toMedium = await patch(`/merchants/${merchant._id}/subscription`, { plan: 'medium' });
+    expect(toMedium.body.merchant.subscription).toMatchObject({ plan: 'medium', requestsLimit: 5000 });
 
-    const custom = await patch(`/merchants/${merchant._id}/subscription`, { plan: 'basic', requestsLimit: 7 });
-    expect(custom.body.merchant.subscription).toMatchObject({ plan: 'basic', requestsLimit: 7 });
+    const custom = await patch(`/merchants/${merchant._id}/subscription`, { plan: 'small', requestsLimit: 7 });
+    expect(custom.body.merchant.subscription).toMatchObject({ plan: 'small', requestsLimit: 7 });
 
     const unlimited = await patch(`/merchants/${merchant._id}/subscription`, { requestsLimit: null, endDate: null });
     expect(unlimited.body.merchant.subscription.requestsLimit).toBeNull();
@@ -256,7 +257,8 @@ describe('PATCH /api/admin/merchants/:id/subscription', () => {
 
   it.each([
     [{}, 'Provide at least one of: plan, status, requestsLimit, endDate, resetUsage'],
-    [{ plan: 'gold' }, 'plan must be one of: free, basic, pro, enterprise'],
+    [{ plan: 'gold' }, 'plan must be one of: small, medium, enterprise'],
+    [{ plan: 'free' }, 'plan must be one of: small, medium, enterprise'],
     [{ status: 'paused' }, 'status must be one of: active, inactive, expired'],
     [{ requestsLimit: -1 }, 'requestsLimit must be a non-negative integer, or null for unlimited'],
     [{ requestsLimit: 1.5 }, 'requestsLimit must be a non-negative integer, or null for unlimited'],
@@ -273,7 +275,7 @@ describe('PATCH /api/admin/merchants/:id/subscription', () => {
   });
 
   it('404s for the super admin', async () => {
-    const res = await patch(`/merchants/${admin._id}/subscription`, { plan: 'pro' });
+    const res = await patch(`/merchants/${admin._id}/subscription`, { plan: 'medium' });
     expect(res.status).toBe(404);
   });
 });

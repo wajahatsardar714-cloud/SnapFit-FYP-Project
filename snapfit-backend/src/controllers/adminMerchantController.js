@@ -8,7 +8,7 @@ const AuditLog = require('../models/AuditLog');
 const { assignUniqueApiKey, maskApiKey } = require('./apiKeyController');
 const { deleteMerchantWithData } = require('./merchantController');
 const { tryOnStatus } = require('./productMappingController');
-const { PLANS } = require('./subscriptionController');
+const { PLANS } = require('../config/plans');
 
 const { MERCHANTS_ONLY } = Merchant;
 const { EXCLUDE_DEMO } = Recommendation;

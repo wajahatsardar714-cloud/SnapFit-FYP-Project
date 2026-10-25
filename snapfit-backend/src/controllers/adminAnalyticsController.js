@@ -1,5 +1,6 @@
 const Merchant = require('../models/Merchant');
 const Recommendation = require('../models/Recommendation');
+const { PLAN_IDS, DEFAULT_PLAN } = require('../config/plans');
 const { sendCsv, CSV_COLUMNS } = require('./analyticsController');
 const { summarizeMerchants, sendValidationError } = require('./adminMerchantController');
 
@@ -12,7 +13,6 @@ const RECENT_MERCHANTS_LIMIT = 5;
 const TOP_MERCHANTS_LIMIT = 10;
 // Statuses that produced a size for the shopper.
 const SUCCEEDED_STATUSES = ['success', 'low_confidence'];
-const PLAN_NAMES = Merchant.schema.path('subscription.plan').enumValues;
 
 // UTC midnight `days - 1` days ago: the first day of a `days`-long window ending today.
 function windowStart(days) {
@@ -64,7 +64,7 @@ async function getOverview(req, res) {
       Recommendation.countDocuments({ ...EXCLUDE_DEMO, status: { $in: SUCCEEDED_STATUSES } }),
       Merchant.aggregate([
         { $match: MERCHANTS_ONLY },
-        { $group: { _id: { $ifNull: ['$subscription.plan', 'free'] }, count: { $sum: 1 } } },
+        { $group: { _id: { $ifNull: ['$subscription.plan', DEFAULT_PLAN] }, count: { $sum: 1 } } },
       ]),
       dailySeries(OVERVIEW_DAYS),
       Merchant.find(MERCHANTS_ONLY).sort({ createdAt: -1, _id: -1 }).limit(RECENT_MERCHANTS_LIMIT),
@@ -81,7 +81,7 @@ async function getOverview(req, res) {
         recommendationsLast30Days,
         successRate: recommendations > 0 ? Math.round((succeeded / recommendations) * 1000) / 1000 : 0,
       },
-      byPlan: Object.fromEntries(PLAN_NAMES.map((plan) => [plan, planCounts.get(plan) || 0])),
+      byPlan: Object.fromEntries(PLAN_IDS.map((plan) => [plan, planCounts.get(plan) || 0])),
       daily,
       recentMerchants: await summarizeMerchants(newestMerchants),
     });

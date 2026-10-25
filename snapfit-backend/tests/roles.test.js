@@ -23,7 +23,7 @@ describe('Merchant model defaults', () => {
       email: 'legacy@test.dev',
       password: 'hashed',
       businessName: 'Old Shop',
-      subscription: { plan: 'free', status: 'inactive', requestsUsed: 0 },
+      subscription: { plan: 'small', status: 'inactive', requestsUsed: 0 },
     });
 
     const legacy = await Merchant.findById(insertedId);

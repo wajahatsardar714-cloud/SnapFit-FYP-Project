@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { PLAN_IDS, DEFAULT_PLAN } = require('../config/plans');
 
 const merchantSchema = new mongoose.Schema(
   {
@@ -21,8 +22,8 @@ const merchantSchema = new mongoose.Schema(
     subscription: {
       plan: {
         type: String,
-        enum: ['free', 'basic', 'pro', 'enterprise'],
-        default: 'free',
+        enum: PLAN_IDS,
+        default: DEFAULT_PLAN,
       },
       status: {
         type: String,

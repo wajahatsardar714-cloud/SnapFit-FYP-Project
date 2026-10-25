@@ -1,6 +1,6 @@
 const SizeChart = require('../models/SizeChart');
 const Merchant = require('../models/Merchant');
-const { PLANS } = require('./subscriptionController');
+const { PLANS } = require('../config/plans');
 
 const MEASUREMENT_KEYS = ['chest', 'waist', 'hip', 'shoulderWidth', 'torsoLength', 'inseam'];
 
@@ -73,12 +73,13 @@ async function createChart(req, res) {
       return res.status(404).json({ message: 'Merchant not found' });
     }
 
-    const chartsLimit = PLANS[merchant.subscription.plan]?.chartsLimit;
+    const plan = PLANS[merchant.subscription.plan];
+    const chartsLimit = plan?.chartsLimit;
     if (chartsLimit != null) {
       const activeCount = await SizeChart.countDocuments({ merchantId: merchant._id, isActive: true });
       if (activeCount >= chartsLimit) {
         return res.status(403).json({
-          message: `Your ${merchant.subscription.plan} plan allows up to ${chartsLimit} size chart${
+          message: `Your ${plan.name} plan allows up to ${chartsLimit} size chart${
             chartsLimit === 1 ? '' : 's'
           }. Upgrade to add more.`,
         });

@@ -45,8 +45,9 @@ async function ensureSuperAdmin() {
     }
 
     if (!(await bcrypt.compare(password, existing.password))) {
-      existing.password = await bcrypt.hash(password, 12);
-      await existing.save();
+      // Only the password is written: the super admin's unused subscription may
+      // still hold a plan id the schema no longer accepts.
+      await Merchant.updateOne({ _id: existing._id }, { password: await bcrypt.hash(password, 12) });
       console.log(`Super admin password updated for ${email}`);
     }
   } catch (err) {

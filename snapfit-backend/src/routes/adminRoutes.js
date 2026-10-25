@@ -3,6 +3,7 @@ const { body, query } = require('express-validator');
 const { protect, requireSuperAdmin } = require('../middlewares/authMiddleware');
 const { loadTargetMerchant, loadDemoMerchant } = require('../middlewares/adminMiddleware');
 const Merchant = require('../models/Merchant');
+const { PLAN_IDS } = require('../config/plans');
 const { uploadShopperPhoto, MAX_EXTRA_FRAMES } = require('../utils/shopperPhotoUpload');
 const {
   listMerchants,
@@ -19,7 +20,6 @@ const { getOverview, getAnalytics, exportAnalytics } = require('../controllers/a
 const { recommend } = require('../controllers/recommendController');
 const { tryOn } = require('../controllers/tryOnController');
 
-const PLAN_NAMES = Merchant.schema.path('subscription.plan').enumValues;
 const SUBSCRIPTION_STATUSES = Merchant.schema.path('subscription.status').enumValues;
 const ACCOUNT_STATUSES = Merchant.schema.path('status').enumValues;
 
@@ -52,8 +52,8 @@ const listMerchantsValidation = [
     .withMessage('search must be at most 100 characters'),
   singleQuery('plan')
     .optional({ values: 'falsy' })
-    .isIn(PLAN_NAMES)
-    .withMessage(`plan must be one of: ${PLAN_NAMES.join(', ')}`),
+    .isIn(PLAN_IDS)
+    .withMessage(`plan must be one of: ${PLAN_IDS.join(', ')}`),
   singleQuery('status')
     .optional({ values: 'falsy' })
     .isIn(ACCOUNT_STATUSES)
@@ -62,7 +62,7 @@ const listMerchantsValidation = [
 ];
 
 const subscriptionValidation = [
-  body('plan').optional().isIn(PLAN_NAMES).withMessage(`plan must be one of: ${PLAN_NAMES.join(', ')}`),
+  body('plan').optional().isIn(PLAN_IDS).withMessage(`plan must be one of: ${PLAN_IDS.join(', ')}`),
   body('status')
     .optional()
     .isIn(SUBSCRIPTION_STATUSES)

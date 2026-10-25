@@ -1,13 +1,7 @@
 const Merchant = require('../models/Merchant');
+const { PLANS } = require('../config/plans');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-const PLANS = {
-  free: { plan: 'free', name: 'Free', price: 0, requestsLimit: 50, chartsLimit: 1 },
-  basic: { plan: 'basic', name: 'Basic', price: 29, requestsLimit: 500, chartsLimit: 5 },
-  pro: { plan: 'pro', name: 'Pro', price: 99, requestsLimit: 5000, chartsLimit: null },
-  enterprise: { plan: 'enterprise', name: 'Enterprise', price: null, requestsLimit: null, chartsLimit: null },
-};
 
 function getPlans(req, res) {
   return res.status(200).json({ plans: Object.values(PLANS) });
@@ -83,4 +77,4 @@ async function cancelSubscription(req, res) {
   }
 }
 
-module.exports = { getPlans, selectPlan, getSubscriptionStatus, cancelSubscription, PLANS };
+module.exports = { getPlans, selectPlan, getSubscriptionStatus, cancelSubscription };

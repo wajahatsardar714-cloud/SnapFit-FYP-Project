@@ -57,7 +57,7 @@ async function createMerchant(overrides = {}) {
     password: 'hashed',
     businessName: 'Test Shop',
     apiKey: `sk_test_${merchantCount}_${Date.now()}`,
-    subscription: { plan: 'basic', status: 'active', requestsLimit: 500, requestsUsed: 0 },
+    subscription: { plan: 'small', status: 'active', requestsLimit: 500, requestsUsed: 0 },
     ...overrides,
   });
 }

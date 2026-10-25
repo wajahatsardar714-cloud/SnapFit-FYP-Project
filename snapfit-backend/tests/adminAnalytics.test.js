@@ -31,9 +31,9 @@ function insertRecs(merchant, specs) {
 
 beforeEach(async () => {
   admin = await createSuperAdmin();
-  shopA = await createMerchant({ businessName: 'Shop A', subscription: { plan: 'pro', status: 'active' } });
-  shopB = await createMerchant({ businessName: 'Shop B', status: 'suspended', subscription: { plan: 'free', status: 'inactive' } });
-  await createMerchant({ businessName: 'Shop C', subscription: { plan: 'pro', status: 'active' } });
+  shopA = await createMerchant({ businessName: 'Shop A', subscription: { plan: 'medium', status: 'active' } });
+  shopB = await createMerchant({ businessName: 'Shop B', status: 'suspended', subscription: { plan: 'small', status: 'inactive' } });
+  await createMerchant({ businessName: 'Shop C', subscription: { plan: 'medium', status: 'active' } });
 
   await insertRecs(shopA, [
     { status: 'success', recommendedSize: 'M', source: 'widget' },
@@ -60,7 +60,7 @@ describe('GET /api/admin/overview', () => {
       recommendationsLast30Days: 4,
       successRate: 0.8,
     });
-    expect(res.body.byPlan).toEqual({ free: 1, basic: 0, pro: 2, enterprise: 0 });
+    expect(res.body.byPlan).toEqual({ small: 1, medium: 2, enterprise: 0 });
 
     const { daily } = res.body;
     expect(daily).toHaveLength(30);
