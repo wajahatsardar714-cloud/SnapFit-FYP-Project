@@ -15,8 +15,9 @@ def combine_landmarks(landmark_sets):
     Median rather than mean because it is robust to one bad frame (a blink of
     motion blur, a mis-detected wrist): with three or more frames a single
     outlier can only move the result to a neighbouring good value, whereas it
-    would shift a mean by its full error / n. Every landmark and field of the first set is combined over the
-    sets that carry it, so the result has the first set's shape.
+    would shift a mean by its full error / n. Every landmark and field of the
+    first set is combined over the sets that carry it, so the result has the
+    first set's shape.
     """
     first = landmark_sets[0]
     return {
