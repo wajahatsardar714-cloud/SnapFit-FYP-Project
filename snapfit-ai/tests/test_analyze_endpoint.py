@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app import main
+from app.measurement_engine import estimate_measurements
 
 REFERENCE_PHOTO = os.path.join(os.path.dirname(__file__), "..", "..", "pose.png")
 
@@ -104,3 +105,89 @@ def test_analyze_returns_measurement_comparison_and_keeps_legacy_fields(monkeypa
     assert [size["label"] for size in body["sizeComparison"]] == ["M", "L"]
     assert body["sizeComparison"][0]["perMeasurement"][0]["name"] == "chest"
     assert isinstance(body["fitNotes"], list)
+
+
+def _analyze(monkeypatch, a_pose, data=None, image_bytes=None, brightness=120.0):
+    pose = {**_fake_pose(a_pose), "brightness": brightness}
+    monkeypatch.setattr(main, "extract_landmarks", lambda _bytes: pose)
+    files = {"image": ("photo.jpg", image_bytes or _jpeg_bytes(), "image/jpeg")}
+    return client.post("/analyze", files=files, data=data or {})
+
+
+def _chart_around_chest(a_pose, height, clothing_fit="regular"):
+    """A one-size chart the photo's chest sits well inside, so the size scores 1
+    and the reported confidence is exactly the applied factors."""
+    chest = estimate_measurements(a_pose["landmarks"], 768, 1024, height, clothing_fit)["chest"]["value"]
+    return json.dumps(
+        {"unit": "cm", "category": "tops", "sizes": [{"label": "M", "measurements": {"chest": {"min": chest - 5, "max": chest + 5}}}]}
+    )
+
+
+def test_a_good_photo_and_adult_height_add_no_tips_or_warnings(monkeypatch, a_pose):
+    body = _analyze(monkeypatch, a_pose, {"user_height": "175"}).json()
+    assert body["photoTips"] == []
+    assert body["warnings"] == []
+
+
+def test_a_dim_photo_gets_a_tip_without_failing(monkeypatch, a_pose):
+    buffer = io.BytesIO()
+    Image.new("RGB", (768, 1024), (50, 50, 50)).save(buffer, "JPEG")
+    response = _analyze(monkeypatch, a_pose, image_bytes=buffer.getvalue(), brightness=50.0)
+    assert response.status_code == 200
+    assert [tip["id"] for tip in response.json()["photoTips"]] == ["dim_light"]
+
+
+class TestSizingInputs:
+    def test_rejects_an_unknown_clothing_fit(self, monkeypatch, a_pose):
+        response = _analyze(monkeypatch, a_pose, {"clothing_fit": "baggy"})
+        assert response.status_code == 400
+        assert response.json()["detail"] == "INVALID_CLOTHING_FIT"
+
+    @pytest.mark.parametrize("height", ["99.9", "230.5", "0", "-170"])
+    def test_rejects_an_implausible_height(self, monkeypatch, a_pose, height):
+        response = _analyze(monkeypatch, a_pose, {"user_height": height})
+        assert response.status_code == 400
+        assert response.json()["detail"] == "INVALID_USER_HEIGHT"
+
+    @pytest.mark.parametrize("height", ["100", "230"])
+    def test_accepts_heights_at_the_limits(self, monkeypatch, a_pose, height):
+        assert _analyze(monkeypatch, a_pose, {"user_height": height}).status_code == 200
+
+    def test_height_stays_optional(self, monkeypatch, a_pose):
+        response = _analyze(monkeypatch, a_pose)
+        assert response.status_code == 200
+        assert response.json()["measurements"] == {}
+
+    @pytest.mark.parametrize("clothing_fit, confidence", [("fitted", 1.0), ("regular", 1.0), ("loose", 0.9)])
+    def test_clothing_fit_reaches_measurements_and_confidence(self, monkeypatch, a_pose, clothing_fit, confidence):
+        data = {"user_height": "175", "size_chart": _chart_around_chest(a_pose, 175, clothing_fit), "clothing_fit": clothing_fit}
+        body = _analyze(monkeypatch, a_pose, data).json()
+        assert body["measurements"] == estimate_measurements(a_pose["landmarks"], 768, 1024, 175, clothing_fit)
+        assert body["size_recommendation"]["confidence"] == confidence
+
+    def test_clothing_fit_defaults_to_regular(self, monkeypatch, a_pose):
+        body = _analyze(monkeypatch, a_pose, {"user_height": "175"}).json()
+        assert body["measurements"] == estimate_measurements(a_pose["landmarks"], 768, 1024, 175, "regular")
+
+
+class TestPossibleChild:
+    def test_a_child_height_warns_and_lowers_confidence(self, monkeypatch, a_pose):
+        body = _analyze(monkeypatch, a_pose, {"user_height": "140", "size_chart": _chart_around_chest(a_pose, 140)}).json()
+        assert body["warnings"] == [
+            {
+                "id": "possible_child",
+                "message": "This size chart is for adults. If you're sizing a child, the recommendation may not fit"
+                " — check a kids' size chart.",
+            }
+        ]
+        assert body["size_recommendation"]["confidence"] == 0.6
+
+    def test_loose_clothing_and_a_child_height_combine(self, monkeypatch, a_pose):
+        data = {"user_height": "140", "size_chart": _chart_around_chest(a_pose, 140, "loose"), "clothing_fit": "loose"}
+        assert _analyze(monkeypatch, a_pose, data).json()["size_recommendation"]["confidence"] == 0.54
+
+    def test_an_adult_height_gets_no_warning(self, monkeypatch, a_pose):
+        assert _analyze(monkeypatch, a_pose, {"user_height": "145"}).json()["warnings"] == []
+
+    def test_warns_without_a_chart_too(self, monkeypatch, a_pose):
+        assert _analyze(monkeypatch, a_pose, {"user_height": "120"}).json()["warnings"][0]["id"] == "possible_child"

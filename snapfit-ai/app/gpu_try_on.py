@@ -29,6 +29,8 @@ from app.try_on_compositing import (
 from app.utils import decode_image
 
 GPU_TIMEOUT_SECONDS = 120
+# The startup health check only needs the tunnel and server to answer.
+HEALTH_TIMEOUT_SECONDS = 10
 # Mask allowance beyond the body for the garment region, as a fraction of
 # shoulder span; scaled up by the size ease so a looser size gets more room.
 MASK_ALLOWANCE = 0.12
@@ -61,6 +63,19 @@ def gpu_try_on_config():
     url = os.environ.get("TRYON_GPU_URL", "").strip().rstrip("/")
     token = os.environ.get("TRYON_GPU_TOKEN", "").strip()
     return (url, token) if url and token else None
+
+
+async def gpu_health(config):
+    """Name of the GPU the remote server reports on /health. Raises
+    TryOnError("GPU_UNREACHABLE") when it doesn't answer healthily."""
+    url, token = config
+    try:
+        async with httpx.AsyncClient(timeout=HEALTH_TIMEOUT_SECONDS) as client:
+            response = await client.get(f"{url}/health", headers=_request_headers(token))
+        response.raise_for_status()
+        return response.json()["gpu"]
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        raise TryOnError("GPU_UNREACHABLE")
 
 
 def clothing_mask(landmarks, width, height, ease=1.0, length="regular"):

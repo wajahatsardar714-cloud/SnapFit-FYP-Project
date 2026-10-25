@@ -5,7 +5,8 @@ user height / stature-in-pixels. Chest, waist and hip circumferences can't be
 seen in a front photo, so they are modelled as ellipses whose breadth comes
 from the joint spans and whose depth is a fixed fraction of that breadth
 (constants and their meaning in app/config.py); those are flagged
-estimated=True.
+estimated=True. Widths and circumferences also get a small clothing
+allowance for what the shopper is wearing (CLOTHING_WIDTH_FACTOR).
 
 Measurement names match the merchant size chart's keys.
 """
@@ -15,6 +16,8 @@ import math
 from app.config import (
     CHEST_BREADTH_PER_SHOULDER_SPAN,
     CHEST_DEPTH_PER_BREADTH,
+    CLOTHING_WIDTH_FACTOR,
+    DEFAULT_CLOTHING_FIT,
     ESTIMATED_MEASUREMENTS,
     HIP_BREADTH_PER_HIP_JOINT_SPAN,
     HIP_DEPTH_PER_BREADTH,
@@ -57,18 +60,20 @@ def stature_px(landmarks, width, height):
     return feet_bottom - head_top
 
 
-def estimate_measurements(landmarks, image_width, image_height, user_height_cm=None):
+def estimate_measurements(landmarks, image_width, image_height, user_height_cm=None, clothing_fit=DEFAULT_CLOTHING_FIT):
     """Returns {name: {"value", "unit": "cm", "estimated"}} for every chart
     measurement, or {} without a height (no absolute scale -- callers fall back
-    to proportion-only matching)."""
+    to proportion-only matching). clothing_fit (one of CLOTHING_FITS) scales the
+    widths and circumferences by its CLOTHING_WIDTH_FACTOR; lengths are kept."""
     if not user_height_cm:
         return {}
 
     p = {name: _px(lm, image_width, image_height) for name, lm in landmarks.items()}
     cm_per_px = user_height_cm / stature_px(landmarks, image_width, image_height)
+    width_factor = CLOTHING_WIDTH_FACTOR[clothing_fit]
 
-    shoulder_span = _distance(p["LEFT_SHOULDER"], p["RIGHT_SHOULDER"]) * cm_per_px
-    hip_span = _distance(p["LEFT_HIP"], p["RIGHT_HIP"]) * cm_per_px
+    shoulder_span = _distance(p["LEFT_SHOULDER"], p["RIGHT_SHOULDER"]) * cm_per_px * width_factor
+    hip_span = _distance(p["LEFT_HIP"], p["RIGHT_HIP"]) * cm_per_px * width_factor
     shoulder_mid = _midpoint(p["LEFT_SHOULDER"], p["RIGHT_SHOULDER"])
     hip_mid = _midpoint(p["LEFT_HIP"], p["RIGHT_HIP"])
     feet_bottom = max(p[name][1] for name in FEET if name in p)

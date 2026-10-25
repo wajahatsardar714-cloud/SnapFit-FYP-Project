@@ -2,6 +2,7 @@ import asyncio
 import base64
 import io
 import re
+import threading
 
 import cv2
 import httpx
@@ -11,7 +12,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app import gpu_try_on, main
-from app.gpu_try_on import clothing_mask, garment_on_white, generate_gpu_try_on
+from app.gpu_try_on import clothing_mask, garment_on_white, generate_gpu_try_on, gpu_health
 from app.try_on import TryOnError
 
 W, H = 768, 1024
@@ -256,6 +257,89 @@ class TestGenerateGpuTryOn:
         monkeypatch.delenv("TRYON_GPU_URL", raising=False)
         with pytest.raises(TryOnError, match="GPU_NOT_CONFIGURED"):
             asyncio.run(generate_gpu_try_on(_photo(), _garment_png(), _pose(a_pose)))
+
+
+class TestGpuHealth:
+    def test_returns_the_gpu_name_and_sends_the_token(self, monkeypatch):
+        seen = {}
+
+        def healthy(request):
+            seen.update(url=str(request.url), token=request.headers.get("x-token"))
+            return httpx.Response(200, json={"status": "ok", "gpu": "Tesla T4"})
+
+        _patch_transport(monkeypatch, healthy)
+        assert asyncio.run(gpu_health(CONFIG)) == "Tesla T4"
+        assert seen == {"url": "https://gpu.test/health", "token": "secret-token"}
+
+    @pytest.mark.parametrize(
+        "handler",
+        [
+            lambda request: httpx.Response(502, text="tunnel down"),
+            lambda request: httpx.Response(200, text="<html>not json</html>"),
+            lambda request: httpx.Response(200, json={"status": "ok"}),
+        ],
+    )
+    def test_unhealthy_answers_raise(self, monkeypatch, handler):
+        _patch_transport(monkeypatch, handler)
+        with pytest.raises(TryOnError, match="GPU_UNREACHABLE"):
+            asyncio.run(gpu_health(CONFIG))
+
+    def test_unreachable_raises(self, monkeypatch):
+        def refuse(request):
+            raise httpx.ConnectError("refused", request=request)
+
+        _patch_transport(monkeypatch, refuse)
+        with pytest.raises(TryOnError, match="GPU_UNREACHABLE"):
+            asyncio.run(gpu_health(CONFIG))
+
+
+class TestStartupWarmUp:
+    @staticmethod
+    def _configure(monkeypatch, health):
+        monkeypatch.setenv("TRYON_GPU_URL", "https://gpu.test")
+        monkeypatch.setenv("TRYON_GPU_TOKEN", "secret-token")
+        monkeypatch.setattr(main, "gpu_health", health)
+
+    @pytest.mark.parametrize(
+        "answer, level, text",
+        [("Tesla T4", "INFO", "reachable (Tesla T4)"), (TryOnError("GPU_UNREACHABLE"), "WARNING", "unreachable")],
+    )
+    def test_checks_the_gpu_in_the_background_and_logs_the_result(self, monkeypatch, caplog, answer, level, text):
+        checked = threading.Event()
+
+        async def health(config):
+            checked.set()
+            if isinstance(answer, Exception):
+                raise answer
+            return answer
+
+        self._configure(monkeypatch, health)
+        with caplog.at_level("INFO", logger="snapfit-ai"), TestClient(main.app) as client:
+            assert checked.wait(5)
+            assert client.get("/health").status_code == 200
+        assert any(record.levelname == level and text in record.getMessage() for record in caplog.records)
+
+    def test_a_slow_gpu_never_holds_up_startup(self, monkeypatch):
+        started = threading.Event()
+
+        async def hang(config):
+            started.set()
+            await asyncio.sleep(3600)
+
+        self._configure(monkeypatch, hang)
+        with TestClient(main.app) as client:
+            assert client.get("/health").status_code == 200
+            assert started.wait(5)
+
+    def test_skipped_when_the_gpu_is_not_configured(self, monkeypatch):
+        monkeypatch.delenv("TRYON_GPU_URL", raising=False)
+
+        async def fail_if_called(config):
+            raise AssertionError("no GPU configured, nothing to check")
+
+        monkeypatch.setattr(main, "gpu_health", fail_if_called)
+        with TestClient(main.app) as client:
+            assert client.get("/health").status_code == 200
 
 
 class TestTryOnEngineSelection:

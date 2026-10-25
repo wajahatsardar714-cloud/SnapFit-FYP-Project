@@ -2,6 +2,7 @@ import math
 
 import pytest
 
+from app.config import CLOTHING_FITS, CLOTHING_WIDTH_FACTOR
 from app.measurement_engine import ellipse_circumference, estimate_measurements
 from app.size_matcher import (
     HEIGHT_HINT,
@@ -62,6 +63,12 @@ class TestNearestSize:
         result = recommend_size(FEATURES, TEES, m(chest=97, shoulderWidth=44))
         assert result["recommended_size"] == "M"
         assert result["confidence"] == 1
+
+    def test_a_confidence_factor_scales_only_the_confidence(self):
+        plain = recommend_size(FEATURES, TEES, m(chest=97, shoulderWidth=44))
+        scaled = recommend_size(FEATURES, TEES, m(chest=97, shoulderWidth=44), confidence_factor=0.54)
+        assert scaled["confidence"] == 0.54
+        assert {k: v for k, v in scaled.items() if k != "confidence"} == {k: v for k, v in plain.items() if k != "confidence"}
 
     def test_between_sizes_picks_the_nearer_one(self):
         gapped = chart([("M", {"chest": (94, 100)}), ("L", {"chest": (106, 112)})])
@@ -153,3 +160,22 @@ class TestMeasurementEngine:
         tall = estimate_measurements(a_pose["landmarks"], 768, 1024, 192)
         for name in short:
             assert tall[name]["value"] / short[name]["value"] == pytest.approx(1.2, abs=0.01)
+
+    @pytest.mark.parametrize("clothing_fit", CLOTHING_FITS)
+    def test_clothing_scales_widths_but_not_lengths(self, a_pose, clothing_fit):
+        fitted = estimate_measurements(a_pose["landmarks"], 768, 1024, 175, "fitted")
+        worn = estimate_measurements(a_pose["landmarks"], 768, 1024, 175, clothing_fit)
+        for name in ("shoulderWidth", "chest", "waist", "hip"):
+            assert worn[name]["value"] == pytest.approx(fitted[name]["value"] * CLOTHING_WIDTH_FACTOR[clothing_fit], abs=0.1)
+        for name in ("torsoLength", "inseam"):
+            assert worn[name] == fitted[name]
+
+    def test_regular_clothing_is_the_default(self, a_pose):
+        assert estimate_measurements(a_pose["landmarks"], 768, 1024, 175) == estimate_measurements(
+            a_pose["landmarks"], 768, 1024, 175, "regular"
+        )
+
+    def test_loose_clothing_reads_narrower_than_fitted(self, a_pose):
+        fitted = estimate_measurements(a_pose["landmarks"], 768, 1024, 175, "fitted")
+        loose = estimate_measurements(a_pose["landmarks"], 768, 1024, 175, "loose")
+        assert loose["chest"]["value"] < fitted["chest"]["value"]

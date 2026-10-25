@@ -1,26 +1,60 @@
+import asyncio
 import base64
 import json
 import logging
 import time
+from contextlib import asynccontextmanager
 from typing import Optional
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import (
+    CHILD_CONFIDENCE_FACTOR,
+    CHILD_HEIGHT_CM,
+    CLOTHING_CONFIDENCE_FACTOR,
+    CLOTHING_FITS,
+    DEFAULT_CLOTHING_FIT,
+    USER_HEIGHT_MAX_CM,
+    USER_HEIGHT_MIN_CM,
+)
 from app.feature_engine import calculate_features
-from app.gpu_try_on import generate_gpu_try_on, gpu_try_on_config
+from app.gpu_try_on import generate_gpu_try_on, gpu_health, gpu_try_on_config
 from app.measurement_engine import estimate_measurements
+from app.photo_quality import photo_tips
 from app.pose_estimator import PoseEstimationError, extract_landmarks
 from app.pose_validator import PoseInvalidError, assert_valid_pose
 from app.size_matcher import SizeMatchError, recommend_size
 from app.try_on import TryOnError, fetch_image_bytes, fetch_product_anchor_data, garment_ease, generate_try_on
-from app.utils import calculate_confidence, validate_image
+from app.utils import calculate_confidence, decode_image, validate_image
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("snapfit-ai")
 
-app = FastAPI(title="SnapFit AI Service")
+
+async def _warm_up_gpu(config):
+    """Wakes the remote GPU try-on server (and its tunnel) so the first shopper
+    doesn't wait for it, and logs whether it is reachable."""
+    try:
+        gpu = await gpu_health(config)
+    except TryOnError:
+        logger.warning(f"GPU try-on server unreachable at {config[0]}; try-ons use the local warp until it answers")
+        return
+    logger.info(f"GPU try-on server reachable ({gpu})")
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    # Fire-and-forget: startup never waits for, or fails on, the GPU server.
+    config = gpu_try_on_config()
+    warm_up = asyncio.create_task(_warm_up_gpu(config)) if config else None
+    yield
+    if warm_up:
+        warm_up.cancel()
+
+
+app = FastAPI(title="SnapFit AI Service", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,6 +84,28 @@ async def log_requests(request: Request, call_next):
 # size_recommendation keeps its original shape; the per-measurement comparison
 # is returned in the newer top-level fields.
 LEGACY_RECOMMENDATION_KEYS = ("recommended_size", "confidence", "fit_scores", "body_type", "notes")
+
+POSSIBLE_CHILD_WARNING = {
+    "id": "possible_child",
+    "message": (
+        "This size chart is for adults. If you're sizing a child, the recommendation may not fit"
+        " — check a kids' size chart."
+    ),
+}
+
+
+def _validate_sizing_inputs(user_height, clothing_fit):
+    if clothing_fit not in CLOTHING_FITS:
+        raise HTTPException(status_code=400, detail="INVALID_CLOTHING_FIT")
+    if user_height is not None and not USER_HEIGHT_MIN_CM <= user_height <= USER_HEIGHT_MAX_CM:
+        raise HTTPException(status_code=400, detail="INVALID_USER_HEIGHT")
+
+
+def _sizing_warnings(user_height):
+    """(warnings, confidence factor) for what the shopper told us."""
+    if user_height is not None and user_height < CHILD_HEIGHT_CM:
+        return [POSSIBLE_CHILD_WARNING], CHILD_CONFIDENCE_FACTOR
+    return [], 1.0
 
 
 def _pose_invalid_exception(error):
@@ -104,10 +160,13 @@ async def analyze(
     size_chart: Optional[str] = Form(None),
     try_on_product_id: Optional[str] = Form(None),
     merchant_id: Optional[str] = Form(None),
+    clothing_fit: str = Form(DEFAULT_CLOTHING_FIT),
 ):
     """With try_on_product_id + merchant_id, also renders the virtual try-on from
     the same pose (one upload, one detection). A try-on failure never fails the
-    analysis: it is reported as tryOn: {"error": CODE}."""
+    analysis: it is reported as tryOn: {"error": CODE}. photoTips and warnings
+    are advice only and never fail it either."""
+    _validate_sizing_inputs(user_height, clothing_fit)
     image_bytes = await image.read()
 
     validation = validate_image(image_bytes)
@@ -127,8 +186,10 @@ async def analyze(
     )
     confidence = calculate_confidence(pose["landmarks"])
     measurements = estimate_measurements(
-        pose["landmarks"], image_dimensions["width"], image_dimensions["height"], user_height
+        pose["landmarks"], image_dimensions["width"], image_dimensions["height"], user_height, clothing_fit
     )
+    tips = photo_tips(decode_image(image_bytes), pose["landmarks"])
+    warnings, child_factor = _sizing_warnings(user_height)
 
     match = None
     if size_chart:
@@ -138,7 +199,9 @@ async def analyze(
             raise HTTPException(status_code=400, detail="INVALID_SIZE_CHART_JSON")
 
         try:
-            match = recommend_size(features, chart, measurements)
+            match = recommend_size(
+                features, chart, measurements, CLOTHING_CONFIDENCE_FACTOR[clothing_fit] * child_factor
+            )
         except SizeMatchError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
@@ -161,6 +224,8 @@ async def analyze(
         "alternativeSize": match["alternative_size"] if match else None,
         "fitNotes": match["fit_notes"] if match else [],
         "tryOn": try_on_result,
+        "photoTips": tips,
+        "warnings": warnings,
     }
 
 

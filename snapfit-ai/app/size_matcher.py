@@ -223,10 +223,11 @@ def _build_notes(recommended, fit_scores, sizes_order, ratio_mode):
     return notes
 
 
-def recommend_size(features, size_chart, measurements=None):
+def recommend_size(features, size_chart, measurements=None, confidence_factor=1.0):
     """measurements: estimate_measurements() output; empty/None -> proportion-only
     mode (no height), which scores sizes by body ratios and applies a confidence
-    penalty.
+    penalty. confidence_factor scales the confidence further (the caller's
+    clothing and child-height factors).
 
     Returns the original keys (recommended_size, confidence, fit_scores,
     body_type, notes) plus alternative_size, size_comparison and fit_notes.
@@ -243,7 +244,7 @@ def recommend_size(features, size_chart, measurements=None):
     recommended, alternative = _rank(comparison, sizes_order)
     fit_scores = {size["label"]: size["score"] for size in comparison}
 
-    confidence = fit_scores[recommended]
+    confidence = fit_scores[recommended] * confidence_factor
     if ratio_mode:
         confidence *= RATIO_MODE_CONFIDENCE_PENALTY
 
