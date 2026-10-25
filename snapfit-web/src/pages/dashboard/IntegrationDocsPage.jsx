@@ -6,6 +6,7 @@ import api from '../../services/api';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
+import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
 
@@ -240,7 +241,17 @@ const AUTH_ERRORS = [
 const RECOMMEND_VALIDATION_ERRORS = [
   { code: 'An image file is required', status: 400, meaning: 'The multipart body is missing the image field.' },
   { code: 'productId is required', status: 400, meaning: 'The productId field was empty or missing.' },
-  { code: 'userHeight must be a positive number', status: 400, meaning: 'userHeight was provided but is not a positive number.' },
+  { code: 'userHeight is required', status: 400, meaning: 'The userHeight field was empty or missing.' },
+  {
+    code: 'userHeight must be between 100 and 230 cm',
+    status: 400,
+    meaning: 'userHeight is not a number, or is outside 100–230 cm.',
+  },
+  {
+    code: 'clothingFit must be fitted, regular or loose',
+    status: 400,
+    meaning: 'clothingFit was sent with a value other than fitted, regular or loose.',
+  },
   {
     code: 'Only image files are allowed',
     status: 400,
@@ -324,11 +335,13 @@ function TryItOut() {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [productId, setProductId] = useState('');
+  const [userHeight, setUserHeight] = useState('');
+  const [clothingFit, setClothingFit] = useState('regular');
   const [file, setFile] = useState(null);
   const [sending, setSending] = useState(false);
   const [response, setResponse] = useState(null);
 
-  const canSend = Boolean(apiKey && productId && file) && !sending;
+  const canSend = Boolean(apiKey && productId && userHeight && file) && !sending;
 
   async function handleSend() {
     setSending(true);
@@ -337,6 +350,8 @@ function TryItOut() {
     const formData = new FormData();
     formData.append('image', file);
     formData.append('productId', productId);
+    formData.append('userHeight', userHeight);
+    formData.append('clothingFit', clothingFit);
 
     try {
       const res = await fetch(`${API_BASE.replace(/\/$/, '')}/recommend`, {
@@ -402,6 +417,29 @@ function TryItOut() {
             </Link>
             .
           </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            id="tryitout-height"
+            type="number"
+            label="Height (cm)"
+            min="100"
+            max="230"
+            value={userHeight}
+            onChange={(e) => setUserHeight(e.target.value)}
+            placeholder="e.g. 178"
+          />
+          <Select
+            id="tryitout-clothing-fit"
+            label="Clothing fit"
+            value={clothingFit}
+            onChange={(e) => setClothingFit(e.target.value)}
+          >
+            <option value="fitted">Fitted</option>
+            <option value="regular">Regular</option>
+            <option value="loose">Loose</option>
+          </Select>
         </div>
 
         <div>
@@ -499,7 +537,8 @@ function IntegrationDocsPage() {
   const formData = new FormData();
   formData.append('image', imageFile);
   formData.append('productId', productId);
-  // formData.append('userHeight', '178'); // optional, improves accuracy
+  formData.append('userHeight', '178'); // cm, 100–230
+  formData.append('clothingFit', 'fitted'); // fitted | regular | loose
 
   const res = await fetch('${API_BASE}/recommend', {
     method: 'POST',
@@ -511,7 +550,7 @@ function IntegrationDocsPage() {
   if (!res.ok || !data.success) {
     throw new Error(data.message);
   }
-  return data.recommendation; // { size, confidence, alternativeSize, measurements, sizeComparison, fitNotes, ... }
+  return data.recommendation; // { size, confidence, alternativeSize, measurements, sizeComparison, fitNotes, photoTips, warnings, ... }
 }`;
 
   const pythonExample = `import requests
@@ -523,7 +562,7 @@ with open("photo.jpg", "rb") as image_file:
         "${API_BASE}/recommend",
         headers={"x-api-key": API_KEY},
         files={"image": image_file},
-        data={"productId": "SKU-1029", "userHeight": "178"},
+        data={"productId": "SKU-1029", "userHeight": "178", "clothingFit": "fitted"},
     )
 
 result = response.json()
@@ -536,7 +575,8 @@ else:
   -H "x-api-key: sk_live_..." \\
   -F "image=@photo.jpg" \\
   -F "productId=SKU-1029" \\
-  -F "userHeight=178"`;
+  -F "userHeight=178" \\
+  -F "clothingFit=fitted"`;
 
   const widgetExample = `import SnapFitWidget from './SnapFitWidget';
 
@@ -575,7 +615,11 @@ else:
         ]
       }
     ],
-    "fitNotes": ["Chest is near the top of M; consider L for a looser fit."]
+    "fitNotes": ["Chest is near the top of M; consider L for a looser fit."],
+    "photoTips": [
+      { "id": "dim_light", "message": "Your photo looks dark — stand somewhere brighter for a more accurate size." }
+    ],
+    "warnings": []
   },
   "product": { "productId": "SKU-1029", "productName": "Classic Crew Tee", "imageUrl": "https://…/uploads/products/…png", "tryOnReady": true },
   "tryOn": { "status": "success", "image": "data:image/jpeg;base64,…" }
@@ -714,8 +758,15 @@ else:
                     {
                       field: 'userHeight',
                       type: 'number',
+                      required: true,
+                      description: "Shopper's height in centimeters, between 100 and 230. Scales the photo to real measurements.",
+                    },
+                    {
+                      field: 'clothingFit',
+                      type: 'string',
                       required: false,
-                      description: "Shopper's height in centimeters. Switches matching from ratio-based to measurement-based, improving accuracy.",
+                      description:
+                        'What the shopper is wearing in the photo: fitted, regular (default) or loose. Fitted clothes give the most accurate size.',
                     },
                     {
                       field: 'includeTryOn',
@@ -727,14 +778,23 @@ else:
                   ]}
                 />
                 <p>
-                  <code className="font-mono">measurements</code> are in cm (only with <code className="font-mono">userHeight</code>);
-                  chest, waist and hip are circumferences estimated from the photo (
+                  <code className="font-mono">measurements</code> are in cm; chest, waist and hip are circumferences
+                  estimated from the photo (
                   <code className="font-mono">estimated: true</code>). Size chart ranges are compared in cm whatever unit the chart
                   uses. <code className="font-mono">tryOn</code> is present only when{' '}
                   <code className="font-mono">includeTryOn</code> was sent: status <code className="font-mono">success</code>{' '}
                   (with <code className="font-mono">image</code>), <code className="font-mono">unavailable</code> (product not
                   set up for try-on) or <code className="font-mono">failed</code> (with a <code className="font-mono">message</code>) —
                   a try-on problem never fails the size recommendation.
+                </p>
+                <p>
+                  <code className="font-mono">photoTips</code> and <code className="font-mono">warnings</code> are always
+                  present (empty when there&apos;s nothing to say), each a list of{' '}
+                  <code className="font-mono">{'{ id, message }'}</code> with a shopper-ready message to show as-is.
+                  Photo tips (<code className="font-mono">dim_light</code>, <code className="font-mono">glare</code>,{' '}
+                  <code className="font-mono">cluttered_background</code>) suggest how a retake could improve accuracy;
+                  the <code className="font-mono">possible_child</code> warning is added when{' '}
+                  <code className="font-mono">userHeight</code> is under 145 cm.
                 </p>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Success response — 200</p>
                 <CodeBlock code={recommendSuccessExample} lang="json" />
@@ -778,7 +838,10 @@ else:
           </Section>
 
           <Section id="code-examples" title="Code Examples">
-            <p>All three examples send the same request: a photo, a product ID, and your API key.</p>
+            <p>
+              All three examples send the same request: a photo, a product ID, the shopper&apos;s height and what
+              they&apos;re wearing, and your API key.
+            </p>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">JavaScript</p>
             <CodeBlock code={jsExample} lang="javascript" />
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Python</p>
