@@ -29,6 +29,8 @@ const recommendationSchema = new mongoose.Schema(
     userHeight: { type: Number },
     // How the clothes the shopper wears in the photo fit.
     clothingFit: { type: String, enum: ['fitted', 'regular', 'loose'], default: 'regular' },
+    // How many photos (main image + live-camera frames) the analysis combined.
+    framesUsed: { type: Number, default: 1 },
     status: { type: String, enum: ['success', 'failed', 'low_confidence'] },
     errorMessage: { type: String },
     ipAddress: { type: String },

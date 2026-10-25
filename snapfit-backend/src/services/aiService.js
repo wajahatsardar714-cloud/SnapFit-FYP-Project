@@ -57,10 +57,13 @@ async function postForm(path, form, timeout = AI_REQUEST_TIMEOUT_MS) {
 // userHeight: shopper height in cm. clothingFit: 'fitted' | 'regular' | 'loose',
 // how the clothes in the photo fit. tryOn: optional { merchantId, productId } --
 // also renders the virtual try-on from the same photo and pose in this one call
-// (result in response.tryOn).
-async function analyzeImage(imageBuffer, sizeChart, { userHeight, clothingFit, tryOn = null } = {}) {
+// (result in response.tryOn). frames: extra live-camera frames (Buffers), sent
+// as a repeated `frames` field; response.framesUsed says how many photos the
+// analysis combined.
+async function analyzeImage(imageBuffer, sizeChart, { userHeight, clothingFit, tryOn = null, frames = [] } = {}) {
   const form = new FormData();
   form.append('image', imageBuffer, { filename: 'upload.jpg' });
+  frames.forEach((frame, i) => form.append('frames', frame, { filename: `frame-${i + 1}.jpg` }));
   form.append('size_chart', JSON.stringify(sizeChart));
   if (userHeight != null) {
     form.append('user_height', String(userHeight));
