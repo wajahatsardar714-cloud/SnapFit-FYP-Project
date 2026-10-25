@@ -49,6 +49,33 @@ describe('SizeResult', () => {
     expect(screen.getByText('Chest is near the top of M; consider L for a looser fit.')).toBeTruthy();
   });
 
+  it('shows warnings above the size', () => {
+    const warning = { id: 'possible_child', message: 'This looks like a child; check the size chart.' };
+    render(<SizeResult result={{ ...RESULT, warnings: [warning] }} />);
+
+    const warnings = screen.getByRole('list', { name: 'Warnings' });
+    expect(within(warnings).getByText(warning.message)).toBeTruthy();
+    const size = screen.getByText('M', { selector: 'div' });
+    expect(warnings.compareDocumentPosition(size) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('lists tips for a better photo', () => {
+    const tips = [
+      { id: 'dim_light', message: 'Find brighter light.' },
+      { id: 'glare', message: 'Avoid glare behind you.' },
+    ];
+    render(<SizeResult result={{ ...RESULT, photoTips: tips }} />);
+
+    const section = within(screen.getByRole('region', { name: 'Tips for a better photo' }));
+    expect(section.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Find brighter light.', 'Avoid glare behind you.']);
+  });
+
+  it('shows neither warnings nor photo tips when both are empty', () => {
+    render(<SizeResult result={{ ...RESULT, warnings: [], photoTips: [] }} />);
+    expect(screen.queryByRole('list', { name: 'Warnings' })).toBeNull();
+    expect(screen.queryByText('Tips for a better photo')).toBeNull();
+  });
+
   it('still renders a legacy result without measurements', () => {
     render(<SizeResult result={{ size: 'S', confidence: 0.4, notes: 'Proportions only.' }} />);
     expect(screen.queryByRole('table')).toBeNull();

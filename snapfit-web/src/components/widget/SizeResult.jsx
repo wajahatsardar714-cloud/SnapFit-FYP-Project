@@ -1,3 +1,6 @@
+import { useId } from 'react';
+import { AlertTriangle, Lightbulb } from 'lucide-react';
+
 const MEASUREMENT_LABELS = {
   shoulderWidth: 'Shoulders',
   chest: 'Chest',
@@ -96,8 +99,43 @@ function ComparisonTable({ result }) {
   );
 }
 
-// Size recommendation result: size, confidence bar, measurement comparison
-// against the recommended and neighbouring sizes, and fit notes.
+// Server-written warnings about the result itself (e.g. a possible child),
+// shown above the size so they're read before it.
+function Warnings({ warnings }) {
+  if (warnings.length === 0) return null;
+  return (
+    <ul aria-label="Warnings" className="mb-4 space-y-1 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-left text-sm text-foreground">
+      {warnings.map((warning) => (
+        <li key={warning.id} className="flex gap-2">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+          {warning.message}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PhotoTips({ tips }) {
+  const headingId = useId();
+  if (tips.length === 0) return null;
+  return (
+    <section aria-labelledby={headingId} className="mt-4 rounded-lg bg-surface-2 px-3 py-2 text-left">
+      <h3 id={headingId} className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+        <Lightbulb size={14} className="text-muted-foreground" aria-hidden="true" />
+        Tips for a better photo
+      </h3>
+      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
+        {tips.map((tip) => (
+          <li key={tip.id}>{tip.message}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// Size recommendation result: warnings, size, confidence bar, measurement
+// comparison against the recommended and neighbouring sizes, fit notes and
+// tips for a better photo.
 function SizeResult({ result }) {
   const tone = confidenceTone(result.confidence);
   const pct = Math.round(result.confidence * 100);
@@ -105,6 +143,8 @@ function SizeResult({ result }) {
 
   return (
     <div className="text-center">
+      <Warnings warnings={result.warnings || []} />
+
       <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
         {result.size}
       </div>
@@ -139,6 +179,8 @@ function SizeResult({ result }) {
           ))}
         </ul>
       )}
+
+      <PhotoTips tips={result.photoTips || []} />
     </div>
   );
 }
