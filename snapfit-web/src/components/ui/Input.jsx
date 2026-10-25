@@ -1,4 +1,4 @@
-import { FIELD_LABEL_CLASSES, getFieldClasses } from './fieldStyles';
+import { FIELD_ERROR_CLASSES, FIELD_LABEL_CLASSES, fieldErrorProps, getFieldClasses } from './fieldStyles';
 
 function Input({ label, error, id, className = '', ...rest }) {
   const inputId = id || rest.name;
@@ -10,8 +10,12 @@ function Input({ label, error, id, className = '', ...rest }) {
           {label}
         </label>
       )}
-      <input id={inputId} className={getFieldClasses(error, className)} {...rest} />
-      {typeof error === 'string' && error && <p className="mt-1 text-xs text-danger">{error}</p>}
+      <input id={inputId} className={getFieldClasses(error, className)} {...fieldErrorProps(inputId, error)} {...rest} />
+      {typeof error === 'string' && error && (
+        <p id={`${inputId}-error`} className={FIELD_ERROR_CLASSES}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

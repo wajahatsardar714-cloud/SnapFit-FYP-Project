@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { homePathFor } from '../../utils/roles';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
-import AuthSidePanel from './AuthSidePanel';
+import { login as content } from '../../content/auth';
+import AuthShell from './AuthShell';
 
 function LoginPage() {
   const { login } = useAuth();
@@ -34,60 +35,40 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <div className="flex w-full flex-col justify-center px-6 py-12 sm:w-[58%] sm:px-12 lg:px-20">
-        <div className="mx-auto w-full max-w-md">
-          <Link to="/login" className="text-lg font-bold text-primary">
-            SnapFit
-          </Link>
-
-          <h1 className="mt-8 text-2xl font-semibold text-foreground">Log in to SnapFit</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to your SnapFit account</p>
-
-          {formError && (
-            <div className="mt-6">
-              <Alert variant="danger" title={formError} />
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={form.email}
-              onChange={handleChange}
-              disabled={submitting}
-            />
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={form.password}
-              onChange={handleChange}
-              disabled={submitting}
-            />
-
-            <Button type="submit" loading={submitting} disabled={submitting} className="w-full">
-              {submitting ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
-            <Link to="/register" className="font-medium text-primary hover:underline">
-              Create one
-            </Link>
-          </p>
+    <AuthShell content={content}>
+      {formError && (
+        <div className="mt-6">
+          <Alert variant="danger" title={formError} />
         </div>
-      </div>
+      )}
 
-      <AuthSidePanel />
-    </div>
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <Input
+          label="Email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={form.email}
+          onChange={handleChange}
+          disabled={submitting}
+        />
+        <Input
+          label="Password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={form.password}
+          onChange={handleChange}
+          disabled={submitting}
+        />
+
+        <Button type="submit" size="lg" loading={submitting} disabled={submitting} className="w-full">
+          {submitting ? 'Signing in...' : 'Sign in'}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }
 

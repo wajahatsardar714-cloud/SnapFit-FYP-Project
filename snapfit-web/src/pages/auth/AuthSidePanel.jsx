@@ -1,31 +1,26 @@
-import { BarChart3, Camera, Ruler } from 'lucide-react';
+import { ICONS } from '../../components/public/icons';
+import { panel } from '../../content/auth';
 
-// Real product capabilities, not invented marketing copy -- size
-// recommendation, guided desktop/phone capture, and analytics are all
-// features that actually ship in this app today.
-const VALUE_PROPS = [
-  { icon: Ruler, text: 'AI-powered size recommendations from a single photo' },
-  { icon: Camera, text: 'Guided capture works on desktop or phone — no app needed' },
-  { icon: BarChart3, text: 'Track fit accuracy and cut returns with built-in analytics' },
-];
-
-// Light surface with blue accents (no blue background or gradient), per the
-// theme's usage rules. Hidden below sm: a 42/58 split has no sensible mobile layout.
+// Navy panel beside the auth form on large screens; hidden below lg, where
+// the form gets the full width.
 function AuthSidePanel() {
   return (
-    <div className="hidden border-r border-border bg-surface-2 sm:flex sm:w-[42%] sm:flex-col sm:justify-center sm:px-12 lg:px-16">
-      <div className="max-w-sm">
-        <p className="text-lg font-semibold text-foreground">Built for merchants who hate returns.</p>
-        <ul className="mt-8 space-y-6">
-          {VALUE_PROPS.map(({ icon: Icon, text }) => (
+    <aside className="hidden rounded-2xl bg-navy p-10 lg:block">
+      <p className="type-h3 text-inverse">{panel.title}</p>
+      <ul className="mt-8 space-y-6">
+        {panel.points.map(({ icon, text }) => {
+          const Icon = ICONS[icon];
+          return (
             <li key={text} className="flex items-start gap-3">
-              <Icon size={20} className="mt-0.5 shrink-0 text-primary" />
-              <span className="text-sm text-muted-foreground">{text}</span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-raised text-inverse-accent">
+                <Icon aria-hidden="true" size={18} />
+              </span>
+              <span className="pt-1.5 text-[0.9375rem] leading-relaxed text-inverse-muted">{text}</span>
             </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+          );
+        })}
+      </ul>
+    </aside>
   );
 }
 

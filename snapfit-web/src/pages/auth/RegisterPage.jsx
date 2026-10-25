@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
-import AuthSidePanel from './AuthSidePanel';
+import { register as content } from '../../content/auth';
+import AuthShell from './AuthShell';
 
 const BUSINESS_TYPES = [
   { value: '', label: 'Select a business type' },
@@ -23,6 +24,14 @@ const PASSWORD_RULES = [
   { label: 'At least 1 number', test: (pw) => /\d/.test(pw) },
   { label: 'At least 1 uppercase letter', test: (pw) => /[A-Z]/.test(pw) },
 ];
+
+// Plans a pricing link may preselect with ?plan= (backend plan ids). After
+// sign-up the merchant lands on plan selection with that plan.
+const PLAN_IDS = ['small', 'medium', 'enterprise'];
+
+function afterRegisterPath(plan) {
+  return PLAN_IDS.includes(plan) ? `/dashboard/subscription/plans?plan=${plan}` : '/dashboard';
+}
 
 const initialForm = {
   name: '',
@@ -47,6 +56,7 @@ function validate(form) {
 function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -79,7 +89,7 @@ function RegisterPage() {
       // existing "register -> already authenticated -> go straight to the
       // dashboard" behavior is the correct, real success path, not a stand-in
       // for a verification flow that doesn't exist.
-      navigate('/dashboard');
+      navigate(afterRegisterPath(searchParams.get('plan')?.toLowerCase()));
     } catch (err) {
       setFormError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -88,124 +98,104 @@ function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <div className="flex w-full flex-col justify-center px-6 py-12 sm:w-[58%] sm:px-12 lg:px-20">
-        <div className="mx-auto w-full max-w-md">
-          <Link to="/login" className="text-lg font-bold text-primary">
-            SnapFit
-          </Link>
-
-          <h1 className="mt-8 text-2xl font-semibold text-foreground">Create your merchant account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Start integrating SnapFit into your store</p>
-
-          {formError && (
-            <div className="mt-6">
-              <Alert variant="danger" title={formError} />
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
-            <Input
-              label="Full name"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              error={errors.name}
-              autoComplete="name"
-              disabled={submitting}
-            />
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              error={errors.email}
-              autoComplete="email"
-              disabled={submitting}
-            />
-
-            <div>
-              <Input
-                label="Password"
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleChange}
-                error={errors.password}
-                autoComplete="new-password"
-                disabled={submitting}
-              />
-              <ul className="mt-2 space-y-1">
-                {PASSWORD_RULES.map((rule) => {
-                  const met = rule.test(form.password);
-                  return (
-                    <li key={rule.label} className={`flex items-center gap-1.5 text-xs ${met ? 'text-success' : 'text-muted-foreground'}`}>
-                      <Check size={12} className={met ? 'text-success' : 'text-muted'} />
-                      {rule.label}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-
-            <Input
-              label="Confirm password"
-              name="confirmPassword"
-              type="password"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              error={errors.confirmPassword}
-              autoComplete="new-password"
-              disabled={submitting}
-            />
-            <Input
-              label="Business name"
-              name="businessName"
-              value={form.businessName}
-              onChange={handleChange}
-              error={errors.businessName}
-              disabled={submitting}
-            />
-            <Input
-              label="Phone (optional)"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              autoComplete="tel"
-              disabled={submitting}
-            />
-
-            <Select
-              label="Business type"
-              name="businessType"
-              value={form.businessType}
-              onChange={handleChange}
-              disabled={submitting}
-            >
-              {BUSINESS_TYPES.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-
-            <Button type="submit" loading={submitting} disabled={submitting} className="w-full">
-              {submitting ? 'Creating account...' : 'Create account'}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link to="/login" className="font-medium text-primary hover:underline">
-              Sign in
-            </Link>
-          </p>
+    <AuthShell content={content}>
+      {formError && (
+        <div className="mt-6">
+          <Alert variant="danger" title={formError} />
         </div>
-      </div>
+      )}
 
-      <AuthSidePanel />
-    </div>
+      <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
+        <Input
+          label="Full name"
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          error={errors.name}
+          autoComplete="name"
+          disabled={submitting}
+        />
+        <Input
+          label="Email"
+          name="email"
+          type="email"
+          value={form.email}
+          onChange={handleChange}
+          error={errors.email}
+          autoComplete="email"
+          disabled={submitting}
+        />
+
+        <div>
+          <Input
+            label="Password"
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            error={errors.password}
+            autoComplete="new-password"
+            disabled={submitting}
+          />
+          <ul className="mt-2 space-y-1">
+            {PASSWORD_RULES.map((rule) => {
+              const met = rule.test(form.password);
+              return (
+                <li key={rule.label} className={`flex items-center gap-1.5 text-xs ${met ? 'text-success' : 'text-muted-foreground'}`}>
+                  <Check size={12} className={met ? 'text-success' : 'text-muted'} />
+                  {rule.label}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <Input
+          label="Confirm password"
+          name="confirmPassword"
+          type="password"
+          value={form.confirmPassword}
+          onChange={handleChange}
+          error={errors.confirmPassword}
+          autoComplete="new-password"
+          disabled={submitting}
+        />
+        <Input
+          label="Business name"
+          name="businessName"
+          value={form.businessName}
+          onChange={handleChange}
+          error={errors.businessName}
+          disabled={submitting}
+        />
+        <Input
+          label="Phone (optional)"
+          name="phone"
+          value={form.phone}
+          onChange={handleChange}
+          autoComplete="tel"
+          disabled={submitting}
+        />
+
+        <Select
+          label="Business type"
+          name="businessType"
+          value={form.businessType}
+          onChange={handleChange}
+          disabled={submitting}
+        >
+          {BUSINESS_TYPES.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+
+        <Button type="submit" size="lg" loading={submitting} disabled={submitting} className="w-full">
+          {submitting ? 'Creating account...' : 'Create account'}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }
 

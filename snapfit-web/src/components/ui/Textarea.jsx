@@ -1,4 +1,4 @@
-import { FIELD_LABEL_CLASSES, getFieldClasses } from './fieldStyles';
+import { FIELD_ERROR_CLASSES, FIELD_LABEL_CLASSES, fieldErrorProps, getFieldClasses } from './fieldStyles';
 
 function Textarea({ label, error, id, className = '', rows = 4, ...rest }) {
   const textareaId = id || rest.name;
@@ -10,8 +10,12 @@ function Textarea({ label, error, id, className = '', rows = 4, ...rest }) {
           {label}
         </label>
       )}
-      <textarea id={textareaId} rows={rows} className={getFieldClasses(error, className)} {...rest} />
-      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+      <textarea id={textareaId} rows={rows} className={getFieldClasses(error, className)} {...fieldErrorProps(textareaId, error)} {...rest} />
+      {error && (
+        <p id={`${textareaId}-error`} className={FIELD_ERROR_CLASSES}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
