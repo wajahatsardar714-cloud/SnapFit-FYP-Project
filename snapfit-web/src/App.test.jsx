@@ -7,6 +7,7 @@ import App from './App';
 vi.mock('./services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
   setAccountSuspendedHandler: vi.fn(),
+  setSubscriptionRequiredHandler: vi.fn(),
 }));
 
 // The signed-in areas are stood in for by their location, so these tests stay

@@ -7,6 +7,7 @@ import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
 import { register as content } from '../../content/auth';
+import { isPlanId } from '../../utils/plans';
 import AuthShell from './AuthShell';
 
 const BUSINESS_TYPES = [
@@ -25,12 +26,10 @@ const PASSWORD_RULES = [
   { label: 'At least 1 uppercase letter', test: (pw) => /[A-Z]/.test(pw) },
 ];
 
-// Plans a pricing link may preselect with ?plan= (backend plan ids). After
-// sign-up the merchant lands on plan selection with that plan.
-const PLAN_IDS = ['small', 'medium', 'enterprise'];
-
+// A pricing link may preselect a plan with ?plan=; after sign-up the merchant
+// lands on plan selection with that plan.
 function afterRegisterPath(plan) {
-  return PLAN_IDS.includes(plan) ? `/dashboard/subscription/plans?plan=${plan}` : '/dashboard';
+  return isPlanId(plan) ? `/dashboard/subscription/plans?plan=${plan}` : '/dashboard';
 }
 
 const initialForm = {
