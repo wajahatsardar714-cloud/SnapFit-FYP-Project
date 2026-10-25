@@ -125,9 +125,9 @@ function DashboardHomePage() {
     );
   }
 
+  // The subscription gate only lets subscribed merchants reach this page.
   const subscription = merchant.subscription;
   const usage = dashboard.usage;
-  const hasSelectedPlan = Boolean(subscription?.startDate);
   const pct =
     usage.requestsLimit == null ? 0 : Math.min(100, Math.round((usage.requestsUsed / usage.requestsLimit) * 100));
   const nearLimit = usage.requestsLimit != null && pct > 80;
@@ -162,11 +162,7 @@ function DashboardHomePage() {
             )
           }
         />
-        <StatCard
-          label="Active Plan"
-          value={hasSelectedPlan ? formatPlanName(subscription.plan) : 'None'}
-          sub={hasSelectedPlan ? subscription.status : 'No plan selected yet'}
-        />
+        <StatCard label="Active Plan" value={formatPlanName(subscription.plan)} sub={subscription.status} />
         <StatCard
           label="Confidence Avg"
           value={confidencePct != null ? `${confidencePct}%` : '—'}
@@ -237,9 +233,7 @@ function DashboardHomePage() {
           <Card>
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-foreground">Plan Usage</span>
-              <Badge variant={hasSelectedPlan ? PLAN_STATUS_BADGE_VARIANT[subscription.status] || 'neutral' : 'neutral'}>
-                {hasSelectedPlan ? subscription.status : 'inactive'}
-              </Badge>
+              <Badge variant={PLAN_STATUS_BADGE_VARIANT[subscription.status] || 'neutral'}>{subscription.status}</Badge>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
               <span>
@@ -252,10 +246,10 @@ function DashboardHomePage() {
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
               </div>
             )}
-            {(nearLimit || !hasSelectedPlan) && (
+            {nearLimit && (
               <Link to="/dashboard/subscription/plans" className="mt-3 block">
                 <Button variant="secondary" size="sm" className="w-full">
-                  {hasSelectedPlan ? "You're nearing your plan limit — Upgrade" : 'Choose a Plan'}
+                  You&apos;re nearing your plan limit — Upgrade
                 </Button>
               </Link>
             )}
