@@ -9,6 +9,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.feature_engine import calculate_features
+from app.gpu_try_on import generate_gpu_try_on, gpu_try_on_config
 from app.measurement_engine import estimate_measurements
 from app.pose_estimator import PoseEstimationError, extract_landmarks
 from app.pose_validator import PoseInvalidError, assert_valid_pose
@@ -66,7 +67,9 @@ TRY_ON_ERROR_STATUS = {"TRYON_NOT_AVAILABLE": 404, "BACKEND_UNREACHABLE": 502, "
 
 
 async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
-    """Try-on image as a data URL. Raises TryOnError with a code on failure."""
+    """{"image": data URL, "engine": "catvton" | "warp"}. Uses the remote GPU
+    model when configured and falls back to the local warp if it fails.
+    Raises TryOnError with a code when neither can produce an image."""
     try:
         anchor_points, product_image_url = await fetch_product_anchor_data(merchant_id, product_id)
     except httpx.HTTPError:
@@ -76,8 +79,17 @@ async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
     except httpx.HTTPError:
         raise TryOnError("PRODUCT_IMAGE_UNREACHABLE")
 
-    result_bytes = generate_try_on(image_bytes, product_image_bytes, anchor_points, pose=pose, ease=ease)
-    return f"data:image/jpeg;base64,{base64.b64encode(result_bytes).decode('ascii')}"
+    engine = "warp"
+    result_bytes = None
+    if gpu_try_on_config():
+        try:
+            result_bytes = await generate_gpu_try_on(image_bytes, product_image_bytes, pose, ease)
+            engine = "catvton"
+        except TryOnError as e:
+            logger.warning(f"GPU try-on failed ({e}); using the local warp")
+    if result_bytes is None:
+        result_bytes = generate_try_on(image_bytes, product_image_bytes, anchor_points, pose=pose, ease=ease)
+    return {"image": f"data:image/jpeg;base64,{base64.b64encode(result_bytes).decode('ascii')}", "engine": engine}
 
 
 @app.get("/health")
@@ -133,8 +145,7 @@ async def analyze(
     try_on_result = None
     if try_on_product_id and merchant_id:
         try:
-            image_url = await _render_try_on(image_bytes, pose, merchant_id, try_on_product_id, garment_ease(match))
-            try_on_result = {"image": image_url}
+            try_on_result = await _render_try_on(image_bytes, pose, merchant_id, try_on_product_id, garment_ease(match))
         except TryOnError as e:
             try_on_result = {"error": str(e).split(":")[0]}
 
@@ -188,7 +199,7 @@ async def try_on(
         raise _pose_invalid_exception(e)
 
     try:
-        return {"image": await _render_try_on(image_bytes, pose, merchant_id, product_id)}
+        return await _render_try_on(image_bytes, pose, merchant_id, product_id)
     except TryOnError as e:
         code = str(e).split(":")[0]
         raise HTTPException(status_code=TRY_ON_ERROR_STATUS.get(code, 422), detail=code)

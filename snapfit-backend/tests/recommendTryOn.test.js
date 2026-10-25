@@ -68,13 +68,13 @@ const requestsUsed = async () => (await Merchant.findById(merchant._id)).subscri
 
 describe('POST /api/recommend with includeTryOn=true', () => {
   it('returns the size and the try-on from one AI call, billed once', async () => {
-    analyzeImage.mockResolvedValue(aiResult({ image: TRY_ON_IMAGE }));
+    analyzeImage.mockResolvedValue(aiResult({ image: TRY_ON_IMAGE, engine: 'catvton' }));
 
     const res = await post('/api/recommend', 'SKU-READY', { includeTryOn: 'true' });
 
     expect(res.status).toBe(200);
     expect(res.body.recommendation.size).toBe('M');
-    expect(res.body.tryOn).toEqual({ status: 'success', image: TRY_ON_IMAGE });
+    expect(res.body.tryOn).toEqual({ status: 'success', image: TRY_ON_IMAGE, engine: 'catvton' });
     expect(analyzeImage).toHaveBeenCalledTimes(1);
     expect(analyzeImage.mock.calls[0][3]).toEqual({ merchantId: merchant._id, productId: 'SKU-READY' });
     expect(tryOnImage).not.toHaveBeenCalled();
