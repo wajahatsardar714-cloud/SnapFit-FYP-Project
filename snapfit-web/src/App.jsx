@@ -1,37 +1,47 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import DashboardLayout from './layouts/DashboardLayout';
-import AdminLayout from './layouts/AdminLayout';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import DashboardHomePage from './pages/dashboard/DashboardHomePage';
-import SubscriptionStatusPage from './pages/dashboard/SubscriptionStatusPage';
-import PlanSelectionPage from './pages/dashboard/PlanSelectionPage';
-import ApiKeyPage from './pages/dashboard/ApiKeyPage';
-import SizeChartsPage from './pages/dashboard/SizeChartsPage';
-import CreateSizeChartPage from './pages/dashboard/CreateSizeChartPage';
-import ProductMappingPage from './pages/dashboard/ProductMappingPage';
-import AnchorPointsPage from './pages/dashboard/AnchorPointsPage';
-import AnalyticsDashboardPage from './pages/dashboard/AnalyticsDashboardPage';
-import IntegrationDocsPage from './pages/dashboard/IntegrationDocsPage';
-import SettingsPage from './pages/dashboard/SettingsPage';
-import SizeCheckDemo from './pages/demo/SizeCheckDemo';
-import AiTestPage from './pages/demo/AiTestPage';
-import MobileCapturePage from './pages/mobile/MobileCapturePage';
-import AdminOverviewPage from './pages/admin/AdminOverviewPage';
-import AdminMerchantsPage from './pages/admin/AdminMerchantsPage';
-import AdminMerchantDetailPage from './pages/admin/AdminMerchantDetailPage';
-import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
-import AdminDemoStudioPage from './pages/admin/AdminDemoStudioPage';
-import AdminAuditLogPage from './pages/admin/AdminAuditLogPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import PageLoader from './components/PageLoader';
+import PublicLayout from './layouts/PublicLayout';
 import { ROLES } from './utils/roles';
+
+// Every page is its own chunk, so a visitor on the public site downloads none
+// of the dashboard, admin or camera code (and the reverse).
+const HomePage = lazy(() => import('./pages/public/HomePage'));
+const PricingPage = lazy(() => import('./pages/public/PricingPage'));
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
+const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'));
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
+const DashboardHomePage = lazy(() => import('./pages/dashboard/DashboardHomePage'));
+const SubscriptionStatusPage = lazy(() => import('./pages/dashboard/SubscriptionStatusPage'));
+const PlanSelectionPage = lazy(() => import('./pages/dashboard/PlanSelectionPage'));
+const ApiKeyPage = lazy(() => import('./pages/dashboard/ApiKeyPage'));
+const SizeChartsPage = lazy(() => import('./pages/dashboard/SizeChartsPage'));
+const CreateSizeChartPage = lazy(() => import('./pages/dashboard/CreateSizeChartPage'));
+const ProductMappingPage = lazy(() => import('./pages/dashboard/ProductMappingPage'));
+const AnchorPointsPage = lazy(() => import('./pages/dashboard/AnchorPointsPage'));
+const AnalyticsDashboardPage = lazy(() => import('./pages/dashboard/AnalyticsDashboardPage'));
+const IntegrationDocsPage = lazy(() => import('./pages/dashboard/IntegrationDocsPage'));
+const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'));
+const SizeCheckDemo = lazy(() => import('./pages/demo/SizeCheckDemo'));
+const AiTestPage = lazy(() => import('./pages/demo/AiTestPage'));
+const MobileCapturePage = lazy(() => import('./pages/mobile/MobileCapturePage'));
+const AdminOverviewPage = lazy(() => import('./pages/admin/AdminOverviewPage'));
+const AdminMerchantsPage = lazy(() => import('./pages/admin/AdminMerchantsPage'));
+const AdminMerchantDetailPage = lazy(() => import('./pages/admin/AdminMerchantDetailPage'));
+const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage'));
+const AdminDemoStudioPage = lazy(() => import('./pages/admin/AdminDemoStudioPage'));
+const AdminAuditLogPage = lazy(() => import('./pages/admin/AdminAuditLogPage'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 
 function App() {
   return (
-    <BrowserRouter>
+    // Navigations run as transitions: the current page stays on screen while
+    // the next page's chunk loads, instead of flashing the loader.
+    <BrowserRouter future={{ v7_startTransition: true }}>
       <AuthProvider>
         <Toaster
           position="top-right"
@@ -48,62 +58,60 @@ function App() {
             },
           }}
         />
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/demo/size-check" element={<SizeCheckDemo />} />
-          <Route path="/test/ai" element={<AiTestPage />} />
-          <Route path="/mobile-capture/:sessionId" element={<MobileCapturePage />} />
+        <Suspense fallback={<PageLoader fullScreen />}>
+          <Routes>
+            {/* Public site: shared header and footer around each page. */}
+            <Route element={<PublicLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+            </Route>
 
-          {/*
-            Login/Register are full-viewport split-screen pages (Theme F.4) --
-            they render their own logo and have no room for a wrapping top
-            nav, so they're standalone routes rather than nested under
-            PublicLayout. PublicLayout (added in F.3) is kept for a future
-            landing/marketing page, matching its own "if any exist" framing;
-            it has no route using it right now.
-          */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+            <Route path="/demo/size-check" element={<SizeCheckDemo />} />
+            <Route path="/test/ai" element={<AiTestPage />} />
+            <Route path="/mobile-capture/:sessionId" element={<MobileCapturePage />} />
 
-          <Route
-            path="/dashboard/*"
-            element={
-              <ProtectedRoute role={ROLES.MERCHANT}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardHomePage />} />
-            <Route path="subscription" element={<SubscriptionStatusPage />} />
-            <Route path="subscription/plans" element={<PlanSelectionPage />} />
-            <Route path="api-key" element={<ApiKeyPage />} />
-            <Route path="size-charts" element={<SizeChartsPage />} />
-            <Route path="size-charts/new" element={<CreateSizeChartPage />} />
-            <Route path="size-charts/:id/edit" element={<CreateSizeChartPage />} />
-            <Route path="product-mapping" element={<ProductMappingPage />} />
-            <Route path="product-mapping/:id/anchor-points" element={<AnchorPointsPage />} />
-            <Route path="analytics" element={<AnalyticsDashboardPage />} />
-            <Route path="docs" element={<IntegrationDocsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
+            <Route
+              path="/dashboard/*"
+              element={
+                <ProtectedRoute role={ROLES.MERCHANT}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<DashboardHomePage />} />
+              <Route path="subscription" element={<SubscriptionStatusPage />} />
+              <Route path="subscription/plans" element={<PlanSelectionPage />} />
+              <Route path="api-key" element={<ApiKeyPage />} />
+              <Route path="size-charts" element={<SizeChartsPage />} />
+              <Route path="size-charts/new" element={<CreateSizeChartPage />} />
+              <Route path="size-charts/:id/edit" element={<CreateSizeChartPage />} />
+              <Route path="product-mapping" element={<ProductMappingPage />} />
+              <Route path="product-mapping/:id/anchor-points" element={<AnchorPointsPage />} />
+              <Route path="analytics" element={<AnalyticsDashboardPage />} />
+              <Route path="docs" element={<IntegrationDocsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
 
-          <Route
-            path="/admin/*"
-            element={
-              <ProtectedRoute role={ROLES.SUPER_ADMIN}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminOverviewPage />} />
-            <Route path="merchants" element={<AdminMerchantsPage />} />
-            <Route path="merchants/:id" element={<AdminMerchantDetailPage />} />
-            <Route path="analytics" element={<AdminAnalyticsPage />} />
-            <Route path="demo" element={<AdminDemoStudioPage />} />
-            <Route path="audit-log" element={<AdminAuditLogPage />} />
-            <Route path="settings" element={<AdminSettingsPage />} />
-          </Route>
-        </Routes>
+            <Route
+              path="/admin/*"
+              element={
+                <ProtectedRoute role={ROLES.SUPER_ADMIN}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminOverviewPage />} />
+              <Route path="merchants" element={<AdminMerchantsPage />} />
+              <Route path="merchants/:id" element={<AdminMerchantDetailPage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="demo" element={<AdminDemoStudioPage />} />
+              <Route path="audit-log" element={<AdminAuditLogPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+            </Route>
+          </Routes>
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
   );
