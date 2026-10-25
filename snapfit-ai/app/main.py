@@ -1,7 +1,9 @@
+import asyncio
 import base64
 import json
 import logging
 import time
+from contextlib import asynccontextmanager
 from typing import Optional
 
 import httpx
@@ -18,7 +20,7 @@ from app.config import (
     USER_HEIGHT_MIN_CM,
 )
 from app.feature_engine import calculate_features
-from app.gpu_try_on import generate_gpu_try_on, gpu_try_on_config
+from app.gpu_try_on import generate_gpu_try_on, gpu_health, gpu_try_on_config
 from app.measurement_engine import estimate_measurements
 from app.photo_quality import photo_tips
 from app.pose_estimator import PoseEstimationError, extract_landmarks
@@ -30,7 +32,29 @@ from app.utils import calculate_confidence, decode_image, validate_image
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("snapfit-ai")
 
-app = FastAPI(title="SnapFit AI Service")
+
+async def _warm_up_gpu(config):
+    """Wakes the remote GPU try-on server (and its tunnel) so the first shopper
+    doesn't wait for it, and logs whether it is reachable."""
+    try:
+        gpu = await gpu_health(config)
+    except TryOnError:
+        logger.warning(f"GPU try-on server unreachable at {config[0]}; try-ons use the local warp until it answers")
+        return
+    logger.info(f"GPU try-on server reachable ({gpu})")
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    # Fire-and-forget: startup never waits for, or fails on, the GPU server.
+    config = gpu_try_on_config()
+    warm_up = asyncio.create_task(_warm_up_gpu(config)) if config else None
+    yield
+    if warm_up:
+        warm_up.cancel()
+
+
+app = FastAPI(title="SnapFit AI Service", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

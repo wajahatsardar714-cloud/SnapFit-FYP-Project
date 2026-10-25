@@ -43,6 +43,25 @@ pipeline = CatVTONPipeline(
 mask_processor = VaeImageProcessor(vae_scale_factor=8, do_normalize=False, do_binarize=True, do_convert_grayscale=True)
 # One generation at a time: the GPU has room for a single 768x1024 run.
 gpu_lock = threading.Lock()
+# Steps for the start-up warm-up run: enough to load the CUDA kernels and
+# allocate memory at full size, so the first shopper doesn't pay for it.
+WARM_UP_STEPS = 2
+
+
+def _warm_up():
+    blank = Image.new("RGB", (WIDTH, HEIGHT), "white")
+    with torch.inference_mode():
+        pipeline(
+            image=blank,
+            condition_image=blank,
+            mask=Image.new("L", (WIDTH, HEIGHT), 255),
+            num_inference_steps=WARM_UP_STEPS,
+            guidance_scale=2.5,
+            generator=torch.Generator(device="cuda").manual_seed(0),
+        )
+
+
+_warm_up()
 
 app = FastAPI(title="SnapFit CatVTON")
 

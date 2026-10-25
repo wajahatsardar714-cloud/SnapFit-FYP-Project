@@ -30,7 +30,8 @@ starting with:
 %%writefile /kaggle/working/CatVTON/snapfit_server.py
 ```
 
-**3. Load the model and start the server** (use the token from `snapfit-ai/.env`)
+**3. Load the model and start the server** (use the token from `snapfit-ai/.env`;
+the import also runs one short warm-up generation, so the first try-on isn't slow)
 ```python
 import os, sys, threading, uvicorn
 os.environ["SNAPFIT_TRYON_TOKEN"] = "<TRYON_GPU_TOKEN>"
@@ -60,6 +61,8 @@ and start the AI service with `--env-file .env`:
 ```
 .venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
 ```
+On startup the AI service calls the server's `/health` in the background and
+logs `GPU try-on server reachable (<GPU name>)` or an "unreachable" warning.
 
 ## Notes
 
