@@ -19,7 +19,14 @@ import {
   validateProductImageFile,
 } from '../../utils/productImage';
 
-const initialForm = { productId: '', productName: '', sizeChartId: '' };
+// Matches the backend's mapping.garmentLength values (default regular).
+const GARMENT_LENGTHS = {
+  cropped: { label: 'Cropped', ends: 'ends at the waist' },
+  regular: { label: 'Regular', ends: 'ends at the hips' },
+  long: { label: 'Long', ends: 'ends at mid-thigh' },
+};
+
+const initialForm = { productId: '', productName: '', sizeChartId: '', garmentLength: 'regular' };
 
 function validateMappingForm({ productId, sizeChartId }) {
   const errors = {};
@@ -292,6 +299,24 @@ function ProductMappingPage() {
                   )}
                 </div>
                 <div className="sm:col-span-2">
+                  <Select
+                    id="mapping-garmentLength"
+                    name="garmentLength"
+                    label="Garment length"
+                    value={form.garmentLength}
+                    onChange={handleChange}
+                  >
+                    {Object.entries(GARMENT_LENGTHS).map(([value, { label, ends }]) => (
+                      <option key={value} value={value}>
+                        {label} — {ends}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Try-on replaces the shopper&apos;s own top down to this length.
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
                   <span className={FIELD_LABEL_CLASSES}>Product image (optional, for try-on)</span>
                   <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border px-4 py-3 text-sm transition-colors duration-150 hover:border-primary">
                     <ImagePlus size={18} className="shrink-0 text-muted" />
@@ -341,6 +366,7 @@ function ProductMappingPage() {
                       <th className="px-6 py-3">Product ID</th>
                       <th className="px-6 py-3">Product Name</th>
                       <th className="px-6 py-3">Size Chart</th>
+                      <th className="px-6 py-3">Length</th>
                       <th className="px-6 py-3">Try-On</th>
                       <th className="px-6 py-3" aria-hidden="true"></th>
                     </tr>
@@ -355,6 +381,9 @@ function ProductMappingPage() {
                         <td className="px-6 py-3">{mapping.productName || '—'}</td>
                         <td className="px-6 py-3">
                           {mapping.sizeChartId?.name || <span className="text-muted">Chart deleted</span>}
+                        </td>
+                        <td className="px-6 py-3 text-muted-foreground">
+                          {(GARMENT_LENGTHS[mapping.garmentLength] || GARMENT_LENGTHS.regular).label}
                         </td>
                         <td className="px-6 py-3">
                           <TryOnCell
