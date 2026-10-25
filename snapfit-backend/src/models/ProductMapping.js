@@ -24,6 +24,10 @@ const productMappingSchema = new mongoose.Schema(
       hipLeft: { type: anchorPointSchema },
       hipRight: { type: anchorPointSchema },
     },
+    // Where the garment ends on the body (cropped: waist, regular: hips, long:
+    // mid-thigh). The AI try-on uses it to decide how far down the shopper's own
+    // top gets repainted.
+    garmentLength: { type: String, enum: ['cropped', 'regular', 'long'], default: 'regular' },
   },
   { timestamps: true }
 );

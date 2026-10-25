@@ -76,7 +76,7 @@ async function mapProduct(req, res) {
     await discardUpload(req);
     return undefined;
   }
-  const { productId, productName, sizeChartId } = req.body;
+  const { productId, productName, sizeChartId, garmentLength } = req.body;
 
   try {
     const chart = await SizeChart.findOne({ _id: sizeChartId, merchantId: req.merchant.merchantId });
@@ -85,7 +85,7 @@ async function mapProduct(req, res) {
       return res.status(404).json({ message: 'Size chart not found' });
     }
 
-    const update = { productName, sizeChartId };
+    const update = { productName, sizeChartId, garmentLength };
     let previousImage = null;
     if (req.file) {
       const existing = await ProductMapping.findOne({ merchantId: req.merchant.merchantId, productId });
@@ -244,6 +244,7 @@ async function getAnchorPointsForProduct(req, res) {
     return res.status(200).json({
       anchorPoints: mapping.anchorPoints,
       imageUrl: `${req.protocol}://${req.get('host')}${mapping.productImage}`,
+      garmentLength: mapping.garmentLength,
     });
   } catch (err) {
     if (err.name === 'CastError') {

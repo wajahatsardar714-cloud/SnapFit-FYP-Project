@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const { protect } = require('../middlewares/authMiddleware');
+const ProductMapping = require('../models/ProductMapping');
 const { uploadProductImage } = require('../utils/productImageUpload');
 const {
   mapProduct,
@@ -25,6 +26,10 @@ const mapValidation = [
     .bail()
     .isMongoId()
     .withMessage('Invalid size chart ID'),
+  body('garmentLength')
+    .optional()
+    .isIn(ProductMapping.schema.path('garmentLength').enumValues)
+    .withMessage('Garment length must be cropped, regular or long'),
 ];
 
 // Internal, service-to-service lookup for the AI microservice's try-on endpoint
