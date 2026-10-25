@@ -29,6 +29,11 @@ export default {
         warning: { DEFAULT: token('warning'), soft: 'var(--color-warning-soft)' },
         danger: { DEFAULT: token('danger'), soft: 'var(--color-danger-soft)' },
         overlay: token('overlay'),
+        admin: {
+          DEFAULT: token('admin'),
+          soft: 'var(--color-admin-soft)',
+          foreground: token('admin-foreground'),
+        },
       },
       // Focus-ring offsets take the page background instead of always white.
       ringOffsetColor: {

@@ -12,4 +12,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// The backend answers any call from a suspended account with a 403 whose
+// message mentions the suspension. AuthProvider registers how to end the
+// session; the login form shows that message itself, so its call is skipped.
+let onAccountSuspended = null;
+
+export function setAccountSuspendedHandler(handler) {
+  onAccountSuspended = handler;
+}
+
+export function isSuspendedError(error) {
+  return error.response?.status === 403 && /suspended/i.test(error.response.data?.message || '');
+}
+
+api.interceptors.response.use(undefined, (error) => {
+  if (isSuspendedError(error) && error.config?.url !== '/auth/login') {
+    onAccountSuspended?.(error.response.data.message);
+  }
+  return Promise.reject(error);
+});
+
 export default api;

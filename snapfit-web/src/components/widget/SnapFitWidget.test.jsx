@@ -272,3 +272,34 @@ describe('SnapFitWidget loading', () => {
     expect(screen.getByText('0 s elapsed')).toBeTruthy();
   });
 });
+
+describe('SnapFitWidget authentication', () => {
+  it('sends the merchant API key to /recommend', async () => {
+    respondWith({});
+    await getMySize();
+
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe('https://api.test/api/recommend');
+    expect(init.headers).toEqual({ 'x-api-key': 'sk_live_test' });
+  });
+
+  it('sends an admin token as a bearer to its own endpoint, with no API key', async () => {
+    respondWith({});
+    render(
+      <SnapFitWidget
+        authToken="admin.jwt"
+        endpoint="/admin/demo/recommend?merchantId=m1"
+        productId="SKU-1"
+        apiUrl="https://api.test/api/"
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Check My Size' }));
+    fireEvent.click(screen.getByRole('button', { name: /Upload a Photo/ }));
+    uploadPhoto();
+    await submitForm();
+
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe('https://api.test/api/admin/demo/recommend?merchantId=m1');
+    expect(init.headers).toEqual({ Authorization: 'Bearer admin.jwt' });
+  });
+});

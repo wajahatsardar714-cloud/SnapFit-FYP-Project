@@ -36,6 +36,8 @@ const DARK = {
 };
 
 const SHARED_NAMES = ['success', 'success-soft', 'warning', 'warning-soft', 'danger', 'danger-soft', 'overlay'];
+// The super admin console's own accent (values differ per theme).
+const ADMIN_NAMES = ['admin', 'admin-soft', 'admin-foreground'];
 
 function block(selector) {
   const start = css.indexOf(selector);
@@ -76,7 +78,7 @@ describe('theme.css', () => {
   });
 
   it('defines every token in both themes', () => {
-    const expected = [...Object.keys(LIGHT), ...SHARED_NAMES].sort();
+    const expected = [...Object.keys(LIGHT), ...SHARED_NAMES, ...ADMIN_NAMES].sort();
     expect(Object.keys(light).sort()).toEqual(expected);
     expect(Object.keys(dark).sort()).toEqual(expected);
   });

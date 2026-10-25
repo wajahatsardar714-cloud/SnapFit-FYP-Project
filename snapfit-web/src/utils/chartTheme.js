@@ -23,6 +23,7 @@ export function getChartTheme(readToken = cssTokenReader()) {
   const mutedForeground = readToken('muted-foreground');
   return {
     primary: rgb(primary),
+    admin: rgb(readToken('admin')),
     series: [rgb(primary), rgb(primary, 0.75), rgb(primary, 0.55), rgb(primary, 0.35), rgb(mutedForeground), rgb(readToken('muted'))],
     grid: rgb(readToken('border')),
     axis: rgb(mutedForeground),

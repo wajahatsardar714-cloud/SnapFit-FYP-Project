@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { homePathFor } from '../../utils/roles';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
@@ -23,8 +24,8 @@ function LoginPage() {
     setFormError('');
     setSubmitting(true);
     try {
-      await login(form.email, form.password);
-      navigate('/dashboard');
+      const account = await login(form.email, form.password);
+      navigate(homePathFor(account));
     } catch (err) {
       setFormError(err.response?.data?.message || 'Invalid email or password.');
     } finally {
@@ -41,7 +42,7 @@ function LoginPage() {
           </Link>
 
           <h1 className="mt-8 text-2xl font-semibold text-foreground">Log in to SnapFit</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to your merchant account</p>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to your SnapFit account</p>
 
           {formError && (
             <div className="mt-6">

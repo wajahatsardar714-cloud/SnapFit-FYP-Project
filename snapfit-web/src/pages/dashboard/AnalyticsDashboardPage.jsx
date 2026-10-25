@@ -21,6 +21,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import StatCard from '../../components/ui/StatCard';
 import { useChartTheme } from '../../utils/chartTheme';
+import { saveBlob } from '../../utils/download';
 
 const AUTO_REFRESH_MS = 60000;
 const PERIOD_OPTIONS = [
@@ -325,14 +326,7 @@ function AnalyticsDashboardPage() {
     setExporting(true);
     try {
       const res = await api.get('/analytics/export', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `recommendations-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      saveBlob(new Blob([res.data], { type: 'text/csv' }), `recommendations-${new Date().toISOString().slice(0, 10)}.csv`);
     } catch {
       toast.error('Failed to export report');
     } finally {

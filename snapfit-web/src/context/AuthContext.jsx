@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import toast from 'react-hot-toast';
+import api, { setAccountSuspendedHandler } from '../services/api';
+import { roleOf } from '../utils/roles';
 
 const AuthContext = createContext(null);
 
@@ -51,6 +53,17 @@ export function AuthProvider({ children }) {
     navigate('/login');
   }, [navigate]);
 
+  // A suspension can land on any request (e.g. an admin suspends the account
+  // mid-session): end the session and say why. One toast id, so parallel
+  // failing requests don't stack copies.
+  useEffect(() => {
+    setAccountSuspendedHandler((message) => {
+      toast.error(message, { id: 'account-suspended' });
+      logout();
+    });
+    return () => setAccountSuspendedHandler(null);
+  }, [logout]);
+
   const updateMerchant = useCallback((patch) => {
     setMerchant((prev) => (prev ? { ...prev, ...patch } : prev));
   }, []);
@@ -60,6 +73,7 @@ export function AuthProvider({ children }) {
     token,
     loading,
     isAuthenticated: Boolean(merchant),
+    role: merchant ? roleOf(merchant) : null,
     login,
     register,
     logout,

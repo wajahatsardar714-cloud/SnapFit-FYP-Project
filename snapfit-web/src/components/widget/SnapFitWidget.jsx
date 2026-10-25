@@ -45,7 +45,19 @@ function heightError(heightValue) {
   return '';
 }
 
-function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size', autoCapture = true }) {
+// Authenticates with the merchant's `apiKey` (the public widget), or -- for
+// the super admin demo studio -- with a signed-in `authToken` sent as a bearer
+// token, together with an `endpoint` that accepts it. `endpoint` is the
+// recommend path relative to `apiUrl`.
+function SnapFitWidget({
+  apiKey,
+  authToken,
+  endpoint = '/recommend',
+  productId,
+  apiUrl,
+  buttonLabel = 'Check My Size',
+  autoCapture = true,
+}) {
   const [isDesktop] = useState(isLikelyDesktop);
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState('form'); // form | loading | result | error
@@ -70,7 +82,11 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
   const fileInputRef = useRef(null);
   const fieldId = useId();
 
-  const isConfigured = Boolean(apiKey && productId && apiUrl);
+  const isConfigured = Boolean((apiKey || authToken) && productId && apiUrl);
+  const authHeaders = apiKey ? { 'x-api-key': apiKey } : { Authorization: `Bearer ${authToken}` };
+  // The phone handoff sessions are API-key authed, so a token-only widget
+  // offers camera and upload only.
+  const offersPhone = isDesktop && Boolean(apiKey);
   const heightValue = heightToCm(heightUnit, heightCm, heightFeet, heightInches);
   const heightMessage = heightError(heightValue);
   const showHeightError = heightTouched && Boolean(heightMessage);
@@ -163,9 +179,9 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
     formData.append('includeTryOn', String(INCLUDE_TRY_ON));
 
     try {
-      const res = await fetch(`${apiUrl.replace(/\/$/, '')}/recommend`, {
+      const res = await fetch(`${apiUrl.replace(/\/$/, '')}${endpoint}`, {
         method: 'POST',
-        headers: { 'x-api-key': apiKey },
+        headers: authHeaders,
         body: formData,
       });
 
@@ -221,7 +237,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                 <p className="mt-1 text-sm text-muted-foreground">Take or upload a full-body photo and we'll estimate your best fit.</p>
 
                 {!inputMode && (
-                  <div className={`mt-5 grid gap-3 ${isDesktop ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  <div className={`mt-5 grid gap-3 ${offersPhone ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     <button
                       type="button"
                       onClick={() => setInputMode('camera')}
@@ -238,7 +254,7 @@ function SnapFitWidget({ apiKey, productId, apiUrl, buttonLabel = 'Check My Size
                       <ImagePlus size={22} className="text-muted-foreground" />
                       Upload a Photo
                     </button>
-                    {isDesktop && (
+                    {offersPhone && (
                       <button
                         type="button"
                         onClick={() => setInputMode('phone')}

@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './layouts/DashboardLayout';
+import AdminLayout from './layouts/AdminLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import DashboardHomePage from './pages/dashboard/DashboardHomePage';
@@ -19,6 +20,14 @@ import SettingsPage from './pages/dashboard/SettingsPage';
 import SizeCheckDemo from './pages/demo/SizeCheckDemo';
 import AiTestPage from './pages/demo/AiTestPage';
 import MobileCapturePage from './pages/mobile/MobileCapturePage';
+import AdminOverviewPage from './pages/admin/AdminOverviewPage';
+import AdminMerchantsPage from './pages/admin/AdminMerchantsPage';
+import AdminMerchantDetailPage from './pages/admin/AdminMerchantDetailPage';
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
+import AdminDemoStudioPage from './pages/admin/AdminDemoStudioPage';
+import AdminAuditLogPage from './pages/admin/AdminAuditLogPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import { ROLES } from './utils/roles';
 
 function App() {
   return (
@@ -59,7 +68,7 @@ function App() {
           <Route
             path="/dashboard/*"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute role={ROLES.MERCHANT}>
                 <DashboardLayout />
               </ProtectedRoute>
             }
@@ -76,6 +85,23 @@ function App() {
             <Route path="analytics" element={<AnalyticsDashboardPage />} />
             <Route path="docs" element={<IntegrationDocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+          </Route>
+
+          <Route
+            path="/admin/*"
+            element={
+              <ProtectedRoute role={ROLES.SUPER_ADMIN}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminOverviewPage />} />
+            <Route path="merchants" element={<AdminMerchantsPage />} />
+            <Route path="merchants/:id" element={<AdminMerchantDetailPage />} />
+            <Route path="analytics" element={<AdminAnalyticsPage />} />
+            <Route path="demo" element={<AdminDemoStudioPage />} />
+            <Route path="audit-log" element={<AdminAuditLogPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
         </Routes>
       </AuthProvider>

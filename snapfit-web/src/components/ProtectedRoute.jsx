@@ -1,9 +1,12 @@
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { homePathFor } from '../utils/roles';
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+// `role` (optional) limits the area to one account role; the other role is
+// sent to its own home instead (a merchant hitting /admin lands on /dashboard).
+function ProtectedRoute({ role, children }) {
+  const { isAuthenticated, loading, merchant, role: currentRole } = useAuth();
 
   if (loading) {
     return (
@@ -15,6 +18,10 @@ function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (role && currentRole !== role) {
+    return <Navigate to={homePathFor(merchant)} replace />;
   }
 
   return children;
