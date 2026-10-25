@@ -30,7 +30,7 @@ const MERCHANT = {
   email: 'blue@shop.dev',
   status: 'active',
   hasApiKey: true,
-  subscription: { plan: 'basic', status: 'active', requestsLimit: 500, requestsUsed: 120, endDate: null },
+  subscription: { plan: 'small', status: 'active', requestsLimit: 500, requestsUsed: 120, endDate: null },
   createdAt: '2026-01-02T00:00:00.000Z',
   counts: { sizeCharts: 1, products: 2, recommendations: 3 },
 };
@@ -61,17 +61,30 @@ beforeEach(() => {
 });
 
 describe('AdminMerchantDetailPage limits editor', () => {
+  it('offers the small, medium and enterprise plans, starting from the current one', async () => {
+    renderPage();
+    await limitsForm();
+
+    const plan = screen.getByLabelText('Plan');
+    expect(plan.value).toBe('small');
+    expect([...plan.options].map((option) => [option.value, option.textContent])).toEqual([
+      ['small', 'Small'],
+      ['medium', 'Medium'],
+      ['enterprise', 'Enterprise'],
+    ]);
+  });
+
   it('sends only what changed, a cleared limit as unlimited (null) and the usage reset', async () => {
     renderPage();
     await limitsForm();
 
-    fireEvent.change(screen.getByLabelText('Plan'), { target: { value: 'pro' } });
+    fireEvent.change(screen.getByLabelText('Plan'), { target: { value: 'medium' } });
     fireEvent.click(screen.getByLabelText('Unlimited requests'));
     fireEvent.click(screen.getByLabelText('Reset requests used to 0'));
     fireEvent.click(screen.getByRole('button', { name: 'Save limits' }));
 
     await waitFor(() =>
-      expect(updateSubscription).toHaveBeenCalledWith('m1', { plan: 'pro', requestsLimit: null, resetUsage: true })
+      expect(updateSubscription).toHaveBeenCalledWith('m1', { plan: 'medium', requestsLimit: null, resetUsage: true })
     );
   });
 

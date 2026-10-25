@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
@@ -6,13 +6,14 @@ import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 import { notifyInfo } from '../../../components/ui/toast';
 import { updateSubscription } from '../../../services/adminApi';
-import { PLANS, SUBSCRIPTION_STATUSES, capitalize } from '../adminFormat';
+import { PLANS, formatPlanName } from '../../../utils/plans';
+import { SUBSCRIPTION_STATUSES, capitalize } from '../adminFormat';
 
 const CHECKBOX_CLASSES = 'h-4 w-4 accent-admin';
 
 function formFrom(subscription = {}) {
   return {
-    plan: subscription.plan || 'free',
+    plan: subscription.plan || PLANS[0],
     status: subscription.status || 'active',
     unlimited: subscription.requestsLimit == null,
     requestsLimit: subscription.requestsLimit == null ? '' : String(subscription.requestsLimit),
@@ -40,13 +41,17 @@ function changesFrom(form, subscription = {}) {
 function LimitsEditor({ merchant, onUpdated }) {
   const { subscription } = merchant;
   const [form, setForm] = useState(() => formFrom(subscription));
+  const [syncedSubscription, setSyncedSubscription] = useState(subscription);
   const [limitError, setLimitError] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Re-sync with whatever the server saved (it may adjust e.g. the limit).
-  useEffect(() => {
+  // Done while rendering rather than in an effect, so a mount-time effect can't
+  // land after the admin's first edit and wipe it.
+  if (subscription !== syncedSubscription) {
+    setSyncedSubscription(subscription);
     setForm(formFrom(subscription));
-  }, [subscription]);
+  }
 
   function update(patch) {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -88,7 +93,7 @@ function LimitsEditor({ merchant, onUpdated }) {
           <Select id="limits-plan" label="Plan" value={form.plan} onChange={(e) => update({ plan: e.target.value })}>
             {PLANS.map((plan) => (
               <option key={plan} value={plan}>
-                {capitalize(plan)}
+                {formatPlanName(plan)}
               </option>
             ))}
           </Select>

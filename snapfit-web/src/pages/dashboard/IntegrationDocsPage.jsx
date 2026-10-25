@@ -9,6 +9,7 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
+import { formatLimit, formatPlanPrice } from '../../utils/plans';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://your-api-domain.com/api';
 
@@ -494,20 +495,6 @@ function TryItOut() {
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-
-function formatPrice(plan) {
-  if (plan.price === 0) return 'Free';
-  if (plan.price == null) return 'Custom';
-  return `$${plan.price}/mo`;
-}
-
-function formatRequests(limit) {
-  return limit == null ? 'Unlimited' : limit.toLocaleString();
-}
-
-function formatCharts(limit) {
-  return limit == null ? 'Unlimited' : limit;
-}
 
 function IntegrationDocsPage() {
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
@@ -1035,10 +1022,10 @@ else:
                     <tbody className="divide-y divide-border">
                       {plans.map((p) => (
                         <tr key={p.plan} className="text-sm text-foreground">
-                          <td className="px-4 py-2 font-medium capitalize text-foreground">{p.name}</td>
-                          <td className="px-4 py-2">{formatPrice(p)}</td>
-                          <td className="px-4 py-2">{formatRequests(p.requestsLimit)}</td>
-                          <td className="px-4 py-2">{formatCharts(p.chartsLimit)}</td>
+                          <td className="px-4 py-2 font-medium text-foreground">{p.name}</td>
+                          <td className="px-4 py-2">{formatPlanPrice(p.price)}</td>
+                          <td className="px-4 py-2">{formatLimit(p.requestsLimit)}</td>
+                          <td className="px-4 py-2">{formatLimit(p.chartsLimit)}</td>
                         </tr>
                       ))}
                     </tbody>

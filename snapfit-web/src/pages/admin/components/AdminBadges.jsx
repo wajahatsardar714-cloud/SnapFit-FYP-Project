@@ -1,8 +1,9 @@
 import Badge from '../../../components/ui/Badge';
-import { ACCOUNT_STATUS_BADGE_VARIANT, PLAN_BADGE_VARIANT, SUBSCRIPTION_STATUS_BADGE_VARIANT, capitalize } from '../adminFormat';
+import { PLAN_BADGE_VARIANT, formatPlanName } from '../../../utils/plans';
+import { ACCOUNT_STATUS_BADGE_VARIANT, SUBSCRIPTION_STATUS_BADGE_VARIANT, capitalize } from '../adminFormat';
 
 export function PlanBadge({ plan }) {
-  return <Badge variant={PLAN_BADGE_VARIANT[plan] || 'neutral'}>{capitalize(plan || 'free')}</Badge>;
+  return <Badge variant={PLAN_BADGE_VARIANT[plan] || 'neutral'}>{formatPlanName(plan)}</Badge>;
 }
 
 export function AccountStatusBadge({ status }) {

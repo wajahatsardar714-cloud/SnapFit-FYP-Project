@@ -1,8 +1,6 @@
-export const PLANS = ['free', 'basic', 'pro', 'enterprise'];
 export const SUBSCRIPTION_STATUSES = ['active', 'inactive', 'expired'];
 export const ACCOUNT_STATUSES = ['active', 'suspended'];
 
-export const PLAN_BADGE_VARIANT = { free: 'neutral', basic: 'info', pro: 'success', enterprise: 'warning' };
 export const ACCOUNT_STATUS_BADGE_VARIANT = { active: 'success', suspended: 'danger' };
 export const SUBSCRIPTION_STATUS_BADGE_VARIANT = { active: 'success', inactive: 'neutral', expired: 'warning' };
 export const RECOMMENDATION_STATUS_VARIANT = { success: 'success', low_confidence: 'warning', failed: 'danger' };

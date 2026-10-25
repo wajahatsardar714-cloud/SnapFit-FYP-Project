@@ -25,9 +25,23 @@ export function isSuspendedError(error) {
   return error.response?.status === 403 && /suspended/i.test(error.response.data?.message || '');
 }
 
+// Locked merchant APIs answer an unsubscribed account with a 403 carrying this
+// code. AuthProvider registers how to send the merchant to plan selection.
+let onSubscriptionRequired = null;
+
+export function setSubscriptionRequiredHandler(handler) {
+  onSubscriptionRequired = handler;
+}
+
+export function isSubscriptionRequiredError(error) {
+  return error.response?.status === 403 && error.response.data?.code === 'SUBSCRIPTION_REQUIRED';
+}
+
 api.interceptors.response.use(undefined, (error) => {
   if (isSuspendedError(error) && error.config?.url !== '/auth/login') {
     onAccountSuspended?.(error.response.data.message);
+  } else if (isSubscriptionRequiredError(error)) {
+    onSubscriptionRequired?.(error.response.data.message);
   }
   return Promise.reject(error);
 });

@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api, { setAccountSuspendedHandler } from '../services/api';
+import api, { setAccountSuspendedHandler, setSubscriptionRequiredHandler } from '../services/api';
 import { roleOf } from '../utils/roles';
+import { PLAN_SELECTION_PATH } from '../utils/subscriptionAccess';
 
 const AuthContext = createContext(null);
 
@@ -64,6 +65,25 @@ export function AuthProvider({ children }) {
     return () => setAccountSuspendedHandler(null);
   }, [logout]);
 
+  // Re-reads the account, e.g. after a plan change, so the subscription gate
+  // opens (or closes) without a reload.
+  const refreshMerchant = useCallback(async () => {
+    const res = await api.get('/auth/me');
+    setMerchant(res.data.merchant);
+    return res.data.merchant;
+  }, []);
+
+  // The server says the subscription is no longer active (it may have expired
+  // mid-session): sync the account so the gate locks, and go choose a plan.
+  useEffect(() => {
+    setSubscriptionRequiredHandler((message) => {
+      toast.error(message, { id: 'subscription-required' });
+      refreshMerchant().catch(() => {}); // best effort: the redirect below happens either way
+      navigate(PLAN_SELECTION_PATH, { replace: true });
+    });
+    return () => setSubscriptionRequiredHandler(null);
+  }, [navigate, refreshMerchant]);
+
   const updateMerchant = useCallback((patch) => {
     setMerchant((prev) => (prev ? { ...prev, ...patch } : prev));
   }, []);
@@ -77,6 +97,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    refreshMerchant,
     updateMerchant,
   };
 

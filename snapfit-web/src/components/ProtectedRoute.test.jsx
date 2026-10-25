@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import toast from 'react-hot-toast';
-import api, { setAccountSuspendedHandler } from '../services/api';
+import api, { setAccountSuspendedHandler, setSubscriptionRequiredHandler } from '../services/api';
 import { AuthProvider } from '../context/AuthContext';
 import LoginPage from '../pages/auth/LoginPage';
 import { ROLES } from '../utils/roles';
@@ -11,6 +11,7 @@ import ProtectedRoute from './ProtectedRoute';
 vi.mock('../services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
   setAccountSuspendedHandler: vi.fn(),
+  setSubscriptionRequiredHandler: vi.fn(),
 }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 
@@ -24,6 +25,7 @@ function renderApp(path) {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/dashboard/subscription/plans" element={<p>Plan selection</p>} />
           <Route
             path="/dashboard/*"
             element={
@@ -125,5 +127,22 @@ describe('suspension during a session', () => {
     expect(toast.error).toHaveBeenCalledWith(SUSPENDED, { id: 'account-suspended' });
     expect(await screen.findByRole('heading', { name: 'Log in to SnapFit' })).toBeTruthy();
     expect(localStorage.getItem('token')).toBeNull();
+  });
+});
+
+describe('subscription required during a session', () => {
+  it('refreshes the account and sends the merchant to plan selection', async () => {
+    localStorage.setItem('token', 'jwt');
+    api.get.mockResolvedValue({ data: { merchant: MERCHANT } });
+    renderApp('/dashboard/analytics');
+    await screen.findByText('Merchant home');
+    api.get.mockClear();
+
+    const handler = setSubscriptionRequiredHandler.mock.calls.findLast(([fn]) => typeof fn === 'function')[0];
+    act(() => handler('An active subscription is required'));
+
+    expect(toast.error).toHaveBeenCalledWith('An active subscription is required', { id: 'subscription-required' });
+    expect(await screen.findByText('Plan selection')).toBeTruthy();
+    expect(api.get).toHaveBeenCalledWith('/auth/me');
   });
 });

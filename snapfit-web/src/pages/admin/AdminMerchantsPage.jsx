@@ -9,7 +9,8 @@ import { AccountStatusBadge, PlanBadge } from './components/AdminBadges';
 import MerchantStatusDialog from './components/MerchantStatusDialog';
 import Pagination from './components/Pagination';
 import { LoadError, PageLoader } from './components/PageStatus';
-import { ACCOUNT_STATUSES, PLANS, capitalize, formatDate, formatUsage } from './adminFormat';
+import { PLANS, formatPlanName } from '../../utils/plans';
+import { ACCOUNT_STATUSES, capitalize, formatDate, formatUsage } from './adminFormat';
 
 const PAGE_SIZE = 10;
 
@@ -80,7 +81,7 @@ function AdminMerchantsPage() {
             <option value="">All plans</option>
             {PLANS.map((plan) => (
               <option key={plan} value={plan}>
-                {capitalize(plan)}
+                {formatPlanName(plan)}
               </option>
             ))}
           </Select>

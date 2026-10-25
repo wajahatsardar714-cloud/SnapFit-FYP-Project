@@ -6,7 +6,8 @@ import { getOverview } from '../../services/adminApi';
 import DailyRequestsChart from './components/DailyRequestsChart';
 import { LoadError, PageLoader } from './components/PageStatus';
 import { AccountStatusBadge, PlanBadge } from './components/AdminBadges';
-import { PLANS, capitalize, formatDate, formatNumber, formatPercent } from './adminFormat';
+import { PLANS, formatPlanName } from '../../utils/plans';
+import { formatDate, formatNumber, formatPercent } from './adminFormat';
 
 function PlanBreakdown({ byPlan }) {
   const total = PLANS.reduce((sum, plan) => sum + (byPlan[plan] || 0), 0);
@@ -19,7 +20,7 @@ function PlanBreakdown({ byPlan }) {
         return (
           <li key={plan}>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-foreground">{capitalize(plan)}</span>
+              <span className="text-foreground">{formatPlanName(plan)}</span>
               <span className="text-muted-foreground">
                 <span className="font-semibold text-foreground">{formatNumber(count)}</span> · {pct}%
               </span>

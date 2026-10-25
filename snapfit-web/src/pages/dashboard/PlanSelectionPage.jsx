@@ -1,60 +1,78 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, Loader2 } from 'lucide-react';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import {
+  RECOMMENDED_PLAN,
+  formatChartsLimit,
+  formatPlanPrice,
+  formatRequestsLimit,
+  isPlanId,
+  isSubscribed,
+} from '../../utils/plans';
 
-function formatPrice(plan) {
-  if (plan.price === 0) return 'Free';
-  if (plan.price == null) return 'Custom pricing';
-  return `$${plan.price}/month`;
-}
-
-function formatRequests(limit) {
-  return limit == null ? 'Unlimited requests' : `${limit.toLocaleString()} requests/month`;
-}
-
-function formatCharts(limit) {
-  if (limit == null) return 'Unlimited size charts';
-  return `${limit} size chart${limit === 1 ? '' : 's'}`;
+function planCardClasses({ isCurrent, isRecommended }) {
+  if (isCurrent) return '!border-primary !bg-primary-soft';
+  if (isRecommended) return '!border-primary';
+  return '';
 }
 
 function PlanSelectionPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { merchant, refreshMerchant } = useAuth();
   const [plans, setPlans] = useState([]);
-  const [currentPlan, setCurrentPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [switching, setSwitching] = useState(false);
 
+  const subscribed = isSubscribed(merchant);
+  const currentPlan = subscribed ? merchant.subscription.plan : null;
+  const requestedPlan = searchParams.get('plan');
+
   useEffect(() => {
-    Promise.all([api.get('/subscription/plans'), api.get('/subscription/status')])
-      .then(([plansRes, statusRes]) => {
-        setPlans(plansRes.data.plans);
-        setCurrentPlan(statusRes.data.subscription.plan);
-      })
+    api
+      .get('/subscription/plans')
+      .then((res) => setPlans(res.data.plans))
       .catch(() => toast.error('Failed to load plans'))
       .finally(() => setLoading(false));
   }, []);
 
-  async function confirmSwitch() {
+  // A plan picked on the public pricing page (?plan=medium) opens its
+  // confirmation straight away; the param is then dropped so it doesn't reopen.
+  useEffect(() => {
+    if (!isPlanId(requestedPlan) || plans.length === 0) return;
+    const match = plans.find((p) => p.plan === requestedPlan);
+    if (match && match.plan !== currentPlan) setSelectedPlan(match);
+    setSearchParams({}, { replace: true });
+  }, [requestedPlan, plans, currentPlan, setSearchParams]);
+
+  async function confirmSelection() {
     if (!selectedPlan) return;
     setSwitching(true);
     try {
       await api.post('/subscription/select', { plan: selectedPlan.plan });
-      toast.success(`Switched to the ${selectedPlan.name} plan!`);
-      setCurrentPlan(selectedPlan.plan);
-      setSelectedPlan(null);
-      navigate('/dashboard/subscription');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to switch plans');
-    } finally {
+      toast.error(err.response?.data?.message || 'Failed to select the plan');
       setSwitching(false);
+      return;
     }
+
+    toast.success(`You're on the ${selectedPlan.name} plan!`);
+    try {
+      await refreshMerchant();
+    } catch {
+      toast.error('Reload the page to unlock your dashboard');
+    }
+    setSwitching(false);
+    setSelectedPlan(null);
+    navigate('/dashboard/subscription');
   }
 
   if (loading) {
@@ -65,35 +83,54 @@ function PlanSelectionPage() {
     );
   }
 
+  const action = subscribed ? 'Switch' : 'Subscribe';
+
   return (
     <div>
       <h1 className="text-xl font-semibold text-foreground">Choose a plan</h1>
       <p className="mt-1 text-sm text-muted-foreground">Pick the plan that fits your store&apos;s volume.</p>
 
-      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3">
         {plans.map((plan) => {
           const isCurrent = plan.plan === currentPlan;
+          const isRecommended = plan.plan === RECOMMENDED_PLAN;
+          const isCustom = plan.price == null;
           return (
-            <Card key={plan.plan} className={`flex flex-col ${isCurrent ? '!border-primary !bg-primary-soft' : ''}`}>
+            <Card
+              key={plan.plan}
+              role="group"
+              aria-label={`${plan.name} plan`}
+              className={`flex flex-col ${planCardClasses({ isCurrent, isRecommended })}`}
+            >
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold capitalize text-foreground">{plan.name}</h2>
-                {isCurrent && <Badge variant="info">Current</Badge>}
+                <h2 className="text-lg font-semibold text-foreground">{plan.name}</h2>
+                {isCurrent ? (
+                  <Badge variant="success">Current</Badge>
+                ) : (
+                  isRecommended && <Badge variant="info">Recommended</Badge>
+                )}
               </div>
-              <p className="mt-2 text-2xl font-semibold text-foreground">{formatPrice(plan)}</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{formatPlanPrice(plan.price)}</p>
+              {isCustom && <p className="mt-1 text-sm text-muted-foreground">Contact us for custom pricing</p>}
 
               <ul className="mt-4 flex-1 space-y-2 text-sm text-foreground">
                 <li className="flex items-center gap-2">
-                  <Check size={16} className="shrink-0 text-success" />
-                  {formatRequests(plan.requestsLimit)}
+                  <Check size={16} className="shrink-0 text-success" aria-hidden="true" />
+                  {formatRequestsLimit(plan.requestsLimit)}
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check size={16} className="shrink-0 text-success" />
-                  {formatCharts(plan.chartsLimit)}
+                  <Check size={16} className="shrink-0 text-success" aria-hidden="true" />
+                  {formatChartsLimit(plan.chartsLimit)}
                 </li>
               </ul>
 
-              <Button className="mt-6" disabled={isCurrent} onClick={() => setSelectedPlan(plan)}>
-                {isCurrent ? 'Current Plan' : 'Select Plan'}
+              <Button
+                className="mt-6"
+                variant={isRecommended ? 'primary' : 'secondary'}
+                disabled={isCurrent}
+                onClick={() => setSelectedPlan(plan)}
+              >
+                {isCurrent ? 'Current Plan' : `Select ${plan.name}`}
               </Button>
             </Card>
           );
@@ -102,15 +139,15 @@ function PlanSelectionPage() {
 
       <ConfirmModal
         open={Boolean(selectedPlan)}
-        title={selectedPlan ? `Switch to ${selectedPlan.name}?` : ''}
+        title={selectedPlan ? `${action} to ${selectedPlan.name}?` : ''}
         description={
           selectedPlan
-            ? `Your plan will change to ${selectedPlan.name} (${formatPrice(selectedPlan)}) immediately, starting a new 30-day billing cycle.`
+            ? `Your plan will be ${selectedPlan.name} (${formatPlanPrice(selectedPlan.price)}) from today, starting a new 30-day billing cycle.`
             : ''
         }
-        confirmLabel="Confirm switch"
+        confirmLabel={`Confirm ${action.toLowerCase()}`}
         loading={switching}
-        onConfirm={confirmSwitch}
+        onConfirm={confirmSelection}
         onClose={() => !switching && setSelectedPlan(null)}
       />
     </div>

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, BookOpen, LogOut, Bell, Settings, ChevronDown, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, BookOpen, LogOut, Bell, Settings, ChevronDown, Moon, Sun, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Badge from '../components/ui/Badge';
 import { notifyInfo } from '../components/ui/toast';
+import SubscriptionGate from '../components/SubscriptionGate';
+import { PLAN_BADGE_VARIANT, formatPlanName, isSubscribed } from '../utils/plans';
+import { isPathLockedFor } from '../utils/subscriptionAccess';
 
 const navItems = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
@@ -15,7 +18,25 @@ const navItems = [
   { label: 'Docs', to: '/dashboard/docs', icon: BookOpen },
 ];
 
-const PLAN_BADGE_VARIANT = { free: 'neutral', basic: 'info', pro: 'success', enterprise: 'warning' };
+const NAV_ITEM_CLASSES =
+  'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2';
+
+// A page the merchant can't open until they subscribe: shown, but not a link.
+function LockedNavItem({ label, icon: Icon }) {
+  return (
+    <span
+      role="link"
+      aria-disabled="true"
+      title="Subscribe to unlock"
+      className={`${NAV_ITEM_CLASSES} cursor-not-allowed text-muted`}
+    >
+      <Icon size={18} aria-hidden="true" />
+      {label}
+      <Lock size={14} className="ml-auto" aria-hidden="true" />
+      <span className="sr-only">(Subscribe to unlock)</span>
+    </span>
+  );
+}
 
 function getInitials(name) {
   if (!name) return '?';
@@ -44,7 +65,8 @@ function DashboardLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const pageTitle = getPageTitle(location.pathname);
-  const plan = merchant?.subscription?.plan || 'free';
+  const subscribed = isSubscribed(merchant);
+  const plan = merchant?.subscription?.plan;
 
   // DashboardLayout persists across nested /dashboard/* navigations (only the
   // Outlet content swaps) -- without this, an open account menu survives a
@@ -62,38 +84,42 @@ function DashboardLayout() {
         <div className="px-5 py-5 text-lg font-bold text-primary">SnapFit</div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
-          {navItems.map(({ label, to, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
-                  isActive ? 'bg-primary-soft font-medium text-primary' : 'text-foreground hover:bg-surface-2'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon size={18} className={isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} />
-                  {label}
-                </>
-              )}
-            </NavLink>
-          ))}
+          {navItems.map(({ label, to, icon: Icon, end }) =>
+            isPathLockedFor(merchant, to) ? (
+              <LockedNavItem key={to} label={label} icon={Icon} />
+            ) : (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `${NAV_ITEM_CLASSES} ${
+                    isActive ? 'bg-primary-soft font-medium text-primary' : 'text-foreground hover:bg-surface-2'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon size={18} className={isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} />
+                    {label}
+                  </>
+                )}
+              </NavLink>
+            )
+          )}
         </nav>
 
         <div className="border-t border-border p-3">
           <div className="flex items-center justify-between px-2 py-1.5">
             <span className="text-xs font-medium text-muted-foreground">Plan</span>
-            <Badge variant={PLAN_BADGE_VARIANT[plan] || 'neutral'} className="capitalize">
-              {plan}
+            <Badge variant={(subscribed && PLAN_BADGE_VARIANT[plan]) || 'neutral'}>
+              {subscribed ? formatPlanName(plan) : 'Inactive'}
             </Badge>
           </div>
           <button
             type="button"
             onClick={() => navigate('/dashboard/settings')}
-            className={`group mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
+            className={`${NAV_ITEM_CLASSES} mt-1 w-full ${
               isSettingsActive ? 'bg-primary-soft font-medium text-primary' : 'text-foreground hover:bg-surface-2'
             }`}
           >
@@ -176,7 +202,9 @@ function DashboardLayout() {
 
         <main className="flex-1 overflow-y-auto bg-background">
           <div className="mx-auto max-w-7xl p-8">
-            <Outlet />
+            <SubscriptionGate>
+              <Outlet />
+            </SubscriptionGate>
           </div>
         </main>
       </div>

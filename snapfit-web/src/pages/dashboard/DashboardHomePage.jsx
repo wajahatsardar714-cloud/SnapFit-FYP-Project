@@ -16,6 +16,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import StatCard from '../../components/ui/StatCard';
+import { formatLimit, formatPlanName } from '../../utils/plans';
 
 function formatDateTime(value) {
   return new Date(value).toLocaleString(undefined, {
@@ -163,7 +164,7 @@ function DashboardHomePage() {
         />
         <StatCard
           label="Active Plan"
-          value={hasSelectedPlan ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1) : 'None'}
+          value={hasSelectedPlan ? formatPlanName(subscription.plan) : 'None'}
           sub={hasSelectedPlan ? subscription.status : 'No plan selected yet'}
         />
         <StatCard
@@ -242,7 +243,7 @@ function DashboardHomePage() {
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                {usage.requestsUsed} / {usage.requestsLimit ?? 'Unlimited'} requests
+                {usage.requestsUsed} / {formatLimit(usage.requestsLimit)} requests
               </span>
               {usage.requestsLimit != null && <span>{pct}%</span>}
             </div>

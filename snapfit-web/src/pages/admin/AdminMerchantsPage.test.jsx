@@ -13,7 +13,7 @@ function merchant(overrides) {
     businessName: 'Blue Tees',
     email: 'blue@shop.dev',
     status: 'active',
-    subscription: { plan: 'basic', requestsUsed: 3, requestsLimit: 500 },
+    subscription: { plan: 'medium', requestsUsed: 3, requestsLimit: 500 },
     createdAt: '2026-01-02T00:00:00.000Z',
     ...overrides,
   };
@@ -45,9 +45,22 @@ describe('AdminMerchantsPage', () => {
 
     const row = within((await screen.findByText('Blue Tees')).closest('tr'));
     expect(row.getByText('blue@shop.dev')).toBeTruthy();
-    expect(row.getByText('Basic')).toBeTruthy();
+    expect(row.getByText('Medium')).toBeTruthy();
     expect(row.getByText('Active')).toBeTruthy();
     expect(lastParams()).toEqual({ page: 1, limit: 10 });
+  });
+
+  it('filters by the small, medium and enterprise plans', async () => {
+    renderPage();
+    await screen.findByText('Blue Tees');
+
+    const options = within(screen.getByLabelText('Plan')).getAllByRole('option');
+    expect(options.map((option) => [option.value, option.textContent])).toEqual([
+      ['', 'All plans'],
+      ['small', 'Small'],
+      ['medium', 'Medium'],
+      ['enterprise', 'Enterprise'],
+    ]);
   });
 
   it('searches and filters, starting again from the first page', async () => {
@@ -60,10 +73,10 @@ describe('AdminMerchantsPage', () => {
     fireEvent.submit(screen.getByRole('search'));
     await waitFor(() => expect(lastParams()).toEqual({ page: 1, limit: 10, search: 'blue' }));
 
-    fireEvent.change(screen.getByLabelText('Plan'), { target: { value: 'pro' } });
+    fireEvent.change(screen.getByLabelText('Plan'), { target: { value: 'small' } });
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'suspended' } });
     await waitFor(() =>
-      expect(lastParams()).toEqual({ page: 1, limit: 10, search: 'blue', plan: 'pro', status: 'suspended' })
+      expect(lastParams()).toEqual({ page: 1, limit: 10, search: 'blue', plan: 'small', status: 'suspended' })
     );
   });
 

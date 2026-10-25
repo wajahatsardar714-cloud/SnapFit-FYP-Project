@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import { formatChartsLimit, formatLimit, formatPlanName } from '../../utils/plans';
 
 // Same 3-way mapping as DashboardHomePage's PLAN_STATUS_BADGE_VARIANT -- keeps
 // "expired" visually distinct (danger) from a merchant who never picked a plan
@@ -18,11 +20,6 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function formatCharts(limit) {
-  if (limit == null) return 'Unlimited size charts';
-  return `${limit} size chart${limit === 1 ? '' : 's'}`;
-}
-
 function usageBarColor(pct) {
   if (pct >= 100) return 'bg-danger';
   if (pct >= 80) return 'bg-warning';
@@ -31,6 +28,7 @@ function usageBarColor(pct) {
 
 function SubscriptionStatusPage() {
   const navigate = useNavigate();
+  const { refreshMerchant } = useAuth();
   const [data, setData] = useState(null);
   const [chartsLimit, setChartsLimit] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +57,7 @@ function SubscriptionStatusPage() {
       await api.post('/subscription/cancel');
       toast.success('Subscription cancelled');
       setCancelOpen(false);
-      await load();
+      await Promise.all([load(), refreshMerchant()]);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to cancel subscription');
     } finally {
@@ -101,7 +99,7 @@ function SubscriptionStatusPage() {
 
       <Card className="mt-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold capitalize text-foreground">{subscription.plan} plan</h2>
+          <h2 className="text-lg font-semibold text-foreground">{formatPlanName(subscription.plan)} plan</h2>
           <Badge variant={STATUS_BADGE_VARIANT[subscription.status] || 'neutral'}>
             {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
           </Badge>
@@ -122,7 +120,7 @@ function SubscriptionStatusPage() {
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Usage this month</span>
             <span className="font-medium text-foreground">
-              {usage.requestsUsed} / {usage.requestsLimit ?? 'Unlimited'} requests
+              {usage.requestsUsed} / {formatLimit(usage.requestsLimit)} requests
             </span>
           </div>
           {usage.requestsLimit != null && (
@@ -133,7 +131,7 @@ function SubscriptionStatusPage() {
         </div>
 
         <div className="mt-4 text-sm text-muted-foreground">
-          Size chart limit: <span className="font-medium text-foreground">{formatCharts(chartsLimit)}</span>
+          Size chart limit: <span className="font-medium text-foreground">{formatChartsLimit(chartsLimit)}</span>
         </div>
 
         <div className="mt-6 flex gap-3">
