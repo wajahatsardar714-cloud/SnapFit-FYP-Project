@@ -66,6 +66,10 @@ USER_HEIGHT_MAX_CM = 230
 CHILD_HEIGHT_CM = 145
 CHILD_CONFIDENCE_FACTOR = 0.6
 
+# Extra frames the live camera may send with the main photo; their landmarks
+# are median-combined with the main photo's to steady the measurements.
+MAX_EXTRA_FRAMES = 4
+
 # --- Size matching (size_matcher.py) ------------------------------------------
 # A measurement inside a size's range scores 1; outside, the score falls to 0
 # at this fraction of the range midpoint away from the nearest edge.
