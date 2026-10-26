@@ -61,7 +61,7 @@ describe('public routes', () => {
 
   it('renders the login page at /login', async () => {
     renderAt('/login');
-    expect(await screen.findByRole('heading', { name: 'Log in to SnapFit' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Log In to Your SnapFit Account' })).toBeTruthy();
   });
 });
 
@@ -161,9 +161,9 @@ describe('site footer', () => {
 
 describe('auth flows', () => {
   async function logIn() {
-    fireEvent.change(await screen.findByLabelText('Email'), { target: { value: 'user@test.com' } });
+    fireEvent.change(await screen.findByLabelText('Business email'), { target: { value: 'user@test.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret123' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Log In' }));
   }
 
   it('sends a super admin to the admin console after login', async () => {
@@ -177,10 +177,10 @@ describe('auth flows', () => {
     api.post.mockResolvedValue({ data: { token: 'jwt', merchant: MERCHANT } });
     renderAt(path);
     fireEvent.change(await screen.findByLabelText('Full name'), { target: { value: 'Sam Shop' } });
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'sam@shop.test' } });
+    fireEvent.change(screen.getByLabelText('Business email'), { target: { value: 'sam@shop.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Secret123' } });
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Secret123' } });
-    fireEvent.change(screen.getByLabelText('Business name'), { target: { value: 'Sam Shop' } });
+    fireEvent.change(screen.getByLabelText('Store name'), { target: { value: 'Sam Shop' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   }
 

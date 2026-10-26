@@ -49,9 +49,9 @@ function renderApp(path) {
 }
 
 async function logIn() {
-  fireEvent.change(await screen.findByLabelText('Email'), { target: { value: 'user@test.com' } });
+  fireEvent.change(await screen.findByLabelText('Business email'), { target: { value: 'user@test.com' } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret123' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Log In' }));
 }
 
 beforeEach(() => {
@@ -110,7 +110,7 @@ describe('ProtectedRoute roles', () => {
 
   it('sends a signed-out visitor to the login page', async () => {
     renderApp('/admin');
-    expect(await screen.findByRole('heading', { name: 'Log in to SnapFit' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Log In to Your SnapFit Account' })).toBeTruthy();
   });
 });
 
@@ -125,7 +125,7 @@ describe('suspension during a session', () => {
     act(() => handler(SUSPENDED));
 
     expect(toast.error).toHaveBeenCalledWith(SUSPENDED, { id: 'account-suspended' });
-    expect(await screen.findByRole('heading', { name: 'Log in to SnapFit' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Log In to Your SnapFit Account' })).toBeTruthy();
     expect(localStorage.getItem('token')).toBeNull();
   });
 });

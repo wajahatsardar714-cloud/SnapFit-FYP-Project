@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api, { setAccountSuspendedHandler, setSubscriptionRequiredHandler } from '../services/api';
+import { clearToken, readToken, saveToken } from '../services/authToken';
 import { roleOf } from '../utils/roles';
 import { PLAN_SELECTION_PATH } from '../utils/subscriptionAccess';
 
@@ -9,13 +10,12 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [merchant, setMerchant] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [token, setToken] = useState(readToken);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (!storedToken) {
+    if (!readToken()) {
       setLoading(false);
       return;
     }
@@ -24,16 +24,17 @@ export function AuthProvider({ children }) {
       .get('/auth/me')
       .then((res) => setMerchant(res.data.merchant))
       .catch(() => {
-        localStorage.removeItem('token');
+        clearToken();
         setToken(null);
         setMerchant(null);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email, password) => {
+  // `remember: false` keeps the session only until the browser closes.
+  const login = useCallback(async (email, password, { remember = true } = {}) => {
     const res = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', res.data.token);
+    saveToken(res.data.token, { remember });
     setToken(res.data.token);
     setMerchant(res.data.merchant);
     return res.data.merchant;
@@ -41,14 +42,14 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (formData) => {
     const res = await api.post('/auth/register', formData);
-    localStorage.setItem('token', res.data.token);
+    saveToken(res.data.token);
     setToken(res.data.token);
     setMerchant(res.data.merchant);
     return res.data.merchant;
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
+    clearToken();
     setToken(null);
     setMerchant(null);
     navigate('/login');

@@ -7,8 +7,10 @@ import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
 import { register as content } from '../../content/auth';
-import { isPlanId } from '../../utils/plans';
+import { PLANS, formatPlanName, isPlanId } from '../../utils/plans';
 import AuthShell from './AuthShell';
+import PasswordInput from './PasswordInput';
+import RegisterFieldHelp from './RegisterFieldHelp';
 
 const BUSINESS_TYPES = [
   { value: '', label: 'Select a business type' },
@@ -26,21 +28,24 @@ const PASSWORD_RULES = [
   { label: 'At least 1 uppercase letter', test: (pw) => /[A-Z]/.test(pw) },
 ];
 
-// A pricing link may preselect a plan with ?plan=; after sign-up the merchant
-// lands on plan selection with that plan.
+// A pricing link may preselect a plan with ?plan=; after sign-up a merchant who
+// chose a plan lands on plan selection with it ('' is "Choose later").
 function afterRegisterPath(plan) {
-  return isPlanId(plan) ? `/dashboard/subscription/plans?plan=${plan}` : '/dashboard';
+  return plan ? `/dashboard/subscription/plans?plan=${plan}` : '/dashboard';
 }
 
-const initialForm = {
-  name: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-  businessName: '',
-  phone: '',
-  businessType: '',
-};
+function initialForm(planParam) {
+  return {
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    businessName: '',
+    phone: '',
+    businessType: '',
+    plan: isPlanId(planParam) ? planParam : '',
+  };
+}
 
 function validate(form) {
   const errors = {};
@@ -48,7 +53,7 @@ function validate(form) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Enter a valid email';
   if (form.password.length < 8) errors.password = 'Password must be at least 8 characters';
   if (form.confirmPassword !== form.password) errors.confirmPassword = 'Passwords do not match';
-  if (!form.businessName.trim()) errors.businessName = 'Business name is required';
+  if (!form.businessName.trim()) errors.businessName = 'Store name is required';
   return errors;
 }
 
@@ -56,7 +61,7 @@ function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(() => initialForm(searchParams.get('plan')?.toLowerCase()));
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -79,7 +84,8 @@ function RegisterPage() {
 
     setSubmitting(true);
     try {
-      const { confirmPassword, ...payload } = form;
+      // The plan is chosen on plan selection after sign-up, not sent with it.
+      const { confirmPassword, plan, ...payload } = form;
       if (!payload.phone) delete payload.phone;
       if (!payload.businessType) delete payload.businessType;
       await register(payload);
@@ -88,7 +94,7 @@ function RegisterPage() {
       // existing "register -> already authenticated -> go straight to the
       // dashboard" behavior is the correct, real success path, not a stand-in
       // for a verification flow that doesn't exist.
-      navigate(afterRegisterPath(searchParams.get('plan')?.toLowerCase()));
+      navigate(afterRegisterPath(plan));
     } catch (err) {
       setFormError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -97,14 +103,14 @@ function RegisterPage() {
   }
 
   return (
-    <AuthShell content={content}>
+    <AuthShell content={content} aside={<RegisterFieldHelp {...content.fieldHelp} />}>
       {formError && (
-        <div className="mt-6">
+        <div className="mb-6">
           <Alert variant="danger" title={formError} />
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <Input
           label="Full name"
           name="name"
@@ -115,7 +121,7 @@ function RegisterPage() {
           disabled={submitting}
         />
         <Input
-          label="Email"
+          label="Business email"
           name="email"
           type="email"
           value={form.email}
@@ -124,12 +130,20 @@ function RegisterPage() {
           autoComplete="email"
           disabled={submitting}
         />
+        <Input
+          label="Store name"
+          name="businessName"
+          value={form.businessName}
+          onChange={handleChange}
+          error={errors.businessName}
+          autoComplete="organization"
+          disabled={submitting}
+        />
 
         <div>
-          <Input
+          <PasswordInput
             label="Password"
             name="password"
-            type="password"
             value={form.password}
             onChange={handleChange}
             error={errors.password}
@@ -160,14 +174,6 @@ function RegisterPage() {
           disabled={submitting}
         />
         <Input
-          label="Business name"
-          name="businessName"
-          value={form.businessName}
-          onChange={handleChange}
-          error={errors.businessName}
-          disabled={submitting}
-        />
-        <Input
           label="Phone (optional)"
           name="phone"
           value={form.phone}
@@ -186,6 +192,15 @@ function RegisterPage() {
           {BUSINESS_TYPES.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
+            </option>
+          ))}
+        </Select>
+
+        <Select label="Subscription plan" name="plan" value={form.plan} onChange={handleChange} disabled={submitting}>
+          <option value="">Choose later</option>
+          {PLANS.map((plan) => (
+            <option key={plan} value={plan}>
+              {formatPlanName(plan)}
             </option>
           ))}
         </Select>
