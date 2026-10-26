@@ -78,3 +78,20 @@ export const footer = {
   // {year} is replaced with the current year.
   copyright: '© {year} SnapFit. All rights reserved.',
 };
+
+// Shown for any URL that isn't a page (the public layout's catch-all route).
+export const notFound = {
+  meta: { title: 'Page Not Found | SnapFit', description: 'This page does not exist on the SnapFit website.' },
+  title: 'Page not found',
+  paragraphs: [
+    [
+      "The page you are looking for doesn't exist or has moved. Head back to the ",
+      { text: 'SnapFit homepage', to: PAGES.home.to },
+      ', compare our ',
+      { text: 'pricing plans', to: PAGES.pricing.to },
+      ', or read the ',
+      { text: 'setup guide', to: PAGES.guide.to },
+      '.',
+    ],
+  ],
+};

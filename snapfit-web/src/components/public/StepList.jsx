@@ -1,15 +1,22 @@
+import { useAnchorId } from './anchors';
 import { Paragraphs } from './RichText';
 
 /**
- * Numbered steps down a connecting line, full width.
+ * Numbered steps down a connecting line, full width. Each step gets an id from
+ * its title for deep links.
  *   steps      [{ title, paragraphs }] in order
  *   headingAs  step heading element, default 'h3'
  */
 function StepList({ steps = [], headingAs: Heading = 'h3' }) {
+  const anchorId = useAnchorId();
   return (
     <ol>
       {steps.map((step, i) => (
-        <li key={step.title} className="relative flex min-w-0 gap-4 pb-10 last:pb-0 sm:gap-6">
+        <li
+          key={step.title}
+          id={anchorId(step.title)}
+          className="relative flex min-w-0 scroll-mt-24 gap-4 pb-10 last:pb-0 sm:gap-6"
+        >
           {i < steps.length - 1 && (
             <span aria-hidden="true" className="absolute bottom-2 left-5 top-12 w-px -translate-x-1/2 bg-border sm:left-6" />
           )}

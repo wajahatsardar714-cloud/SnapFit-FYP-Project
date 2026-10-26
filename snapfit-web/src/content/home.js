@@ -1,4 +1,5 @@
 import { PAGES } from './site';
+import { withLink } from './links';
 
 // Homepage content. Edit text here -- HomePage only renders it, in this order.
 //
@@ -439,7 +440,7 @@ export const sections = [
       {
         question: 'Does SnapFit Work with Shopify?',
         answer: [
-          'SnapFit is designed for API-based integration with e-commerce websites, including Shopify where the required integration is supported. Store owners should follow the available integration documentation to confirm compatibility and implementation requirements.',
+          withLink('SnapFit is designed for API-based integration with e-commerce websites, including Shopify where the required integration is supported. Store owners should follow the available integration documentation to confirm compatibility and implementation requirements.', 'integration documentation', PAGES.guide.to),
         ],
       },
       {

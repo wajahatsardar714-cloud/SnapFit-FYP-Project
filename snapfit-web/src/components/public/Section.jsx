@@ -1,3 +1,4 @@
+import { SectionIdContext } from './anchors';
 import Container from './Container';
 import SectionHeading from './SectionHeading';
 
@@ -9,7 +10,8 @@ const TONE_CLASSES = {
 /**
  * A page section: vertical rhythm, the full-width container and (when `title` is
  * given) a centred SectionHeading labelling the <section>.
- *   id             section id (anchor target; the heading gets `${id}-title`)
+ *   id             section id: the deep-link target (its heading gets `${id}-title`
+ *                  and a "#" link to it; items inside derive their ids from it)
  *   eyebrow, title, intro   passed to SectionHeading
  *   tone           'default' (page grey) | 'surface' (white), to alternate
  *   className      extra classes on the <section>
@@ -19,8 +21,12 @@ function Section({ id, eyebrow, title, intro, tone = 'default', className = '', 
   return (
     <section id={id} aria-labelledby={headingId} className={`scroll-mt-20 py-16 md:py-24 ${TONE_CLASSES[tone]} ${className}`}>
       <Container>
-        {title && <SectionHeading id={headingId} eyebrow={eyebrow} title={title} intro={intro} />}
-        {children && <div className={title ? 'mt-12' : ''}>{children}</div>}
+        {title && <SectionHeading id={headingId} anchor={id} eyebrow={eyebrow} title={title} intro={intro} />}
+        {children && (
+          <SectionIdContext.Provider value={id ?? null}>
+            <div className={title ? 'mt-12' : ''}>{children}</div>
+          </SectionIdContext.Provider>
+        )}
       </Container>
     </section>
   );

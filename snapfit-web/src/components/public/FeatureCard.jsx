@@ -1,8 +1,10 @@
+import { useAnchorId } from './anchors';
 import { ICONS } from './icons';
 import { Paragraphs } from './RichText';
 
 /**
- * White card with its icon in the top-right corner on a soft-blue chip.
+ * White card with its icon in the top-right corner on a soft-blue chip. Its id
+ * comes from the title, so it can be deep-linked.
  *   title       card heading
  *   icon        a name from ./icons (e.g. 'scan', 'ruler')
  *   paragraphs  body texts (see RichText)
@@ -10,8 +12,12 @@ import { Paragraphs } from './RichText';
  */
 function FeatureCard({ title, icon, paragraphs = [], headingAs: Heading = 'h3' }) {
   const Icon = ICONS[icon];
+  const anchorId = useAnchorId();
   return (
-    <article className="flex h-full min-w-0 flex-col rounded-xl border border-border bg-surface p-6 shadow-card">
+    <article
+      id={anchorId(title)}
+      className="flex h-full min-w-0 scroll-mt-24 flex-col rounded-xl border border-border bg-surface p-6 shadow-card"
+    >
       <div className="flex items-start justify-between gap-4">
         <Heading className="type-h4 min-w-0 break-words text-deep-blue">{title}</Heading>
         {Icon && (

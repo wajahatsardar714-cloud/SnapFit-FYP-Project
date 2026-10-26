@@ -1,19 +1,23 @@
 import { ChevronDown } from 'lucide-react';
+import { useAnchorId } from './anchors';
 import { Paragraphs } from './RichText';
 
 /**
  * Questions and answers as native <details> disclosures (no JavaScript): white
- * when closed, soft blue when open.
+ * when closed, soft blue when open. Each question gets an id for deep links;
+ * ScrollToHash opens the one a link points at.
  *   items  [{ question, answer }] -- `answer` is an array of paragraph texts
  *          (see RichText)
  */
 function FaqAccordion({ items = [] }) {
+  const anchorId = useAnchorId();
   return (
     <div className="space-y-3">
       {items.map((item) => (
         <details
           key={item.question}
-          className="group min-w-0 rounded-xl border border-border bg-surface shadow-card open:border-primary/40 open:bg-primary-soft"
+          id={anchorId(item.question)}
+          className="group min-w-0 scroll-mt-24 rounded-xl border border-border bg-surface shadow-card open:border-primary/40 open:bg-primary-soft"
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-4 text-foreground sm:px-6 [&::-webkit-details-marker]:hidden">
             <span className="type-h4 min-w-0 break-words">{item.question}</span>

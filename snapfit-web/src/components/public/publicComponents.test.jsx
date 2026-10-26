@@ -177,21 +177,31 @@ describe('SmartLink', () => {
 });
 
 describe('usePageMeta', () => {
-  it('sets the title and description, and restores them on unmount', () => {
+  const canonicalTag = () => document.head.querySelector('link[rel="canonical"]');
+  const atPath = (path) =>
+    function Router({ children }) {
+      return <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>;
+    };
+
+  it('sets the title, description and canonical permalink, and restores them on unmount', () => {
     document.title = 'Before';
-    const { unmount } = renderHook(() => usePageMeta('Page title', 'Page description', ['a', 'b']));
+    const { unmount } = renderHook(() => usePageMeta('Page title', 'Page description', ['a', 'b']), {
+      wrapper: atPath('/pricing?ref=ad#plans'),
+    });
     expect(document.title).toBe('Page title');
     expect(descriptionTag().getAttribute('content')).toBe('Page description');
     expect(document.head.querySelector('meta[name="keywords"]').getAttribute('content')).toBe('a, b');
+    expect(canonicalTag().getAttribute('href')).toBe(`${window.location.origin}/pricing`);
 
     unmount();
     expect(document.title).toBe('Before');
     expect(descriptionTag()).toBeNull();
     expect(document.head.querySelector('meta[name="keywords"]')).toBeNull();
+    expect(canonicalTag()).toBeNull();
   });
 
   it('works as a component too', () => {
-    render(<PageMeta title="Component title" description="Component description" />);
+    render(<PageMeta title="Component title" description="Component description" />, { wrapper: atPath('/') });
     expect(document.title).toBe('Component title');
     expect(descriptionTag().getAttribute('content')).toBe('Component description');
   });

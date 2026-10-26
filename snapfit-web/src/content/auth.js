@@ -1,4 +1,5 @@
 import { PAGES, contactEmailLink as supportEmail } from './site';
+import { withLink } from './links';
 
 // Login and register page content. Edit text here -- the auth pages only
 // render it, in this order: the H1 and intro, the form section, then
@@ -22,7 +23,7 @@ export const login = {
   },
   title: 'Log In to Your SnapFit Account',
   intro: [
-    'Welcome back to SnapFit. Log in to access your account and continue managing your AI clothing size estimation setup.',
+    withLink('Welcome back to SnapFit. Log in to access your account and continue managing your AI clothing size estimation setup.', 'AI clothing size estimation', PAGES.home.to),
     'SnapFit helps online clothing retailers introduce photo-based body measurement estimation and product-specific size recommendations into their e-commerce websites. Through its API-driven approach, the platform is designed to connect sizing assistance with the existing product shopping experience.',
     "Whether you are configuring your integration, reviewing your subscription, or maintaining your store's sizing workflow, your account is the starting point for accessing the features available to you.",
   ],
@@ -199,7 +200,7 @@ export const register = {
   },
   title: 'Create Your SnapFit Account',
   intro: [
-    'Make clothing size selection easier for your customers with SnapFit. Our AI-powered size estimation platform helps online clothing stores estimate supported body measurements from a photo and recommend suitable sizes using product-specific size charts.',
+    withLink('Make clothing size selection easier for your customers with SnapFit. Our AI-powered size estimation platform helps online clothing stores estimate supported body measurements from a photo and recommend suitable sizes using product-specific size charts.', 'AI-powered size estimation platform', PAGES.home.to),
     'Create your account to get started with SnapFit, explore your subscription options, and prepare your store for an AI-assisted sizing experience.',
   ],
   formSection: {

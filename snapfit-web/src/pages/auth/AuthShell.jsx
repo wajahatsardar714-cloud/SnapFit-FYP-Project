@@ -9,12 +9,9 @@ import { Paragraphs } from '../../components/public/RichText';
 import Section from '../../components/public/Section';
 import StepList from '../../components/public/StepList';
 
-// Section text runs the full container width rather than Prose's reading column.
-const FULL_WIDTH = '!max-w-none';
-
 // How each content `layout` renders inside its Section (see content/auth.js).
 const LAYOUTS = {
-  prose: (section) => <Prose paragraphs={section.paragraphs} className={FULL_WIDTH} />,
+  prose: (section) => <Prose paragraphs={section.paragraphs} />,
   steps: (section) => <StepList steps={section.items} />,
   cards: (section) => (
     <CardGrid columns={section.columns}>

@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import App from '../../App';
+import { paragraph } from '../../test/text';
 
 // Each page as the user wrote it: SEO title and description, the H1, every H2
 // in order and a sentence from each part of the text.
@@ -100,7 +101,7 @@ describe.each(PAGES)('legal page at $path', (page) => {
     await renderAt(page.path);
     const main = screen.getByRole('main');
     expect(within(main).getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(page.h2s);
-    for (const sentence of page.sentences) expect(within(main).getByText(sentence)).toBeTruthy();
+    for (const sentence of page.sentences) expect(within(main).getByText(paragraph(sentence))).toBeTruthy();
   });
 
   it('links the contact email without changing the words', async () => {

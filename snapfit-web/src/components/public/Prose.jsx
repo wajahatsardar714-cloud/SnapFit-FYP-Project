@@ -1,13 +1,16 @@
+import { useAnchorId } from './anchors';
 import { Paragraphs } from './RichText';
 
 /**
  * Long-form text across the full container width.
  *   paragraphs   paragraph texts (see RichText)
- *   subsections  [{ title, paragraphs }] -- each title renders as `headingAs`
+ *   subsections  [{ title, paragraphs }] -- each title renders as `headingAs`,
+ *                and the subsection gets an id from it for deep links
  *   headingAs    subsection heading element, default 'h3'
  *   className    extra classes on the wrapper
  */
 function Prose({ paragraphs = [], subsections = [], headingAs: Heading = 'h3', className = '' }) {
+  const anchorId = useAnchorId();
   return (
     <div className={`type-body min-w-0 break-words text-body ${className}`}>
       {paragraphs.length > 0 && (
@@ -16,7 +19,7 @@ function Prose({ paragraphs = [], subsections = [], headingAs: Heading = 'h3', c
         </div>
       )}
       {subsections.map((subsection) => (
-        <div key={subsection.title} className="mt-10 first:mt-0">
+        <div key={subsection.title} id={anchorId(subsection.title)} className="mt-10 scroll-mt-24 first:mt-0">
           <Heading className="type-h3 text-deep-blue">{subsection.title}</Heading>
           <div className="mt-3 space-y-5">
             <Paragraphs items={subsection.paragraphs} />

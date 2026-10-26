@@ -1,4 +1,5 @@
 import { PAGES, contactEmailLink } from './site';
+import { withLink } from './links';
 
 // Guide page content. Edit text here -- GuidePage only renders it, in this order.
 //
@@ -33,7 +34,7 @@ export const hero = {
 
 export const intro = [
   'Welcome to the SnapFit Guide. This resource helps online clothing retailers understand how SnapFit works, prepare their store for integration, configure product size charts, and provide AI-assisted clothing size recommendations to customers.',
-  'SnapFit is an AI-based size estimation and recommendation platform designed for online clothing stores. It uses a photo-based workflow to estimate supported body measurements and compare them with product size charts.',
+  withLink('SnapFit is an AI-based size estimation and recommendation platform designed for online clothing stores. It uses a photo-based workflow to estimate supported body measurements and compare them with product size charts.', 'AI-based size estimation and recommendation platform', PAGES.home.to),
   'The platform uses MediaPipe BlazePose for body landmark detection and an API-driven integration model for connecting the sizing service with compatible e-commerce websites. This guide explains the main steps involved in setting up the service and maintaining a useful sizing experience.',
 ];
 

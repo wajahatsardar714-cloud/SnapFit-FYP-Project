@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { hero, meta, sections } from '../../content/pricing';
 import api from '../../services/api';
+import { paragraph } from '../../test/text';
 import PricingPage from './PricingPage';
 
 vi.mock('../../services/api', () => ({ default: { get: vi.fn() } }));
@@ -83,7 +84,7 @@ describe('PricingPage', () => {
       'Before launching, test the photo upload process, recommendation output, error handling, and product-page button. Confirm that customers receive clear guidance throughout the sizing workflow.',
       'Ready to explore SnapFit? Review the available pricing plans, create your account, and take the next step toward introducing AI-powered clothing size recommendations to your online store.',
     ]) {
-      expect(screen.getByText(sentence)).toBeTruthy();
+      expect(screen.getByText(paragraph(sentence))).toBeTruthy();
     }
     for (const h3 of ['Photo-Based Body Measurement', 'Consider Your Store Size', 'Configure Product Size Charts', "Use Your Store's Size Charts"]) {
       expect(screen.getByRole('heading', { level: 3, name: h3 })).toBeTruthy();

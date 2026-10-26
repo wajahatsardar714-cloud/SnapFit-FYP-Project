@@ -1,3 +1,6 @@
+import { PAGES } from './site';
+import { withLink } from './links';
+
 // Pricing page content. Edit text here -- PricingPage only renders it, in this order.
 //
 // A paragraph is a string, or an array of strings and inline links
@@ -34,7 +37,7 @@ export const hero = {
 };
 
 export const intro = [
-  'Choosing the right sizing solution can make a difference in how customers shop at your online clothing store. SnapFit offers an AI-powered clothing size estimation and recommendation platform that helps retailers provide personalized sizing guidance through their existing e-commerce websites.',
+  withLink('Choosing the right sizing solution can make a difference in how customers shop at your online clothing store. SnapFit offers an AI-powered clothing size estimation and recommendation platform that helps retailers provide personalized sizing guidance through their existing e-commerce websites.', 'AI-powered clothing size estimation and recommendation platform', PAGES.home.to),
   'Our subscription plans are designed to support different business requirements, from smaller online stores to growing retailers and enterprise businesses. With SnapFit, you can introduce photo-based body measurement, product-specific size chart matching, and AI-assisted clothing size recommendations through an API-driven integration.',
   "Whether you operate a Shopify store or a custom e-commerce website, the right plan depends on your store's needs, expected usage, and integration requirements. Explore the SnapFit pricing plans below to understand your options and choose a suitable starting point for your business.",
 ];

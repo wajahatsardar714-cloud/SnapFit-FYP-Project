@@ -1,4 +1,5 @@
-import { contactEmailLink } from './site';
+import { PAGES, contactEmailLink } from './site';
+import { withLink } from './links';
 
 // Legal page content: the Privacy Policy, Terms of Service and Cookie Policy.
 // Edit text here -- LegalPage only renders it. Each page is
@@ -24,7 +25,7 @@ export const privacy = {
     {
       title: 'Introduction',
       paragraphs: [
-        'SnapFit respects your privacy and aims to handle personal information responsibly. This Privacy Policy explains how information may be collected, used, stored, and shared when you use our AI-based clothing size estimation and recommendation platform.',
+        withLink('SnapFit respects your privacy and aims to handle personal information responsibly. This Privacy Policy explains how information may be collected, used, stored, and shared when you use our AI-based clothing size estimation and recommendation platform.', 'AI-based clothing size estimation and recommendation platform', PAGES.home.to),
       ],
     },
     {
@@ -82,7 +83,7 @@ export const terms = {
     {
       title: 'Our Services',
       paragraphs: [
-        'SnapFit provides AI-based clothing size estimation and recommendation functionality for compatible online clothing stores. Features and availability may vary according to your subscription and integration.',
+        withLink('SnapFit provides AI-based clothing size estimation and recommendation functionality for compatible online clothing stores. Features and availability may vary according to your subscription and integration.', 'AI-based clothing size estimation and recommendation functionality', PAGES.home.to),
       ],
     },
     {
@@ -134,7 +135,7 @@ export const cookies = {
     {
       title: 'How SnapFit May Use Cookies',
       paragraphs: [
-        'Depending on the technologies implemented, SnapFit may use cookies for account sessions, authentication, security, user preferences, and website performance. Analytics or advertising cookies should be described here only if they are actually used.',
+        withLink('Depending on the technologies implemented, SnapFit may use cookies for account sessions, authentication, security, user preferences, and website performance. Analytics or advertising cookies should be described here only if they are actually used.', 'SnapFit', PAGES.home.to),
       ],
     },
     {
