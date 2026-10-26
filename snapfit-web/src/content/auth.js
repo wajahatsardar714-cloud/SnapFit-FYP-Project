@@ -1,4 +1,4 @@
-import { PAGES } from './site';
+import { PAGES, contactEmailLink as supportEmail } from './site';
 
 // Login and register page content. Edit text here -- the auth pages only
 // render it, in this order: the H1 and intro, the form section, then
@@ -8,9 +8,6 @@ import { PAGES } from './site';
 // ({ text, to, live? }) when part of the sentence should link somewhere.
 // Each section's `layout` picks how it renders: prose | steps | cards | faq |
 // cta (see AuthShell).
-
-const SUPPORT_EMAIL = 'wajahatsardar714@gmail.com';
-const supportEmail = { text: SUPPORT_EMAIL, to: `mailto:${SUPPORT_EMAIL}` };
 
 const pricingPage = { text: 'Pricing page', ...PAGES.pricing };
 // The auth pages link the legal pages directly: they ship together.
