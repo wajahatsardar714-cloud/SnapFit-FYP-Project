@@ -11,6 +11,7 @@ import { ROLES } from './utils/roles';
 // of the dashboard, admin or camera code (and the reverse).
 const HomePage = lazy(() => import('./pages/public/HomePage'));
 const PricingPage = lazy(() => import('./pages/public/PricingPage'));
+const GuidePage = lazy(() => import('./pages/public/GuidePage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'));
@@ -64,6 +65,7 @@ function App() {
             <Route element={<PublicLayout />}>
               <Route index element={<HomePage />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/guide" element={<GuidePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
             </Route>
