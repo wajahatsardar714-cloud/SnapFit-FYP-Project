@@ -5,13 +5,23 @@
 // the homepage ("/#faq"), or an external/mailto URL. `live: false` renders the
 // label as plain text, for pages that are planned but not built yet.
 
-// Pages referenced from several places. Flip `live` to true once a page exists
-// and every link to it (footer, FAQ answers, ...) starts working.
+// Pages referenced from several places. A page with `live: false` shows as
+// plain text everywhere it is linked (footer, FAQ answers, ...) until it exists.
 export const PAGES = {
+  home: { to: '/', live: true },
   pricing: { to: '/pricing', live: true },
-  privacy: { to: '/privacy', live: false },
-  terms: { to: '/terms', live: false },
+  guide: { to: '/guide', live: true },
+  login: { to: '/login', live: true },
+  register: { to: '/register', live: true },
+  privacy: { to: '/privacy', live: true },
+  terms: { to: '/terms', live: true },
+  cookies: { to: '/cookies', live: true },
 };
+
+export const CONTACT_EMAIL = 'wajahatsardar714@gmail.com';
+
+// The contact address as an inline link ({ text, to }), for content paragraphs.
+export const contactEmailLink = { text: CONTACT_EMAIL, to: `mailto:${CONTACT_EMAIL}` };
 
 export const brand = {
   name: 'SnapFit',
@@ -22,14 +32,12 @@ export const header = {
   skipLink: 'Skip to main content',
   navLabel: 'Main',
   links: [
-    { label: 'Home', to: '/' },
-    { label: 'How it works', to: '/#how-it-works' },
-    { label: 'Features', to: '/#features' },
+    { label: 'Home', to: PAGES.home.to },
     { label: 'Pricing', to: PAGES.pricing.to },
-    { label: 'FAQ', to: '/#faq' },
+    { label: 'Guide', to: PAGES.guide.to },
   ],
-  login: { label: 'Login', to: '/login' },
-  register: { label: 'Get Started', to: '/register' },
+  login: { label: 'Login', to: PAGES.login.to },
+  register: { label: 'Get Started', to: PAGES.register.to },
   // Shown instead of Login/Get Started when signed in, keyed by account role
   // (src/utils/roles.js); the link goes to that role's home.
   account: { merchant: 'Dashboard', superadmin: 'Admin' },
@@ -42,41 +50,31 @@ export const footer = {
     {
       title: 'Product',
       links: [
-        { label: 'How it works', to: '/#how-it-works' },
-        { label: 'Features', to: '/#features' },
+        { label: 'Home', ...PAGES.home },
         { label: 'Pricing', ...PAGES.pricing },
-        { label: 'FAQ', to: '/#faq' },
-      ],
-    },
-    {
-      title: 'Resources',
-      links: [
-        { label: 'Integration steps', to: '/#integration' },
-        { label: 'Accuracy and limitations', to: '/#accuracy' },
-        { label: 'Photo privacy', to: '/#privacy' },
+        { label: 'Guide', ...PAGES.guide },
       ],
     },
     {
       title: 'Account',
       links: [
-        { label: 'Get Started', to: '/register' },
-        { label: 'Log In', to: '/login' },
+        { label: 'Login', ...PAGES.login },
+        { label: 'Register', ...PAGES.register },
       ],
     },
     {
       title: 'Legal',
       links: [
         { label: 'Privacy Policy', ...PAGES.privacy },
-        { label: 'Terms', ...PAGES.terms },
+        { label: 'Terms of Service', ...PAGES.terms },
+        { label: 'Cookie Policy', ...PAGES.cookies },
       ],
     },
+    {
+      title: 'Contact',
+      links: [{ label: CONTACT_EMAIL, to: contactEmailLink.to }],
+    },
   ],
-  // Placeholder address (.example is a reserved domain): replace it with the
-  // real support inbox before launch.
-  contact: {
-    title: 'Contact',
-    links: [{ label: 'support@snapfit.example', to: 'mailto:support@snapfit.example' }],
-  },
   // {year} is replaced with the current year.
   copyright: '© {year} SnapFit. All rights reserved.',
 };

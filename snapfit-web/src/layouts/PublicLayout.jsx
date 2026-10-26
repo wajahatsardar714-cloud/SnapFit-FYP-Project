@@ -8,8 +8,8 @@ import { brand, footer, header } from '../content/site';
 
 const MAIN_ID = 'main-content';
 
-// Public site shell (home, pricing, login, register): skip link, header, the
-// page, footer. Always the light palette, even when the dashboard is set to
+// Public site shell (home, pricing, guide, legal pages, login, register): skip
+// link, header, the page, footer. Always the light palette, even when the dashboard is set to
 // dark. overflow-x-clip is only a safety net -- content must fit on its own --
 // and, unlike overflow-hidden, it keeps the sticky header working.
 function PublicLayout() {

@@ -10,18 +10,17 @@ import SmartLink from './SmartLink';
 
 const MENU_ID = 'site-menu';
 
-// "/#faq" is current only on the homepage with that hash; "/" only without one.
-function isCurrent(to, { pathname, hash }) {
-  const [path, fragment] = to.split('#');
-  if (fragment !== undefined) return pathname === path && hash === `#${fragment}`;
-  return path === '/' ? pathname === '/' && !hash : pathname.startsWith(path);
+// A page link is current on that page and below it ("/guide" on "/guide/x");
+// "/" only on the homepage itself.
+function isCurrent(to, pathname) {
+  return to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(`${to}/`);
 }
 
-function NavLinks({ links, location, className, linkClassName }) {
+function NavLinks({ links, pathname, className, linkClassName }) {
   return (
     <ul className={className}>
       {links.map((link) => {
-        const current = isCurrent(link.to, location);
+        const current = isCurrent(link.to, pathname);
         return (
           <li key={link.label}>
             <SmartLink
@@ -94,7 +93,7 @@ function SiteHeader({ brand, nav }) {
         </Link>
 
         <nav aria-label={nav.navLabel} className="hidden lg:block">
-          <NavLinks links={nav.links} location={location} className="flex items-center gap-1" linkClassName="block px-3 py-2 text-[0.9375rem]" />
+          <NavLinks links={nav.links} pathname={location.pathname} className="flex items-center gap-1" linkClassName="block px-3 py-2 text-[0.9375rem]" />
         </nav>
         <AccountActions nav={nav} className="hidden items-center gap-2 lg:flex" />
 
@@ -113,7 +112,7 @@ function SiteHeader({ brand, nav }) {
       <div id={MENU_ID} hidden={!menuOpen} className="border-t border-border bg-surface lg:hidden">
         <Container className="py-4">
           <nav aria-label={nav.navLabel}>
-            <NavLinks links={nav.links} location={location} className="space-y-1" linkClassName="block px-3 py-3 text-base" />
+            <NavLinks links={nav.links} pathname={location.pathname} className="space-y-1" linkClassName="block px-3 py-3 text-base" />
           </nav>
           <AccountActions nav={nav} className="mt-4 grid gap-3 border-t border-border pt-4" buttonClassName="w-full" />
         </Container>

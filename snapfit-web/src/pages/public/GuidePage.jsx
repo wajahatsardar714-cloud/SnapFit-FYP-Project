@@ -10,12 +10,9 @@ import StepList from '../../components/public/StepList';
 import TableOfContents from '../../components/public/TableOfContents';
 import { hero, intro, meta, sections, tableOfContents } from '../../content/guide';
 
-// The guide's text runs the full container width rather than Prose's reading column.
-const FULL_WIDTH = '!max-w-none';
-
 // How each content `layout` renders inside its Section (see content/guide.js).
 const LAYOUTS = {
-  prose: (section) => <Prose paragraphs={section.paragraphs} className={FULL_WIDTH} />,
+  prose: (section) => <Prose paragraphs={section.paragraphs} />,
   steps: (section) => <StepList steps={section.items} />,
   cards: (section) => (
     <CardGrid>
@@ -37,7 +34,7 @@ function GuidePage() {
       <Hero {...hero} />
 
       <Section>
-        <Prose paragraphs={intro} className={FULL_WIDTH} />
+        <Prose paragraphs={intro} />
         <div className="mt-12">
           <TableOfContents title={tableOfContents.title} items={tocItems} />
         </div>

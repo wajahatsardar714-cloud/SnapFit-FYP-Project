@@ -73,10 +73,6 @@ export default {
         // The only shadow allowed on default-state cards (none in dark mode).
         card: 'var(--shadow-card)',
       },
-      maxWidth: {
-        // Comfortable reading measure for long-form text.
-        reading: '70ch',
-      },
     },
   },
   plugins: [],

@@ -1,18 +1,12 @@
-const SIZE_CLASSES = {
-  default: 'max-w-6xl',
-  narrow: 'max-w-3xl',
-  reading: 'max-w-reading',
-};
-
 /**
- * Centred page column with the site's side gutters (16px on phones).
- *   size       'default' (72rem) | 'narrow' (48rem) | 'reading' (70ch)
+ * Centred page column: the site's one content width (80rem, 1280px) with side
+ * gutters (16px on phones). Sections, prose, tables and FAQs all fill it.
  *   as         element to render (default 'div')
  *   className  extra classes
  */
-function Container({ size = 'default', as: Tag = 'div', className = '', children, ...rest }) {
+function Container({ as: Tag = 'div', className = '', children, ...rest }) {
   return (
-    <Tag className={`mx-auto w-full min-w-0 px-4 sm:px-6 lg:px-8 ${SIZE_CLASSES[size]} ${className}`} {...rest}>
+    <Tag className={`mx-auto w-full min-w-0 max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`} {...rest}>
       {children}
     </Tag>
   );

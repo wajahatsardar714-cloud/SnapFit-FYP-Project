@@ -72,14 +72,27 @@ describe('site header', () => {
     const nav = within(header()).getByRole('navigation', { name: 'Main' });
     expect(within(nav).getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
       ['Home', '/'],
-      ['How it works', '/#how-it-works'],
-      ['Features', '/#features'],
       ['Pricing', '/pricing'],
-      ['FAQ', '/#faq'],
+      ['Guide', '/guide'],
     ]);
+    expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page');
     expect(within(header()).getByRole('link', { name: 'Login' }).getAttribute('href')).toBe('/login');
     expect(within(header()).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/register');
     expect(within(header()).queryByRole('link', { name: 'Dashboard' })).toBeNull();
+  });
+
+  it('keeps legal pages and in-page anchors out of the header, in both menus', async () => {
+    renderAt('/guide');
+    await screen.findByRole('heading', { level: 1 });
+    const hrefs = within(header())
+      .getAllByRole('link', { hidden: true })
+      .map((link) => link.getAttribute('href'));
+    expect(hrefs.filter((href) => href.includes('#'))).toEqual([]);
+    for (const page of ['/privacy', '/terms', '/cookies']) expect(hrefs).not.toContain(page);
+    for (const nav of within(header()).getAllByRole('navigation', { name: 'Main', hidden: true })) {
+      expect(within(nav).getByRole('link', { name: 'Guide', hidden: true }).getAttribute('aria-current')).toBe('page');
+      expect(within(nav).getByRole('link', { name: 'Home', hidden: true }).getAttribute('aria-current')).toBeNull();
+    }
   });
 
   it('shows the Dashboard button to a signed-in merchant', async () => {
@@ -113,6 +126,36 @@ describe('site header', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+});
+
+describe('site footer', () => {
+  const footerLinks = (title) => {
+    const heading = within(screen.getByRole('contentinfo')).getByRole('heading', { level: 2, name: title });
+    return within(heading.parentElement)
+      .getAllByRole('link')
+      .map((link) => [link.textContent, link.getAttribute('href')]);
+  };
+
+  it('links every page, the legal pages and the contact email', async () => {
+    renderAt('/');
+    await screen.findByRole('heading', { level: 1 });
+    expect(footerLinks('Product')).toEqual([
+      ['Home', '/'],
+      ['Pricing', '/pricing'],
+      ['Guide', '/guide'],
+    ]);
+    expect(footerLinks('Account')).toEqual([
+      ['Login', '/login'],
+      ['Register', '/register'],
+    ]);
+    expect(footerLinks('Legal')).toEqual([
+      ['Privacy Policy', '/privacy'],
+      ['Terms of Service', '/terms'],
+      ['Cookie Policy', '/cookies'],
+    ]);
+    expect(footerLinks('Contact')).toEqual([['wajahatsardar714@gmail.com', 'mailto:wajahatsardar714@gmail.com']]);
+    expect(screen.getByRole('contentinfo').textContent).not.toContain('snapfit.example');
   });
 });
 

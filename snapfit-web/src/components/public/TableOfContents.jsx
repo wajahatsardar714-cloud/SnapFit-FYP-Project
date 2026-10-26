@@ -10,7 +10,7 @@ import { useLocation } from 'react-router-dom';
 function TableOfContents({ title, items = [] }) {
   const { hash } = useLocation();
   return (
-    <nav aria-label={title} className="mx-auto max-w-3xl">
+    <nav aria-label={title}>
       <details className="group rounded-xl border border-border bg-surface shadow-card">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-4 sm:px-6 [&::-webkit-details-marker]:hidden">
           <span className="type-h4 text-deep-blue">{title}</span>

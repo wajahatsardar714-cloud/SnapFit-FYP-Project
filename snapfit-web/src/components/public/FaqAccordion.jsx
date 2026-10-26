@@ -9,7 +9,7 @@ import { Paragraphs } from './RichText';
  */
 function FaqAccordion({ items = [] }) {
   return (
-    <div className="mx-auto max-w-3xl space-y-3">
+    <div className="space-y-3">
       {items.map((item) => (
         <details
           key={item.question}

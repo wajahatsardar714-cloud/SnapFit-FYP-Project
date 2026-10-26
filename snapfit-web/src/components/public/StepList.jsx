@@ -1,13 +1,13 @@
 import { Paragraphs } from './RichText';
 
 /**
- * Numbered steps down a connecting line, in a centred column.
+ * Numbered steps down a connecting line, full width.
  *   steps      [{ title, paragraphs }] in order
  *   headingAs  step heading element, default 'h3'
  */
 function StepList({ steps = [], headingAs: Heading = 'h3' }) {
   return (
-    <ol className="mx-auto max-w-3xl">
+    <ol>
       {steps.map((step, i) => (
         <li key={step.title} className="relative flex min-w-0 gap-4 pb-10 last:pb-0 sm:gap-6">
           {i < steps.length - 1 && (

@@ -12,6 +12,7 @@ import { ROLES } from './utils/roles';
 const HomePage = lazy(() => import('./pages/public/HomePage'));
 const PricingPage = lazy(() => import('./pages/public/PricingPage'));
 const GuidePage = lazy(() => import('./pages/public/GuidePage'));
+const LegalPage = lazy(() => import('./pages/public/LegalPage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'));
@@ -66,6 +67,9 @@ function App() {
               <Route index element={<HomePage />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/guide" element={<GuidePage />} />
+              <Route path="/privacy" element={<LegalPage page="privacy" />} />
+              <Route path="/terms" element={<LegalPage page="terms" />} />
+              <Route path="/cookies" element={<LegalPage page="cookies" />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
             </Route>

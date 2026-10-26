@@ -130,13 +130,12 @@ describe('HomePage', () => {
     }
   });
 
-  it('renders the FAQ as native details, with the Pricing page linked', () => {
+  it('renders the FAQ as native details, with the Pricing page and Privacy Policy linked', () => {
     const items = section('faq').querySelectorAll('details');
     expect(items).toHaveLength(12);
     expect(items[0].querySelector('summary').textContent).toBe('What Is AI Clothing Size Estimation?');
     expect(within(section('faq')).getByRole('link', { name: 'Pricing page', hidden: true }).getAttribute('href')).toBe('/pricing');
-    // The Privacy Policy page doesn't exist yet: plain text, same words.
-    expect(within(section('faq')).queryByRole('link', { name: 'Privacy Policy', hidden: true })).toBeNull();
+    expect(within(section('faq')).getByRole('link', { name: 'Privacy Policy', hidden: true }).getAttribute('href')).toBe('/privacy');
     expect(items[11].textContent).toContain(
       "Store owners and shoppers should review SnapFit's Privacy Policy for details about processing, storage, access, and deletion."
     );

@@ -1,7 +1,7 @@
 import { Paragraphs } from './RichText';
 
 /**
- * Long-form text in a centred, readable column (max 70ch).
+ * Long-form text across the full container width.
  *   paragraphs   paragraph texts (see RichText)
  *   subsections  [{ title, paragraphs }] -- each title renders as `headingAs`
  *   headingAs    subsection heading element, default 'h3'
@@ -9,7 +9,7 @@ import { Paragraphs } from './RichText';
  */
 function Prose({ paragraphs = [], subsections = [], headingAs: Heading = 'h3', className = '' }) {
   return (
-    <div className={`type-body mx-auto max-w-reading min-w-0 break-words text-body ${className}`}>
+    <div className={`type-body min-w-0 break-words text-body ${className}`}>
       {paragraphs.length > 0 && (
         <div className="space-y-5">
           <Paragraphs items={paragraphs} />
