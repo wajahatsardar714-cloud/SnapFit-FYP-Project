@@ -1,4 +1,4 @@
-import { PAGES } from './site';
+import { PAGES, contactEmailLink } from './site';
 
 // Guide page content. Edit text here -- GuidePage only renders it, in this order.
 //
@@ -6,8 +6,6 @@ import { PAGES } from './site';
 // ({ text, to, live? }) when part of the sentence should link somewhere.
 // Each section's `layout` picks how it renders: prose | steps | cards | faq |
 // cta. Its `id` is the anchor the table of contents links to.
-
-const SUPPORT_EMAIL = 'wajahatsardar714@gmail.com';
 
 // The guide links the Privacy Policy directly: the legal pages ship with it.
 const privacyPolicy = { to: PAGES.privacy.to };
@@ -259,7 +257,7 @@ export const sections = [
         answer: [
           [
             'For questions about registration, subscriptions, or integration, contact ',
-            { text: SUPPORT_EMAIL, to: `mailto:${SUPPORT_EMAIL}` },
+            contactEmailLink,
             '. Do not send passwords or secret API credentials in support messages.',
           ],
         ],
