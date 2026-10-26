@@ -66,7 +66,7 @@ describe('public routes', () => {
 });
 
 describe('site header', () => {
-  it('offers Login and Get Started to visitors', async () => {
+  it('offers Login and Register to visitors', async () => {
     renderAt('/');
     await screen.findByRole('heading', { level: 1 });
     const nav = within(header()).getByRole('navigation', { name: 'Main' });
@@ -77,7 +77,7 @@ describe('site header', () => {
     ]);
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page');
     expect(within(header()).getByRole('link', { name: 'Login' }).getAttribute('href')).toBe('/login');
-    expect(within(header()).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/register');
+    expect(within(header()).getByRole('link', { name: 'Register' }).getAttribute('href')).toBe('/register');
     expect(within(header()).queryByRole('link', { name: 'Dashboard' })).toBeNull();
   });
 
@@ -137,17 +137,13 @@ describe('site footer', () => {
       .map((link) => [link.textContent, link.getAttribute('href')]);
   };
 
-  it('links every page, the legal pages and the contact email', async () => {
+  it('links the site pages, the legal pages and the contact email', async () => {
     renderAt('/');
     await screen.findByRole('heading', { level: 1 });
     expect(footerLinks('Product')).toEqual([
       ['Home', '/'],
       ['Pricing', '/pricing'],
       ['Guide', '/guide'],
-    ]);
-    expect(footerLinks('Account')).toEqual([
-      ['Login', '/login'],
-      ['Register', '/register'],
     ]);
     expect(footerLinks('Legal')).toEqual([
       ['Privacy Policy', '/privacy'],
@@ -156,6 +152,18 @@ describe('site footer', () => {
     ]);
     expect(footerLinks('Contact')).toEqual([['wajahatsardar714@gmail.com', 'mailto:wajahatsardar714@gmail.com']]);
     expect(screen.getByRole('contentinfo').textContent).not.toContain('snapfit.example');
+  });
+
+  it('leaves Login and Register to the header', async () => {
+    renderAt('/');
+    await screen.findByRole('heading', { level: 1 });
+    const footer = screen.getByRole('contentinfo');
+    expect(within(footer).queryByRole('heading', { name: 'Account' })).toBeNull();
+    const hrefs = within(footer)
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'));
+    expect(hrefs).not.toContain('/login');
+    expect(hrefs).not.toContain('/register');
   });
 });
 

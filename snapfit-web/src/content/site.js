@@ -37,7 +37,7 @@ export const header = {
     { label: 'Guide', to: PAGES.guide.to },
   ],
   login: { label: 'Login', to: PAGES.login.to },
-  register: { label: 'Get Started', to: PAGES.register.to },
+  register: { label: 'Register', to: PAGES.register.to },
   // Shown instead of Login/Get Started when signed in, keyed by account role
   // (src/utils/roles.js); the link goes to that role's home.
   account: { merchant: 'Dashboard', superadmin: 'Admin' },
@@ -53,13 +53,6 @@ export const footer = {
         { label: 'Home', ...PAGES.home },
         { label: 'Pricing', ...PAGES.pricing },
         { label: 'Guide', ...PAGES.guide },
-      ],
-    },
-    {
-      title: 'Account',
-      links: [
-        { label: 'Login', ...PAGES.login },
-        { label: 'Register', ...PAGES.register },
       ],
     },
     {

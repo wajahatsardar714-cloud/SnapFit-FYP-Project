@@ -39,7 +39,7 @@ function NavLinks({ links, pathname, className, linkClassName }) {
   );
 }
 
-// Login + Get Started, or the account's home (Dashboard/Admin) once signed in.
+// Login + Register, or the account's home (Dashboard/Admin) once signed in.
 function AccountActions({ nav, className, buttonClassName = '' }) {
   const { isAuthenticated, merchant } = useAuth();
   if (isAuthenticated) {
