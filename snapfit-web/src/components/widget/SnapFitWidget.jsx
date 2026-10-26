@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
-import { AlertTriangle, Camera, ImagePlus, Ruler, Shirt, Smartphone, X } from 'lucide-react';
+import { AlertTriangle, Camera, ImagePlus, Ruler, Shirt, Smartphone } from 'lucide-react';
 import { isLikelyDesktop } from '../../utils/device';
 import AnalysisProgress from './AnalysisProgress';
 import SizeResult from './SizeResult';
 import TryOnPreview from './TryOnPreview';
+import WidgetDialog from './WidgetDialog';
 
 // Code-split: LiveCapture pulls in @mediapipe/tasks-vision (WASM), which is only
 // needed once a shopper opens the camera tab. Merchants who only use the (default)
@@ -14,6 +15,14 @@ const LiveCapture = lazy(() => import('./LiveCapture'));
 const MobileHandoff = lazy(() => import('./MobileHandoff'));
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+// The dialog's title for each step.
+const STEP_TITLES = {
+  form: 'Find your size',
+  loading: 'Analyzing your photo',
+  result: 'Your size',
+  error: "We couldn't check your size",
+};
 const MIN_HEIGHT_CM = 100;
 const MAX_HEIGHT_CM = 230;
 // Size + try-on in one call: one upload, billed as one request. The backend
@@ -87,6 +96,8 @@ function SnapFitWidget({
   // The phone handoff sessions are API-key authed, so a token-only widget
   // offers camera and upload only.
   const offersPhone = isDesktop && Boolean(apiKey);
+  // The result shows a try-on panel unless the product isn't try-on ready.
+  const hasTryOnView = Boolean(tryOn && tryOn.status !== 'unavailable');
   const heightValue = heightToCm(heightUnit, heightCm, heightFeet, heightInches);
   const heightMessage = heightError(heightValue);
   const showHeightError = heightTouched && Boolean(heightMessage);
@@ -137,6 +148,13 @@ function SnapFitWidget({
   function closeModal() {
     if (step === 'loading') return;
     setIsOpen(false);
+  }
+
+  // Back from the result (or an error) to the form, keeping the photo and
+  // answers so the shopper can adjust them and check again.
+  function backToForm() {
+    setStep('form');
+    setFeedback(null);
   }
 
   // `frames`: extra frames captured with this photo (live camera only).
@@ -218,350 +236,362 @@ function SnapFitWidget({
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-overlay/50" onClick={closeModal} aria-hidden="true" />
+        <WidgetDialog
+          title={STEP_TITLES[step]}
+          wide={step === 'result'}
+          onBack={step === 'result' || step === 'error' ? backToForm : undefined}
+          onClose={closeModal}
+          closeDisabled={step === 'loading'}
+        >
+          {step === 'form' && (
+            <div>
+              <p className="text-sm text-muted-foreground">Take or upload a full-body photo and we'll estimate your best fit.</p>
 
-          <div className="relative w-full max-w-md rounded-xl bg-background p-6 shadow-xl">
-            <button
-              type="button"
-              onClick={closeModal}
-              disabled={step === 'loading'}
-              className="absolute right-4 top-4 text-muted-foreground hover:text-muted-foreground disabled:opacity-40"
-            >
-              <X size={18} />
-            </button>
-
-            {step === 'form' && (
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">Find your size</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Take or upload a full-body photo and we'll estimate your best fit.</p>
-
-                {!inputMode && (
-                  <div className={`mt-5 grid gap-3 ${offersPhone ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {!inputMode && (
+                <div className={`mt-5 grid gap-3 ${offersPhone ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('camera')}
+                    className="flex flex-col items-center gap-2 rounded-lg border border-border py-5 text-sm font-medium text-foreground hover:bg-surface-2"
+                  >
+                    <Camera size={22} className="text-muted-foreground" />
+                    Take a Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('upload')}
+                    className="flex flex-col items-center gap-2 rounded-lg border border-border py-5 text-sm font-medium text-foreground hover:bg-surface-2"
+                  >
+                    <ImagePlus size={22} className="text-muted-foreground" />
+                    Upload a Photo
+                  </button>
+                  {offersPhone && (
                     <button
                       type="button"
-                      onClick={() => setInputMode('camera')}
+                      onClick={() => setInputMode('phone')}
                       className="flex flex-col items-center gap-2 rounded-lg border border-border py-5 text-sm font-medium text-foreground hover:bg-surface-2"
                     >
-                      <Camera size={22} className="text-muted-foreground" />
-                      Take a Photo
+                      <Smartphone size={22} className="text-muted-foreground" />
+                      Use My Phone
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {inputMode === 'phone' && !file && (
+                <div className="mt-4">
+                  <Suspense fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>}>
+                    <MobileHandoff
+                      apiKey={apiKey}
+                      apiUrl={apiUrl}
+                      onCapture={(capturedFile) => onFilesSelected([capturedFile])}
+                      onSwitchToUpload={() => {
+                        setFormError('');
+                        setInputMode('upload');
+                      }}
+                    />
+                  </Suspense>
+                </div>
+              )}
+
+              {inputMode === 'phone' && file && (
+                <div className="mt-4">
+                  <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-border p-3">
+                    <img src={previewUrl} alt="Photo from your phone" className="h-48 w-48 rounded-md object-cover" />
+                    <span className="text-xs text-muted-foreground">Received from your phone</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-center gap-4 text-xs">
+                    <button
+                      type="button"
+                      onClick={clearPhoto}
+                      className="font-medium text-muted-foreground underline hover:text-foreground"
+                    >
+                      Retake
                     </button>
                     <button
                       type="button"
-                      onClick={() => setInputMode('upload')}
-                      className="flex flex-col items-center gap-2 rounded-lg border border-border py-5 text-sm font-medium text-foreground hover:bg-surface-2"
+                      onClick={() => {
+                        clearPhoto();
+                        setFormError('');
+                        setInputMode('upload');
+                      }}
+                      className="font-medium text-muted-foreground underline hover:text-foreground"
                     >
-                      <ImagePlus size={22} className="text-muted-foreground" />
-                      Upload a Photo
+                      Or upload a photo instead
                     </button>
-                    {offersPhone && (
-                      <button
-                        type="button"
-                        onClick={() => setInputMode('phone')}
-                        className="flex flex-col items-center gap-2 rounded-lg border border-border py-5 text-sm font-medium text-foreground hover:bg-surface-2"
-                      >
-                        <Smartphone size={22} className="text-muted-foreground" />
-                        Use My Phone
-                      </button>
+                  </div>
+                </div>
+              )}
+
+              {inputMode === 'camera' && (
+                <div className="mt-4">
+                  <Suspense
+                    fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading camera…</p>}
+                  >
+                    <LiveCapture
+                      file={file}
+                      previewUrl={previewUrl}
+                      onCapture={(capturedFile, frames) => onFilesSelected([capturedFile], frames)}
+                      onRetake={clearPhoto}
+                      onSwitchToUpload={() => {
+                        clearPhoto();
+                        setFormError('');
+                        setInputMode('upload');
+                      }}
+                      autoCapture={autoCapture}
+                    />
+                  </Suspense>
+                </div>
+              )}
+
+              {inputMode === 'upload' && (
+                <div className="mt-4">
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragActive(true);
+                    }}
+                    onDragLeave={() => setDragActive(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition ${
+                      dragActive ? 'border-primary bg-surface-2' : 'border-border'
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => onFilesSelected(e.target.files)}
+                    />
+                    {/* previewUrl trails `file` by a render (set in an effect), so check both. */}
+                    {file && previewUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <img src={previewUrl} alt="Selected preview" className="h-32 w-32 rounded-md object-cover" />
+                        <span className="text-xs text-muted-foreground">{file.name} — click to change</span>
+                      </div>
+                    ) : (
+                      <>
+                        <ImagePlus size={28} className="text-muted-foreground" />
+                        <p className="mt-2 text-sm text-muted-foreground">Drag & drop your photo here, or click to browse</p>
+                        <p className="mt-1 text-xs text-muted-foreground">JPG or PNG, up to 10MB</p>
+                      </>
                     )}
                   </div>
-                )}
-
-                {inputMode === 'phone' && !file && (
-                  <div className="mt-4">
-                    <Suspense fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>}>
-                      <MobileHandoff
-                        apiKey={apiKey}
-                        apiUrl={apiUrl}
-                        onCapture={(capturedFile) => onFilesSelected([capturedFile])}
-                        onSwitchToUpload={() => {
-                          setFormError('');
-                          setInputMode('upload');
-                        }}
-                      />
-                    </Suspense>
-                  </div>
-                )}
-
-                {inputMode === 'phone' && file && (
-                  <div className="mt-4">
-                    <div className="flex flex-col items-center gap-2 rounded-lg border-2 border-border p-3">
-                      <img src={previewUrl} alt="Photo from your phone" className="h-48 w-48 rounded-md object-cover" />
-                      <span className="text-xs text-muted-foreground">Received from your phone</span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-center gap-4 text-xs">
-                      <button
-                        type="button"
-                        onClick={clearPhoto}
-                        className="font-medium text-muted-foreground underline hover:text-foreground"
-                      >
-                        Retake
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          clearPhoto();
-                          setFormError('');
-                          setInputMode('upload');
-                        }}
-                        className="font-medium text-muted-foreground underline hover:text-foreground"
-                      >
-                        Or upload a photo instead
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {inputMode === 'camera' && (
-                  <div className="mt-4">
-                    <Suspense
-                      fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading camera…</p>}
-                    >
-                      <LiveCapture
-                        file={file}
-                        previewUrl={previewUrl}
-                        onCapture={(capturedFile, frames) => onFilesSelected([capturedFile], frames)}
-                        onRetake={clearPhoto}
-                        onSwitchToUpload={() => {
-                          clearPhoto();
-                          setFormError('');
-                          setInputMode('upload');
-                        }}
-                        autoCapture={autoCapture}
-                      />
-                    </Suspense>
-                  </div>
-                )}
-
-                {inputMode === 'upload' && (
-                  <div className="mt-4">
-                    <div
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setDragActive(true);
-                      }}
-                      onDragLeave={() => setDragActive(false)}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition ${
-                        dragActive ? 'border-primary bg-surface-2' : 'border-border'
-                      }`}
-                    >
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => onFilesSelected(e.target.files)}
-                      />
-                      {/* previewUrl trails `file` by a render (set in an effect), so check both. */}
-                      {file && previewUrl ? (
-                        <div className="flex flex-col items-center gap-2">
-                          <img src={previewUrl} alt="Selected preview" className="h-32 w-32 rounded-md object-cover" />
-                          <span className="text-xs text-muted-foreground">{file.name} — click to change</span>
-                        </div>
-                      ) : (
-                        <>
-                          <ImagePlus size={28} className="text-muted-foreground" />
-                          <p className="mt-2 text-sm text-muted-foreground">Drag & drop your photo here, or click to browse</p>
-                          <p className="mt-1 text-xs text-muted-foreground">JPG or PNG, up to 10MB</p>
-                        </>
-                      )}
-                    </div>
-                    <div className="mt-2 text-center text-xs">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          clearPhoto();
-                          setFormError('');
-                          setInputMode('camera');
-                        }}
-                        className="font-medium text-muted-foreground underline hover:text-foreground"
-                      >
-                        Or take a photo instead
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {formError && <p className="mt-2 text-sm text-danger">{formError}</p>}
-
-                {inputMode && (
-                  <>
-                    <div className="mt-4" role="group" aria-labelledby={`${fieldId}-height-label`}>
-                      <div id={`${fieldId}-height-label`} className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <Ruler size={16} aria-hidden="true" />
-                        Height
-                      </div>
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="flex rounded-md border border-border p-0.5 text-xs">
-                          <button
-                            type="button"
-                            aria-pressed={heightUnit === 'cm'}
-                            onClick={() => setHeightUnit('cm')}
-                            className={`rounded px-2 py-1 ${heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-                          >
-                            cm
-                          </button>
-                          <button
-                            type="button"
-                            aria-pressed={heightUnit === 'ft'}
-                            onClick={() => setHeightUnit('ft')}
-                            className={`rounded px-2 py-1 ${heightUnit === 'ft' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-                          >
-                            ft/in
-                          </button>
-                        </div>
-
-                        {heightUnit === 'cm' ? (
-                          <input
-                            {...heightInputProps}
-                            aria-label="Height in cm"
-                            placeholder="e.g. 178"
-                            value={heightCm}
-                            onChange={(e) => setHeightCm(e.target.value)}
-                            className={`w-24 ${heightInputProps.className}`}
-                          />
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <input
-                              {...heightInputProps}
-                              aria-label="Height, feet"
-                              placeholder="ft"
-                              value={heightFeet}
-                              onChange={(e) => setHeightFeet(e.target.value)}
-                              className={`w-16 ${heightInputProps.className}`}
-                            />
-                            <input
-                              {...heightInputProps}
-                              aria-label="Height, inches"
-                              placeholder="in"
-                              value={heightInches}
-                              onChange={(e) => setHeightInches(e.target.value)}
-                              className={`w-16 ${heightInputProps.className}`}
-                            />
-                          </div>
-                        )}
-                      </div>
-                      {showHeightError && (
-                        <p id={heightErrorId} className="mt-1 text-xs text-danger">
-                          {heightMessage}
-                        </p>
-                      )}
-                    </div>
-
-                    <fieldset className="mt-4">
-                      <legend className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <Shirt size={16} aria-hidden="true" />
-                        What are you wearing?
-                      </legend>
-                      <div className="mt-2 flex rounded-md border border-border p-0.5 text-xs">
-                        {CLOTHING_FIT_OPTIONS.map((option) => (
-                          <label
-                            key={option.value}
-                            className={`flex-1 cursor-pointer rounded px-2 py-1 text-center focus-within:ring-2 focus-within:ring-primary ${
-                              clothingFit === option.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name={`${fieldId}-clothing-fit`}
-                              value={option.value}
-                              checked={clothingFit === option.value}
-                              onChange={() => setClothingFit(option.value)}
-                              className="sr-only"
-                            />
-                            {option.label}
-                          </label>
-                        ))}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">Fitted clothes give the most accurate size.</p>
-                    </fieldset>
-
+                  <div className="mt-2 text-center text-xs">
                     <button
                       type="button"
-                      onClick={handleSubmit}
-                      disabled={!file}
-                      className="mt-5 w-full rounded-md bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() => {
+                        clearPhoto();
+                        setFormError('');
+                        setInputMode('camera');
+                      }}
+                      className="font-medium text-muted-foreground underline hover:text-foreground"
                     >
-                      Get My Size
+                      Or take a photo instead
                     </button>
-                  </>
-                )}
-              </div>
-            )}
+                  </div>
+                </div>
+              )}
 
-            {step === 'loading' && <AnalysisProgress includesTryOn={INCLUDE_TRY_ON} />}
+              {formError && <p className="mt-2 text-sm text-danger">{formError}</p>}
 
-            {step === 'result' && result && (
-              <div className="text-center">
-                <SizeResult result={result} />
+              {inputMode && (
+                <>
+                  <div className="mt-4" role="group" aria-labelledby={`${fieldId}-height-label`}>
+                    <div id={`${fieldId}-height-label`} className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Ruler size={16} aria-hidden="true" />
+                      Height
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="flex rounded-md border border-border p-0.5 text-xs">
+                        <button
+                          type="button"
+                          aria-pressed={heightUnit === 'cm'}
+                          onClick={() => setHeightUnit('cm')}
+                          className={`rounded px-2 py-1 ${heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                        >
+                          cm
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={heightUnit === 'ft'}
+                          onClick={() => setHeightUnit('ft')}
+                          className={`rounded px-2 py-1 ${heightUnit === 'ft' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                        >
+                          ft/in
+                        </button>
+                      </div>
 
-                {tryOn && tryOn.status !== 'unavailable' && (
-                  <div className="mt-5 border-t pt-4 text-left">
+                      {heightUnit === 'cm' ? (
+                        <input
+                          {...heightInputProps}
+                          aria-label="Height in cm"
+                          placeholder="e.g. 178"
+                          value={heightCm}
+                          onChange={(e) => setHeightCm(e.target.value)}
+                          className={`w-24 ${heightInputProps.className}`}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <input
+                            {...heightInputProps}
+                            aria-label="Height, feet"
+                            placeholder="ft"
+                            value={heightFeet}
+                            onChange={(e) => setHeightFeet(e.target.value)}
+                            className={`w-16 ${heightInputProps.className}`}
+                          />
+                          <input
+                            {...heightInputProps}
+                            aria-label="Height, inches"
+                            placeholder="in"
+                            value={heightInches}
+                            onChange={(e) => setHeightInches(e.target.value)}
+                            className={`w-16 ${heightInputProps.className}`}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {showHeightError && (
+                      <p id={heightErrorId} className="mt-1 text-xs text-danger">
+                        {heightMessage}
+                      </p>
+                    )}
+                  </div>
+
+                  <fieldset className="mt-4">
+                    <legend className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Shirt size={16} aria-hidden="true" />
+                      What are you wearing?
+                    </legend>
+                    <div className="mt-2 flex rounded-md border border-border p-0.5 text-xs">
+                      {CLOTHING_FIT_OPTIONS.map((option) => (
+                        <label
+                          key={option.value}
+                          className={`flex-1 cursor-pointer rounded px-2 py-1 text-center focus-within:ring-2 focus-within:ring-primary ${
+                            clothingFit === option.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={`${fieldId}-clothing-fit`}
+                            value={option.value}
+                            checked={clothingFit === option.value}
+                            onChange={() => setClothingFit(option.value)}
+                            className="sr-only"
+                          />
+                          {option.label}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Fitted clothes give the most accurate size.</p>
+                  </fieldset>
+
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={!file}
+                    className="mt-5 w-full rounded-md bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Get My Size
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {step === 'loading' && <AnalysisProgress includesTryOn={INCLUDE_TRY_ON} />}
+
+          {step === 'result' && result && (
+            <div>
+              {/* Size and measurements first on phones; on wide screens the
+                  try-on photo sits beside them. */}
+              <div
+                className={
+                  hasTryOnView
+                    ? 'grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start'
+                    : 'mx-auto max-w-2xl'
+                }
+              >
+                <div className="min-w-0">
+                  <SizeResult result={result} />
+                </div>
+                {hasTryOnView && (
+                  <div className="min-w-0 rounded-xl border border-border bg-surface p-4 lg:sticky lg:top-0 lg:order-first">
                     <TryOnPreview tryOn={tryOn} originalUrl={previewUrl} size={result.size} />
                   </div>
                 )}
+              </div>
 
-                <div className="mt-5 border-t pt-4">
-                  <p className="text-xs font-medium text-muted-foreground">How did it fit?</p>
-                  {feedback ? (
-                    <p className="mt-2 text-sm text-muted-foreground">Thanks for your feedback!</p>
-                  ) : (
-                    <div className="mt-2 flex justify-center gap-2">
-                      {[
-                        { key: 'small', label: 'Too small' },
-                        { key: 'perfect', label: 'Perfect' },
-                        { key: 'large', label: 'Too large' },
-                      ].map((option) => (
-                        <button
-                          key={option.key}
-                          type="button"
-                          onClick={() => setFeedback(option.key)}
-                          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-surface-2"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="mt-8 border-t border-border pt-5 text-center">
+                <p className="text-xs font-medium text-muted-foreground">How did it fit?</p>
+                {feedback ? (
+                  <p className="mt-2 text-sm text-muted-foreground">Thanks for your feedback!</p>
+                ) : (
+                  <div className="mt-2 flex justify-center gap-2">
+                    {[
+                      { key: 'small', label: 'Too small' },
+                      { key: 'perfect', label: 'Perfect' },
+                      { key: 'large', label: 'Too large' },
+                    ].map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => setFeedback(option.key)}
+                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-surface-2"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
+              <div className="mx-auto mt-6 grid max-w-md grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={resetFlow}
-                  className="mt-5 w-full rounded-md border border-border py-2 text-sm font-medium text-foreground hover:bg-surface-2"
+                  className="rounded-md border border-border py-2.5 text-sm font-medium text-foreground hover:bg-surface-2"
                 >
                   {result.photoTips?.length ? 'Retake photo' : 'Check another photo'}
                 </button>
-              </div>
-            )}
-
-            {step === 'error' && (
-              <div className="flex flex-col items-center py-6 text-center">
-                <AlertTriangle size={28} className="text-warning" />
-                <p className="mt-3 text-sm font-medium text-foreground">{errorMessage}</p>
-                {poseChecks.length > 1 && (
-                  <ul className="mt-3 space-y-1 text-left text-xs text-muted-foreground">
-                    {poseChecks.map((check) => (
-                      <li key={check.id} className="flex gap-2">
-                        <span aria-hidden="true">•</span>
-                        {check.message}
-                      </li>
-                    ))}
-                  </ul>
-                )}
                 <button
                   type="button"
-                  onClick={() => setStep('form')}
-                  className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
+                  onClick={closeModal}
+                  className="rounded-md bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
                 >
-                  Try Again
+                  Done
                 </button>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
+
+          {step === 'error' && (
+            <div className="flex flex-col items-center py-6 text-center">
+              <AlertTriangle size={28} className="text-warning" />
+              <p className="mt-3 text-sm font-medium text-foreground">{errorMessage}</p>
+              {poseChecks.length > 1 && (
+                <ul className="mt-3 space-y-1 text-left text-xs text-muted-foreground">
+                  {poseChecks.map((check) => (
+                    <li key={check.id} className="flex gap-2">
+                      <span aria-hidden="true">•</span>
+                      {check.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                type="button"
+                onClick={() => setStep('form')}
+                className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+        </WidgetDialog>
       )}
     </div>
   );

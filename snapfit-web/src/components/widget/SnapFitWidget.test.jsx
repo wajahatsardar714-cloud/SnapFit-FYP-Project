@@ -303,3 +303,37 @@ describe('SnapFitWidget authentication', () => {
     expect(init.headers).toEqual({ Authorization: 'Bearer admin.jwt' });
   });
 });
+
+describe('SnapFitWidget dialog', () => {
+  it('is a named dialog that shows the result wide and scrolls on its own', async () => {
+    respondWith({});
+    await getMySize();
+    const dialog = screen.getByRole('dialog', { name: 'Your size' });
+    expect(dialog.className).toContain('sm:max-w-5xl');
+    expect(dialog.querySelector('.overflow-y-auto')).not.toBeNull();
+  });
+
+  it('goes back from the result to the form with the photo and height kept', async () => {
+    respondWith({});
+    await getMySize();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(screen.getByRole('dialog', { name: 'Find your size' })).toBeTruthy();
+    expect(screen.getByLabelText('Height in cm').value).toBe('178');
+    expect(screen.getByRole('button', { name: 'Get My Size' })).toBeTruthy();
+  });
+
+  it('closes with Done or Escape and stops the page scrolling while open', async () => {
+    respondWith({});
+    await getMySize();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.body.style.overflow).toBe('');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check My Size' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});

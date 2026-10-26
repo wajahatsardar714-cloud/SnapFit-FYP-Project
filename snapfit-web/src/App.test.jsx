@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from './services/api';
@@ -56,7 +56,8 @@ describe('public routes', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'SnapFit Pricing Plans for AI Clothing Size Estimation' })
     ).toBeTruthy();
-    expect(api.get).toHaveBeenCalledWith('/subscription/plans');
+    // The plans request fires from an effect, which can trail the first render under load.
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/subscription/plans'));
   });
 
   it('renders the login page at /login', async () => {
