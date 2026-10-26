@@ -23,13 +23,9 @@ export const meta = {
   ],
 };
 
-export const hero = {
+export const header = {
   title: 'SnapFit Guide: Setup, Integration, and AI Clothing Size Estimation',
   description: meta.description,
-  actions: [
-    { label: 'Get Started', to: PAGES.signup.to, variant: 'primary' },
-    { label: 'View pricing', to: PAGES.pricing.to, variant: 'outlineInverse' },
-  ],
 };
 
 export const intro = [
@@ -267,7 +263,7 @@ export const sections = [
   },
   {
     id: 'start-using-snapfit',
-    layout: 'cta',
+    layout: 'prose',
     eyebrow: 'Ready to Launch',
     title: 'Start Using SnapFit',
     paragraphs: [
@@ -279,10 +275,6 @@ export const sections = [
         { text: 'legal policies', ...privacyPolicy },
         ' to prepare your store and maintain a reliable sizing experience.',
       ],
-    ],
-    actions: [
-      { label: 'Get Started', to: PAGES.signup.to, variant: 'primary' },
-      { label: 'View pricing', to: PAGES.pricing.to, variant: 'outlineInverse' },
     ],
   },
 ];

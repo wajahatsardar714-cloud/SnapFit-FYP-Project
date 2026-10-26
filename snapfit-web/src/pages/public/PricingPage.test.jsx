@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { hero, meta, sections } from '../../content/pricing';
+import { header, meta, sections } from '../../content/pricing';
 import api from '../../services/api';
 import { paragraph } from '../../test/text';
 import PricingPage from './PricingPage';
@@ -45,14 +45,14 @@ describe('PricingPage', () => {
     );
   });
 
-  it('has the H1, the short description and buttons to register and log in', () => {
-    const heroRegion = screen.getByRole('region', { name: hero.title });
-    expect(within(heroRegion).getByRole('heading', { level: 1 }).textContent).toBe(
+  it('opens with a plain header: the H1 and short description, no banner or buttons', () => {
+    const top = screen.getByRole('region', { name: header.title });
+    expect(within(top).getByRole('heading', { level: 1 }).textContent).toBe(
       'SnapFit Pricing Plans for AI Clothing Size Estimation'
     );
-    expect(within(heroRegion).getByText(meta.description)).toBeTruthy();
-    expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
-    expect(within(heroRegion).getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/signin');
+    expect(within(top).getByText(meta.description)).toBeTruthy();
+    expect(within(top).queryAllByRole('link')).toEqual([]);
+    expect(top.className).not.toContain('bg-navy');
   });
 
   it('renders every H2 with its eyebrow', () => {
@@ -184,10 +184,14 @@ describe('PricingPage', () => {
     expect(items[10].querySelector('summary').textContent).toBe('How Can I Get Help Choosing a Plan?');
   });
 
-  it('ends with the call to action', () => {
-    const cta = section('find-your-plan');
-    expect(within(cta).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
-    expect(within(cta).getByRole('link', { name: 'Compare plans' }).getAttribute('href')).toBe('#plans');
+  it('ends with its closing text as a normal section, not a banner', () => {
+    const last = section('find-your-plan');
+    expect(within(last).getByRole('heading', { level: 2 }).textContent).toBe('Find the Right SnapFit Plan for Your Business');
+    expect(last.textContent).toContain('Ready to explore SnapFit? Review the available pricing plans, create your account');
+    expect(within(last).queryAllByRole('link')).toEqual(
+      within(last).queryAllByRole('link', { name: 'Link to the section Find the Right SnapFit Plan for Your Business' })
+    );
+    expect(last.className).not.toContain('bg-navy');
   });
 });
 

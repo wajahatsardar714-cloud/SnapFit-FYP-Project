@@ -1,12 +1,10 @@
-import ActionLinks from '../../components/public/ActionLinks';
 import CardGrid from '../../components/public/CardGrid';
-import Container from '../../components/public/Container';
 import CtaBanner from '../../components/public/CtaBanner';
 import FaqAccordion from '../../components/public/FaqAccordion';
 import FeatureCard from '../../components/public/FeatureCard';
+import PageHeader from '../../components/public/PageHeader';
 import { usePageMeta } from '../../components/public/PageMeta';
 import Prose from '../../components/public/Prose';
-import { Paragraphs } from '../../components/public/RichText';
 import Section from '../../components/public/Section';
 import StepList from '../../components/public/StepList';
 
@@ -25,11 +23,11 @@ const LAYOUTS = {
 };
 
 /**
- * The login and register content pages (inside PublicLayout): the H1 and
- * intro, the account section with the Log In / Sign Up buttons (which open the
- * bare form screens), then the content sections. No form on these pages.
+ * The login and register content pages (inside PublicLayout): the H1 with the
+ * Log In / Sign Up buttons right under it (they open the bare form screens),
+ * the intro, the account section, then the content sections. No form here.
  *   content   login or register from content/auth.js
- *   below     shown under the buttons (e.g. what the sign-up form asks for)
+ *   below     shown in the account section (e.g. what the sign-up form asks for)
  */
 function AuthShell({ content, below }) {
   usePageMeta(content.meta.title, content.meta.description);
@@ -37,21 +35,11 @@ function AuthShell({ content, below }) {
 
   return (
     <>
-      <section aria-labelledby="auth-title" className="bg-surface py-16 md:py-20">
-        <Container className="text-center">
-          <h1 id="auth-title" className="type-h1 break-words text-foreground">
-            {content.title}
-          </h1>
-          <div className="mt-6 space-y-4">
-            <Paragraphs items={content.intro} className="type-body text-body" />
-          </div>
-        </Container>
-      </section>
+      <PageHeader title={content.title} actions={content.actions} intro={content.intro} />
 
       <Section id={formSection.id} eyebrow={formSection.eyebrow} title={formSection.title} intro={formSection.intro}>
-        <ActionLinks actions={content.actions} align="center" />
-        {below && <div className="mt-12">{below}</div>}
-        {formSection.notes && <Prose paragraphs={formSection.notes} className="mt-10" />}
+        {below}
+        {formSection.notes && <Prose paragraphs={formSection.notes} className={below ? 'mt-10' : ''} />}
       </Section>
 
       {sections.map((section, index) =>

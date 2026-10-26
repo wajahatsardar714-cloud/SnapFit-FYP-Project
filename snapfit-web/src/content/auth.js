@@ -2,9 +2,9 @@ import { PAGES, contactEmailLink as supportEmail } from './site';
 import { withLink } from './links';
 
 // Login and register page content. Edit text here -- the content pages only
-// render it, in this order: the H1 and intro, the section with the Log In /
-// Sign Up buttons, then `sections`. The buttons open the bare form screens
-// (signIn, signUp at the end).
+// render it, in this order: the H1, the Log In / Sign Up buttons, the intro,
+// the account section, then `sections`. The buttons open the bare form
+// screens (signIn, signUp at the end).
 //
 // A paragraph is a string, or an array of strings and inline links
 // ({ text, to, live? }) when part of the sentence should link somewhere.
@@ -38,7 +38,7 @@ export const login = {
       'For security, avoid sharing your password with other people. Use a unique password that you do not use for unrelated websites.',
     ],
   },
-  // Buttons in place of a form: they open the bare form screens.
+  // Buttons right under the H1 (no form here): they open the bare form screens.
   actions: [
     { label: 'Log In', to: PAGES.signin.to },
     { label: 'Sign Up', to: PAGES.signup.to, variant: 'outline' },
@@ -211,12 +211,12 @@ export const register = {
       'Register with your business information to begin setting up your SnapFit account. Provide accurate details so you can manage your subscription, access the appropriate account features, and configure your integration.',
     ],
   },
-  // Buttons in place of a form: they open the bare form screens.
+  // Buttons right under the H1 (no form here): they open the bare form screens.
   actions: [
     { label: 'Sign Up', to: PAGES.signup.to },
     { label: 'Log In', to: PAGES.signin.to, variant: 'outline' },
   ],
-  // What the sign-up form asks for, shown under the buttons.
+  // What the sign-up form asks for, shown in the account section.
   fieldHelp: {
     lead: 'Your registration form may request the following information:',
     items: [

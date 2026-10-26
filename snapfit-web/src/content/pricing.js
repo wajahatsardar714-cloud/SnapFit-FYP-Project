@@ -26,14 +26,10 @@ export const meta = {
   ],
 };
 
-export const hero = {
+export const header = {
   title: 'SnapFit Pricing Plans for AI Clothing Size Estimation',
   description:
     'Explore SnapFit pricing plans for AI clothing size estimation. Find the right plan for your online store and simplify clothing size recommendations.',
-  actions: [
-    { label: 'Get Started', to: PAGES.signup.to, variant: 'primary' },
-    { label: 'Log In', to: PAGES.signin.to, variant: 'outlineInverse' },
-  ],
 };
 
 export const intro = [
@@ -398,17 +394,13 @@ export const sections = [
   },
   {
     id: 'find-your-plan',
-    layout: 'cta',
+    layout: 'prose',
     eyebrow: 'Ready to Start',
     title: 'Find the Right SnapFit Plan for Your Business',
     paragraphs: [
       'Adding AI clothing size estimation to your online store can give customers another source of guidance when choosing what to buy. SnapFit combines photo-based measurement estimation, product size chart matching, and API-driven integration to support a more personalized sizing experience.',
       'The right subscription depends on your expected usage, technical requirements, and the features available in each plan. Compare the Small, Medium, and Enterprise options carefully before making your decision.',
       'Ready to explore SnapFit? Review the available pricing plans, create your account, and take the next step toward introducing AI-powered clothing size recommendations to your online store.',
-    ],
-    actions: [
-      { label: 'Get Started', to: PAGES.signup.to, variant: 'primary' },
-      { label: 'Compare plans', to: PLANS_ANCHOR, variant: 'outlineInverse' },
     ],
   },
 ];

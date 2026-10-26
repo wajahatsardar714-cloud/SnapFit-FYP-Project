@@ -133,6 +133,16 @@ describe('RegisterPage content', () => {
 });
 
 describe('RegisterPage buttons', () => {
+  it('puts the buttons right after the H1, before the description', () => {
+    renderRegister();
+    const h1 = screen.getByRole('heading', { level: 1 });
+    const button = screen.getByRole('link', { name: 'Sign Up' });
+    const intro = screen.getByText((_, el) => el.tagName === 'P' && el.textContent.startsWith('Make clothing size selection easier'));
+    const follows = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(h1, button)).toBe(true);
+    expect(follows(button, intro)).toBe(true);
+  });
+
   it('has no form, only buttons to the sign-up and log-in forms', () => {
     renderRegister();
     expect(screen.queryByLabelText('Full name')).toBeNull();

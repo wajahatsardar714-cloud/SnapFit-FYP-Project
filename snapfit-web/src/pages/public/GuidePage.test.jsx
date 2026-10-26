@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import App from '../../App';
-import { hero, meta, sections } from '../../content/guide';
+import { header, meta, sections } from '../../content/guide';
 import GuidePage from './GuidePage';
 
 function renderGuide() {
@@ -20,7 +20,7 @@ describe('GuidePage', () => {
     localStorage.clear();
     window.history.pushState({}, '', '/guide');
     render(<App />);
-    expect(await screen.findByRole('heading', { level: 1, name: hero.title })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: header.title })).toBeTruthy();
     expect(screen.getByRole('banner')).toBeTruthy();
     expect(screen.getByRole('contentinfo')).toBeTruthy();
   });
@@ -36,15 +36,15 @@ describe('GuidePage', () => {
     );
   });
 
-  it('has the H1, the description and buttons to register and pricing in the hero', () => {
+  it('opens with a plain header: the H1 and description, no banner or buttons', () => {
     renderGuide();
-    const heroRegion = screen.getByRole('region', { name: hero.title });
-    expect(within(heroRegion).getByRole('heading', { level: 1 }).textContent).toBe(
+    const top = screen.getByRole('region', { name: header.title });
+    expect(within(top).getByRole('heading', { level: 1 }).textContent).toBe(
       'SnapFit Guide: Setup, Integration, and AI Clothing Size Estimation'
     );
-    expect(within(heroRegion).getByText(meta.description)).toBeTruthy();
-    expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
-    expect(within(heroRegion).getByRole('link', { name: 'View pricing' }).getAttribute('href')).toBe('/pricing');
+    expect(within(top).getByText(meta.description)).toBeTruthy();
+    expect(within(top).queryAllByRole('link')).toEqual([]);
+    expect(top.className).not.toContain('bg-navy');
   });
 
   it('renders every H2 with its eyebrow in its own section', () => {
@@ -137,6 +137,8 @@ describe('GuidePage', () => {
     expect(cta.textContent).toContain(
       'Use this guide alongside the official API documentation, Pricing page, and legal policies to prepare your store and maintain a reliable sizing experience.'
     );
-    expect(within(cta).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
+    // A normal closing section now, without the banner's buttons.
+    expect(within(cta).queryByRole('link', { name: 'Get Started' })).toBeNull();
+    expect(cta.className).not.toContain('bg-navy');
   });
 });

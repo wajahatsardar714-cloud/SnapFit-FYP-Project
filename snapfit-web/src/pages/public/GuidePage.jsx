@@ -1,14 +1,13 @@
 import CardGrid from '../../components/public/CardGrid';
-import CtaBanner from '../../components/public/CtaBanner';
 import FaqAccordion from '../../components/public/FaqAccordion';
 import FeatureCard from '../../components/public/FeatureCard';
-import Hero from '../../components/public/Hero';
+import PageHeader from '../../components/public/PageHeader';
 import { usePageMeta } from '../../components/public/PageMeta';
 import Prose from '../../components/public/Prose';
 import Section from '../../components/public/Section';
 import StepList from '../../components/public/StepList';
 import TableOfContents from '../../components/public/TableOfContents';
-import { hero, intro, meta, sections, tableOfContents } from '../../content/guide';
+import { header, intro, meta, sections, tableOfContents } from '../../content/guide';
 
 // How each content `layout` renders inside its Section (see content/guide.js).
 const LAYOUTS = {
@@ -31,7 +30,7 @@ function GuidePage() {
 
   return (
     <>
-      <Hero {...hero} />
+      <PageHeader title={header.title} intro={[header.description]} />
 
       <Section>
         <Prose paragraphs={intro} />
@@ -40,21 +39,17 @@ function GuidePage() {
         </div>
       </Section>
 
-      {sections.map((section, index) =>
-        section.layout === 'cta' ? (
-          <CtaBanner key={section.id} {...section} />
-        ) : (
-          <Section
-            key={section.id}
-            id={section.id}
-            eyebrow={section.eyebrow}
-            title={section.title}
-            tone={index % 2 === 0 ? 'surface' : 'default'}
-          >
-            {LAYOUTS[section.layout](section)}
-          </Section>
-        )
-      )}
+      {sections.map((section, index) => (
+        <Section
+          key={section.id}
+          id={section.id}
+          eyebrow={section.eyebrow}
+          title={section.title}
+          tone={index % 2 === 0 ? 'surface' : 'default'}
+        >
+          {LAYOUTS[section.layout](section)}
+        </Section>
+      ))}
     </>
   );
 }

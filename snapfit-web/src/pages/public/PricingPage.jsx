@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react';
 import CardGrid from '../../components/public/CardGrid';
-import CtaBanner from '../../components/public/CtaBanner';
 import DataTable from '../../components/public/DataTable';
 import FaqAccordion from '../../components/public/FaqAccordion';
 import FeatureCard from '../../components/public/FeatureCard';
-import Hero from '../../components/public/Hero';
+import PageHeader from '../../components/public/PageHeader';
 import { usePageMeta } from '../../components/public/PageMeta';
 import PricingCard from '../../components/public/PricingCard';
 import Prose from '../../components/public/Prose';
 import Section from '../../components/public/Section';
 import StepList from '../../components/public/StepList';
 import TableOfContents from '../../components/public/TableOfContents';
-import { hero, intro, meta, sections, tableOfContents } from '../../content/pricing';
+import { header, intro, meta, sections, tableOfContents } from '../../content/pricing';
 import api from '../../services/api';
 import { RECOMMENDED_PLAN, formatChartsLimit, formatPlanPrice, formatRequestsLimit } from '../../utils/plans';
 
@@ -83,6 +82,7 @@ const LAYOUTS = {
   ),
   steps: (section) => <StepList steps={section.items} />,
   faq: (section) => <FaqAccordion items={section.items} />,
+  prose: (section) => <Prose paragraphs={section.paragraphs} />,
 };
 
 const tocItems = sections.map(({ id, title }) => ({ id, label: title }));
@@ -93,7 +93,7 @@ function PricingPage() {
 
   return (
     <>
-      <Hero {...hero} />
+      <PageHeader title={header.title} intro={[header.description]} />
 
       <Section>
         <Prose paragraphs={intro} />
@@ -102,22 +102,18 @@ function PricingPage() {
         </div>
       </Section>
 
-      {sections.map((section, index) =>
-        section.layout === 'cta' ? (
-          <CtaBanner key={section.id} {...section} />
-        ) : (
-          <Section
-            key={section.id}
-            id={section.id}
-            eyebrow={section.eyebrow}
-            title={section.title}
-            intro={section.intro}
-            tone={index % 2 === 0 ? 'surface' : 'default'}
-          >
-            {LAYOUTS[section.layout](section, published)}
-          </Section>
-        )
-      )}
+      {sections.map((section, index) => (
+        <Section
+          key={section.id}
+          id={section.id}
+          eyebrow={section.eyebrow}
+          title={section.title}
+          intro={section.intro}
+          tone={index % 2 === 0 ? 'surface' : 'default'}
+        >
+          {LAYOUTS[section.layout](section, published)}
+        </Section>
+      ))}
     </>
   );
 }

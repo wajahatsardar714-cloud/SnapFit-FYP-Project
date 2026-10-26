@@ -126,6 +126,16 @@ describe('LoginPage content', () => {
     expect(support.getAttribute('href')).toBe(`mailto:${SUPPORT_EMAIL}`);
   });
 
+  it('puts the buttons right after the H1, before the description', () => {
+    renderLogin();
+    const h1 = screen.getByRole('heading', { level: 1 });
+    const button = screen.getByRole('link', { name: 'Log In' });
+    const intro = screen.getByText((_, el) => el.tagName === 'P' && el.textContent.startsWith('Welcome back to SnapFit.'));
+    const follows = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(h1, button)).toBe(true);
+    expect(follows(button, intro)).toBe(true);
+  });
+
   it('has no form, only buttons to the log-in and sign-up forms', () => {
     renderLogin();
     for (const line of ['Login form fields:', 'Show or hide password', 'Remember me, if supported', 'Log In button']) {
