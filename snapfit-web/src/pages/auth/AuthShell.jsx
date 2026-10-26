@@ -1,3 +1,4 @@
+import ActionLinks from '../../components/public/ActionLinks';
 import CardGrid from '../../components/public/CardGrid';
 import Container from '../../components/public/Container';
 import CtaBanner from '../../components/public/CtaBanner';
@@ -24,13 +25,13 @@ const LAYOUTS = {
 };
 
 /**
- * The login and register page (inside PublicLayout): the H1 and intro, the
- * form section with the form in a centred card, then the content sections.
+ * The login and register content pages (inside PublicLayout): the H1 and
+ * intro, the account section with the Log In / Sign Up buttons (which open the
+ * bare form screens), then the content sections. No form on these pages.
  *   content   login or register from content/auth.js
- *   aside     shown beside the form card on wide screens, below it on phones
- *   children  the form
+ *   below     shown under the buttons (e.g. what the sign-up form asks for)
  */
-function AuthShell({ content, aside, children }) {
+function AuthShell({ content, below }) {
   usePageMeta(content.meta.title, content.meta.description);
   const { formSection, sections } = content;
 
@@ -41,23 +42,15 @@ function AuthShell({ content, aside, children }) {
           <h1 id="auth-title" className="type-h1 break-words text-foreground">
             {content.title}
           </h1>
-          <div className="mx-auto mt-6 max-w-reading space-y-4">
+          <div className="mt-6 space-y-4">
             <Paragraphs items={content.intro} className="type-body text-body" />
           </div>
         </Container>
       </section>
 
       <Section id={formSection.id} eyebrow={formSection.eyebrow} title={formSection.title} intro={formSection.intro}>
-        <div
-          className={
-            aside ? 'grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,32rem)_minmax(0,1fr)] lg:gap-12' : undefined
-          }
-        >
-          <div className="mx-auto w-full min-w-0 max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8">
-            {children}
-          </div>
-          {aside}
-        </div>
+        <ActionLinks actions={content.actions} align="center" />
+        {below && <div className="mt-12">{below}</div>}
         {formSection.notes && <Prose paragraphs={formSection.notes} className="mt-10" />}
       </Section>
 

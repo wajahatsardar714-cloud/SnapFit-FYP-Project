@@ -31,8 +31,8 @@ export const hero = {
   description:
     'Help shoppers find the right clothing size with SnapFit AI clothing size estimation. Integrate photo-based sizing into your online store.',
   actions: [
-    { label: 'Get Started', to: '/register', variant: 'primary' },
-    { label: 'Log In', to: '/login', variant: 'outlineInverse' },
+    { label: 'Get Started', to: PAGES.signup.to, variant: 'primary' },
+    { label: 'Log In', to: PAGES.signin.to, variant: 'outlineInverse' },
   ],
   // Text drawn inside the decorative hero animation.
   visualLabels: { title: 'Size check', chest: 'Chest', waist: 'Waist', size: 'Size M · High confidence' },
@@ -516,7 +516,7 @@ export const sections = [
       'Get started with SnapFit today and bring AI clothing size estimation to your online store.',
     ],
     actions: [
-      { label: 'Get Started', to: '/register', variant: 'primary' },
+      { label: 'Get Started', to: PAGES.signup.to, variant: 'primary' },
       { label: 'View pricing', to: PAGES.pricing.to, variant: 'outlineInverse' },
     ],
   },

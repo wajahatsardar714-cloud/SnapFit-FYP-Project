@@ -1,9 +1,10 @@
 import { PAGES, contactEmailLink as supportEmail } from './site';
 import { withLink } from './links';
 
-// Login and register page content. Edit text here -- the auth pages only
-// render it, in this order: the H1 and intro, the form section, then
-// `sections`.
+// Login and register page content. Edit text here -- the content pages only
+// render it, in this order: the H1 and intro, the section with the Log In /
+// Sign Up buttons, then `sections`. The buttons open the bare form screens
+// (signIn, signUp at the end).
 //
 // A paragraph is a string, or an array of strings and inline links
 // ({ text, to, live? }) when part of the sentence should link somewhere.
@@ -37,11 +38,10 @@ export const login = {
       'For security, avoid sharing your password with other people. Use a unique password that you do not use for unrelated websites.',
     ],
   },
-  // There is no reset-email service: "Forgot password?" reveals this note.
-  passwordHelp: [
-    'Contact ',
-    supportEmail,
-    " from your account email and we'll help you reset your password.",
+  // Buttons in place of a form: they open the bare form screens.
+  actions: [
+    { label: 'Log In', to: PAGES.signin.to },
+    { label: 'Sign Up', to: PAGES.signup.to, variant: 'outline' },
   ],
   sections: [
     {
@@ -185,8 +185,8 @@ export const login = {
         ],
       ],
       actions: [
-        { label: 'Log in now', to: '#access-account', variant: 'primary' },
-        { label: 'Create an account', to: '/register', variant: 'outlineInverse' },
+        { label: 'Log in now', to: PAGES.signin.to, variant: 'primary' },
+        { label: 'Create an account', to: PAGES.signup.to, variant: 'outlineInverse' },
       ],
     },
   ],
@@ -211,7 +211,12 @@ export const register = {
       'Register with your business information to begin setting up your SnapFit account. Provide accurate details so you can manage your subscription, access the appropriate account features, and configure your integration.',
     ],
   },
-  // Shown beside the form (below it on phones).
+  // Buttons in place of a form: they open the bare form screens.
+  actions: [
+    { label: 'Sign Up', to: PAGES.signup.to },
+    { label: 'Log In', to: PAGES.signin.to, variant: 'outline' },
+  ],
+  // What the sign-up form asks for, shown under the buttons.
   fieldHelp: {
     lead: 'Your registration form may request the following information:',
     items: [
@@ -349,9 +354,27 @@ export const register = {
         'Ready to get started? Register for SnapFit and take the first step toward a more informed clothing size selection process.',
       ],
       actions: [
-        { label: 'Create your account', to: '#create-account', variant: 'primary' },
+        { label: 'Create your account', to: PAGES.signup.to, variant: 'primary' },
         { label: 'View pricing', to: PAGES.pricing.to, variant: 'outlineInverse' },
       ],
     },
   ],
+};
+
+// The bare form screens behind the buttons above (no page content: a heading
+// and the form only).
+export const signIn = {
+  meta: { title: 'Log In | SnapFit', description: 'Log in to your SnapFit account.' },
+  title: 'Log In',
+  // There is no reset-email service: "Forgot password?" reveals this note.
+  passwordHelp: [
+    'Contact ',
+    supportEmail,
+    " from your account email and we'll help you reset your password.",
+  ],
+};
+
+export const signUp = {
+  meta: { title: 'Sign Up | SnapFit', description: 'Create your SnapFit account.' },
+  title: 'Sign Up',
 };

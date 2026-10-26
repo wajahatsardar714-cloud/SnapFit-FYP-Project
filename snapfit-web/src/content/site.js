@@ -13,6 +13,9 @@ export const PAGES = {
   guide: { to: '/guide', live: true },
   login: { to: '/login', live: true },
   register: { to: '/register', live: true },
+  // The bare login and sign-up forms (no page content), opened by the call-to-action buttons.
+  signin: { to: '/signin', live: true },
+  signup: { to: '/signup', live: true },
   privacy: { to: '/privacy', live: true },
   terms: { to: '/terms', live: true },
   cookies: { to: '/cookies', live: true },
@@ -33,12 +36,12 @@ export const header = {
   navLabel: 'Main',
   links: [
     { label: 'Home', to: PAGES.home.to },
+    { label: 'Login', to: PAGES.login.to },
+    { label: 'Get Started', to: PAGES.register.to },
     { label: 'Pricing', to: PAGES.pricing.to },
     { label: 'Guide', to: PAGES.guide.to },
   ],
-  login: { label: 'Login', to: PAGES.login.to },
-  register: { label: 'Register', to: PAGES.register.to },
-  // Shown instead of Login/Get Started when signed in, keyed by account role
+  // A signed-in visitor's button, keyed by account role
   // (src/utils/roles.js); the link goes to that role's home.
   account: { merchant: 'Dashboard', superadmin: 'Admin' },
   menu: { open: 'Open menu', close: 'Close menu' },

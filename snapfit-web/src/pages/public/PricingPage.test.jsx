@@ -51,8 +51,8 @@ describe('PricingPage', () => {
       'SnapFit Pricing Plans for AI Clothing Size Estimation'
     );
     expect(within(heroRegion).getByText(meta.description)).toBeTruthy();
-    expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/register');
-    expect(within(heroRegion).getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
+    expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
+    expect(within(heroRegion).getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/signin');
   });
 
   it('renders every H2 with its eyebrow', () => {
@@ -112,9 +112,9 @@ describe('PricingPage', () => {
       )
     ).toBeTruthy();
     expect(cards.map((card) => within(card).getByRole('link', { name: 'Get started' }).getAttribute('href'))).toEqual([
-      '/register?plan=small',
-      '/register?plan=medium',
-      '/register?plan=enterprise',
+      '/signup?plan=small',
+      '/signup?plan=medium',
+      '/signup?plan=enterprise',
     ]);
   });
 
@@ -186,7 +186,7 @@ describe('PricingPage', () => {
 
   it('ends with the call to action', () => {
     const cta = section('find-your-plan');
-    expect(within(cta).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/register');
+    expect(within(cta).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
     expect(within(cta).getByRole('link', { name: 'Compare plans' }).getAttribute('href')).toBe('#plans');
   });
 });

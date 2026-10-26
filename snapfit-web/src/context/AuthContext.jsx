@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
     clearToken();
     setToken(null);
     setMerchant(null);
-    navigate('/login');
+    navigate('/signin');
   }, [navigate]);
 
   // A suspension can land on any request (e.g. an admin suspends the account

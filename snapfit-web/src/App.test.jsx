@@ -66,18 +66,18 @@ describe('public routes', () => {
 });
 
 describe('site header', () => {
-  it('offers Login and Register to visitors', async () => {
+  it('lists Login and Get Started right after Home, as content pages', async () => {
     renderAt('/');
     await screen.findByRole('heading', { level: 1 });
     const nav = within(header()).getByRole('navigation', { name: 'Main' });
     expect(within(nav).getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
       ['Home', '/'],
+      ['Login', '/login'],
+      ['Get Started', '/register'],
       ['Pricing', '/pricing'],
       ['Guide', '/guide'],
     ]);
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page');
-    expect(within(header()).getByRole('link', { name: 'Login' }).getAttribute('href')).toBe('/login');
-    expect(within(header()).getByRole('link', { name: 'Register' }).getAttribute('href')).toBe('/register');
     expect(within(header()).queryByRole('link', { name: 'Dashboard' })).toBeNull();
   });
 
@@ -101,7 +101,6 @@ describe('site header', () => {
     renderAt('/');
     const button = await within(header()).findByRole('link', { name: 'Dashboard' });
     expect(button.getAttribute('href')).toBe('/dashboard');
-    expect(within(header()).queryByRole('link', { name: 'Login' })).toBeNull();
   });
 
   it('shows the Admin button to a signed-in super admin', async () => {
@@ -176,7 +175,7 @@ describe('auth flows', () => {
 
   it('sends a super admin to the admin console after login', async () => {
     api.post.mockResolvedValue({ data: { token: 'jwt', merchant: ADMIN } });
-    renderAt('/login');
+    renderAt('/signin');
     await logIn();
     expect(await screen.findByText('Admin at /admin')).toBeTruthy();
   });
@@ -193,22 +192,43 @@ describe('auth flows', () => {
   }
 
   it('takes a new merchant from ?plan= straight to that plan', async () => {
-    await register('/register?plan=medium');
+    await register('/signup?plan=medium');
     expect(await screen.findByText('Dashboard at /dashboard/subscription/plans?plan=medium')).toBeTruthy();
     expect(api.post).toHaveBeenCalledWith('/auth/register', expect.objectContaining({ email: 'sam@shop.test' }));
   });
 
   it('goes to the dashboard after registering without a plan, or with an unknown one', async () => {
-    await register('/register?plan=platinum');
+    await register('/signup?plan=platinum');
     expect(await screen.findByText('Dashboard at /dashboard')).toBeTruthy();
   });
 
-  it('shows field errors on the register form', async () => {
-    renderAt('/register');
+  it('shows field errors on the sign-up form', async () => {
+    renderAt('/signup');
     fireEvent.click(await screen.findByRole('button', { name: 'Create account' }));
     const name = screen.getByLabelText('Full name');
     expect(name.getAttribute('aria-invalid')).toBe('true');
     expect(document.getElementById(name.getAttribute('aria-describedby')).textContent).toBe('Name is required');
     expect(api.post).not.toHaveBeenCalled();
+  });
+});
+
+describe('the two ways in', () => {
+  it('the header opens the content pages; their buttons open the bare forms', async () => {
+    renderAt('/register');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Create Your SnapFit Account' })).toBeTruthy();
+    expect(screen.queryByLabelText('Full name')).toBeNull();
+    fireEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Sign Up' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sign Up' })).toBeTruthy();
+    expect(screen.getByLabelText('Full name')).toBeTruthy();
+  });
+
+  it('the hero buttons open the bare forms, without the site header or footer', async () => {
+    renderAt('/');
+    const hero = await screen.findByRole('region', { name: 'AI Clothing Size Estimation and Recommendation for Online Stores' });
+    fireEvent.click(within(hero).getByRole('link', { name: 'Log In' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Log In' })).toBeTruthy();
+    expect(screen.getByLabelText('Business email')).toBeTruthy();
+    expect(screen.queryByRole('banner')).toBeNull();
+    expect(screen.queryByRole('contentinfo')).toBeNull();
   });
 });

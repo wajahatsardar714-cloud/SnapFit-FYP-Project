@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { AuthProvider } from '../../context/AuthContext';
 import { register as content } from '../../content/auth';
 import RegisterPage from './RegisterPage';
+import SignUpPage from './SignUpPage';
 
 vi.mock('../../services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -24,18 +25,23 @@ function Landing() {
   );
 }
 
-function renderRegister(path = '/register') {
+// /register is the content page; /signup is the bare form its buttons open.
+function renderAt(path) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
         <Routes>
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
           <Route path="/dashboard/*" element={<Landing />} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>
   );
 }
+
+const renderRegister = () => renderAt('/register');
+const renderSignUp = (search = '') => renderAt(`/signup${search}`);
 
 // A paragraph or list item whose text (links included) is exactly `text`.
 const block = (text) => screen.getByText((_, el) => ['P', 'LI'].includes(el.tagName) && el.textContent === text);
@@ -126,9 +132,28 @@ describe('RegisterPage content', () => {
   });
 });
 
-describe('RegisterPage form', () => {
-  it('labels the fields as the content names them', () => {
+describe('RegisterPage buttons', () => {
+  it('has no form, only buttons to the sign-up and log-in forms', () => {
     renderRegister();
+    expect(screen.queryByLabelText('Full name')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Create account' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Sign Up' }).getAttribute('href')).toBe('/signup');
+    expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/signin');
+  });
+});
+
+describe('SignUpPage', () => {
+  it('is the bare form: a heading and the fields, no page content', () => {
+    renderSignUp();
+    expect(document.title).toBe('Sign Up | SnapFit');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Sign Up');
+    expect(screen.queryAllByRole('heading', { level: 2 })).toEqual([]);
+    expect(screen.queryByText('Your registration form may request the following information:')).toBeNull();
+    expect(screen.getByRole('link', { name: 'SnapFit home' }).getAttribute('href')).toBe('/');
+  });
+
+  it('labels the fields as the content names them', () => {
+    renderSignUp();
     for (const label of ['Full name', 'Business email', 'Store name', 'Password', 'Confirm password', 'Subscription plan']) {
       expect(screen.getByLabelText(label)).toBeTruthy();
     }
@@ -143,12 +168,12 @@ describe('RegisterPage form', () => {
   });
 
   it('preselects the plan from ?plan=', () => {
-    renderRegister('/register?plan=Enterprise');
+    renderSignUp('?plan=Enterprise');
     expect(screen.getByLabelText('Subscription plan').value).toBe('enterprise');
   });
 
   it('sends a merchant who chose a plan to plan selection, without posting the plan', async () => {
-    renderRegister();
+    renderSignUp();
     fillForm();
     fireEvent.change(screen.getByLabelText('Subscription plan'), { target: { value: 'small' } });
     submit();
@@ -163,7 +188,7 @@ describe('RegisterPage form', () => {
   });
 
   it('goes to the dashboard when the merchant chooses later', async () => {
-    renderRegister('/register?plan=medium');
+    renderSignUp('?plan=medium');
     fillForm();
     fireEvent.change(screen.getByLabelText('Subscription plan'), { target: { value: '' } });
     submit();
@@ -171,7 +196,7 @@ describe('RegisterPage form', () => {
   });
 
   it('flags a missing store name', () => {
-    renderRegister();
+    renderSignUp();
     submit();
     const store = screen.getByLabelText('Store name');
     expect(store.getAttribute('aria-invalid')).toBe('true');

@@ -30,8 +30,8 @@ describe('HomePage', () => {
     expect(within(heroRegion).getByRole('heading', { level: 1 }).textContent).toBe(
       'AI Clothing Size Estimation and Recommendation for Online Stores'
     );
-    expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/register');
-    expect(within(heroRegion).getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
+    expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
+    expect(within(heroRegion).getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/signin');
     expect(within(heroRegion).getByText(meta.description)).toBeTruthy();
   });
 
@@ -143,7 +143,7 @@ describe('HomePage', () => {
 
   it('ends with the call to action', () => {
     const cta = section('get-started');
-    expect(within(cta).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/register');
+    expect(within(cta).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
     expect(within(cta).getByRole('link', { name: 'View pricing' }).getAttribute('href')).toBe('/pricing');
   });
 });

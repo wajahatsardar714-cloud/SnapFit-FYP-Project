@@ -16,6 +16,8 @@ const LegalPage = lazy(() => import('./pages/public/LegalPage'));
 const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
+const SignInPage = lazy(() => import('./pages/auth/SignInPage'));
+const SignUpPage = lazy(() => import('./pages/auth/SignUpPage'));
 const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'));
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const DashboardHomePage = lazy(() => import('./pages/dashboard/DashboardHomePage'));
@@ -75,6 +77,10 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
+
+            {/* The bare login and sign-up forms: no site header, footer or content. */}
+            <Route path="/signin" element={<SignInPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
 
             <Route path="/demo/size-check" element={<SizeCheckDemo />} />
             <Route path="/test/ai" element={<AiTestPage />} />

@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { AuthProvider, useAuth } from '../../context/AuthContext';
 import { login as content } from '../../content/auth';
 import LoginPage from './LoginPage';
+import SignInPage from './SignInPage';
 
 vi.mock('../../services/api', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -29,12 +30,14 @@ function SignedIn({ name }) {
   );
 }
 
-function renderLogin() {
+// /login is the content page; /signin is the bare form its buttons open.
+function renderAt(path) {
   return render(
-    <MemoryRouter initialEntries={['/login']}>
+    <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signin" element={<SignInPage />} />
           <Route path="/dashboard" element={<SignedIn name="Merchant home" />} />
           <Route path="/admin" element={<SignedIn name="Admin home" />} />
         </Routes>
@@ -42,6 +45,9 @@ function renderLogin() {
     </MemoryRouter>
   );
 }
+
+const renderLogin = () => renderAt('/login');
+const renderSignIn = () => renderAt('/signin');
 
 // A paragraph whose text (links included) is exactly `text`.
 const paragraph = (text) => screen.getByText((_, el) => el.tagName === 'P' && el.textContent === text);
@@ -120,21 +126,34 @@ describe('LoginPage content', () => {
     expect(support.getAttribute('href')).toBe(`mailto:${SUPPORT_EMAIL}`);
   });
 
-  it('builds the form spec as controls rather than printing it', () => {
+  it('has no form, only buttons to the log-in and sign-up forms', () => {
     renderLogin();
     for (const line of ['Login form fields:', 'Show or hide password', 'Remember me, if supported', 'Log In button']) {
       expect(screen.queryByText(line)).toBeNull();
     }
+    expect(screen.queryByLabelText('Business email')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Log In' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/signin');
+    expect(screen.getByRole('link', { name: 'Sign Up' }).getAttribute('href')).toBe('/signup');
+  });
+});
+
+describe('SignInPage', () => {
+  it('is the bare form: a heading and the fields, no page content', () => {
+    renderSignIn();
+    expect(document.title).toBe('Log In | SnapFit');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Log In');
+    expect(screen.queryAllByRole('heading', { level: 2 })).toEqual([]);
+    expect(screen.queryByText('Welcome back to SnapFit', { exact: false })).toBeNull();
+    expect(screen.getByRole('link', { name: 'SnapFit home' }).getAttribute('href')).toBe('/');
     expect(screen.getByLabelText('Business email').getAttribute('type')).toBe('email');
     expect(screen.getByLabelText('Remember me').checked).toBe(true);
     expect(screen.getByRole('button', { name: 'Forgot password?' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Log In' }).getAttribute('type')).toBe('submit');
   });
-});
 
-describe('LoginPage form', () => {
   it('shows and hides the password', () => {
-    renderLogin();
+    renderSignIn();
     const password = screen.getByLabelText('Password');
     const toggle = screen.getByRole('button', { name: 'Show password' });
     expect(password.getAttribute('type')).toBe('password');
@@ -149,7 +168,7 @@ describe('LoginPage form', () => {
   });
 
   it('reveals how to reset a password', () => {
-    renderLogin();
+    renderSignIn();
     const toggle = screen.getByRole('button', { name: 'Forgot password?' });
     const note = document.getElementById(toggle.getAttribute('aria-controls'));
     expect(note.hidden).toBe(true);
@@ -166,7 +185,7 @@ describe('LoginPage form', () => {
 
   it('remembers the session in localStorage by default, and logout clears it', async () => {
     api.post.mockResolvedValue({ data: { token: 'jwt', merchant: MERCHANT } });
-    renderLogin();
+    renderSignIn();
     await logIn();
     expect(await screen.findByText('Merchant home')).toBeTruthy();
     expect(api.post).toHaveBeenCalledWith('/auth/login', { email: 'user@test.com', password: 'secret123' });
@@ -174,20 +193,20 @@ describe('LoginPage form', () => {
     expect(sessionStorage.getItem('token')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Log In to Your SnapFit Account' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Log In' })).toBeTruthy();
     expect(localStorage.getItem('token')).toBeNull();
   });
 
   it('keeps the session in sessionStorage when Remember me is unchecked, and logout clears it', async () => {
     api.post.mockResolvedValue({ data: { token: 'jwt', merchant: ADMIN } });
-    renderLogin();
+    renderSignIn();
     await logIn({ remember: false });
     expect(await screen.findByText('Admin home')).toBeTruthy();
     expect(sessionStorage.getItem('token')).toBe('jwt');
     expect(localStorage.getItem('token')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
-    await screen.findByRole('heading', { level: 1, name: 'Log In to Your SnapFit Account' });
+    await screen.findByRole('heading', { level: 1, name: 'Log In' });
     expect(sessionStorage.getItem('token')).toBeNull();
     expect(localStorage.getItem('token')).toBeNull();
   });
@@ -195,13 +214,13 @@ describe('LoginPage form', () => {
   it('restores a session-only login on reload', async () => {
     sessionStorage.setItem('token', 'jwt');
     api.get.mockResolvedValue({ data: { merchant: MERCHANT } });
-    renderLogin();
+    renderSignIn();
     await vi.waitFor(() => expect(api.get).toHaveBeenCalledWith('/auth/me'));
   });
 
   it('shows the suspension message and stores no token', async () => {
     api.post.mockRejectedValue({ response: { status: 403, data: { message: SUSPENDED } } });
-    renderLogin();
+    renderSignIn();
     await logIn();
     expect(await screen.findByText(SUSPENDED)).toBeTruthy();
     expect(localStorage.getItem('token')).toBeNull();

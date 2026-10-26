@@ -31,8 +31,8 @@ export const hero = {
   description:
     'Explore SnapFit pricing plans for AI clothing size estimation. Find the right plan for your online store and simplify clothing size recommendations.',
   actions: [
-    { label: 'Get Started', to: '/register', variant: 'primary' },
-    { label: 'Log In', to: '/login', variant: 'outlineInverse' },
+    { label: 'Get Started', to: PAGES.signup.to, variant: 'primary' },
+    { label: 'Log In', to: PAGES.signin.to, variant: 'outlineInverse' },
   ],
 };
 
@@ -75,7 +75,7 @@ export const sections = [
           'Best for: Smaller online retailers looking for an entry-level sizing solution.',
           'Get started: Create your SnapFit account and review the available Small plan details.',
         ],
-        cta: { label: 'Get started', to: '/register?plan=small' },
+        cta: { label: 'Get started', to: `${PAGES.signup.to}?plan=small` },
       },
       {
         plan: 'medium',
@@ -87,7 +87,7 @@ export const sections = [
           'Best for: Growing online clothing businesses that need a sizing solution suited to their expected activity.',
           'Get started: Compare the published Medium plan features and choose the option that fits your store.',
         ],
-        cta: { label: 'Get started', to: '/register?plan=medium' },
+        cta: { label: 'Get started', to: `${PAGES.signup.to}?plan=medium` },
       },
       {
         plan: 'enterprise',
@@ -99,7 +99,7 @@ export const sections = [
           'Best for: Larger retailers and businesses with more demanding integration or usage requirements.',
           'Get started: Review the Enterprise plan details and contact SnapFit for clarification about available options.',
         ],
-        cta: { label: 'Get started', to: '/register?plan=enterprise' },
+        cta: { label: 'Get started', to: `${PAGES.signup.to}?plan=enterprise` },
       },
     ],
   },
@@ -407,7 +407,7 @@ export const sections = [
       'Ready to explore SnapFit? Review the available pricing plans, create your account, and take the next step toward introducing AI-powered clothing size recommendations to your online store.',
     ],
     actions: [
-      { label: 'Get Started', to: '/register', variant: 'primary' },
+      { label: 'Get Started', to: PAGES.signup.to, variant: 'primary' },
       { label: 'Compare plans', to: PLANS_ANCHOR, variant: 'outlineInverse' },
     ],
   },

@@ -17,7 +17,7 @@ function ProtectedRoute({ role, children }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/signin" replace />;
   }
 
   if (role && currentRole !== role) {

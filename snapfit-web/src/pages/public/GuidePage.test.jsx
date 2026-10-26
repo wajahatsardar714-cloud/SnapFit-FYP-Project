@@ -43,7 +43,7 @@ describe('GuidePage', () => {
       'SnapFit Guide: Setup, Integration, and AI Clothing Size Estimation'
     );
     expect(within(heroRegion).getByText(meta.description)).toBeTruthy();
-    expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/register');
+    expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
     expect(within(heroRegion).getByRole('link', { name: 'View pricing' }).getAttribute('href')).toBe('/pricing');
   });
 
@@ -137,6 +137,6 @@ describe('GuidePage', () => {
     expect(cta.textContent).toContain(
       'Use this guide alongside the official API documentation, Pricing page, and legal policies to prepare your store and maintain a reliable sizing experience.'
     );
-    expect(within(cta).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/register');
+    expect(within(cta).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
   });
 });

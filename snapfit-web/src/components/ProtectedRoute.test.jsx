@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import toast from 'react-hot-toast';
 import api, { setAccountSuspendedHandler, setSubscriptionRequiredHandler } from '../services/api';
 import { AuthProvider } from '../context/AuthContext';
-import LoginPage from '../pages/auth/LoginPage';
+import SignInPage from '../pages/auth/SignInPage';
 import { ROLES } from '../utils/roles';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -24,7 +24,7 @@ function renderApp(path) {
     <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signin" element={<SignInPage />} />
           <Route path="/dashboard/subscription/plans" element={<p>Plan selection</p>} />
           <Route
             path="/dashboard/*"
@@ -62,7 +62,7 @@ beforeEach(() => {
 describe('login routing by role', () => {
   it('sends a super admin to /admin', async () => {
     api.post.mockResolvedValue({ data: { token: 'jwt', merchant: ADMIN } });
-    renderApp('/login');
+    renderApp('/signin');
     await logIn();
     expect(await screen.findByText('Admin home')).toBeTruthy();
     expect(localStorage.getItem('token')).toBe('jwt');
@@ -70,14 +70,14 @@ describe('login routing by role', () => {
 
   it('sends a merchant to /dashboard', async () => {
     api.post.mockResolvedValue({ data: { token: 'jwt', merchant: MERCHANT } });
-    renderApp('/login');
+    renderApp('/signin');
     await logIn();
     expect(await screen.findByText('Merchant home')).toBeTruthy();
   });
 
   it('shows the suspension message on the login form', async () => {
     api.post.mockRejectedValue({ response: { status: 403, data: { message: SUSPENDED } } });
-    renderApp('/login');
+    renderApp('/signin');
     await logIn();
     expect(await screen.findByText(SUSPENDED)).toBeTruthy();
     expect(localStorage.getItem('token')).toBeNull();
@@ -110,7 +110,7 @@ describe('ProtectedRoute roles', () => {
 
   it('sends a signed-out visitor to the login page', async () => {
     renderApp('/admin');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Log In to Your SnapFit Account' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Log In' })).toBeTruthy();
   });
 });
 
@@ -125,7 +125,7 @@ describe('suspension during a session', () => {
     act(() => handler(SUSPENDED));
 
     expect(toast.error).toHaveBeenCalledWith(SUSPENDED, { id: 'account-suspended' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Log In to Your SnapFit Account' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Log In' })).toBeTruthy();
     expect(localStorage.getItem('token')).toBeNull();
   });
 });

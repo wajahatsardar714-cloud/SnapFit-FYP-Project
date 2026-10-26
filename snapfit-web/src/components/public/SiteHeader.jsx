@@ -39,36 +39,27 @@ function NavLinks({ links, pathname, className, linkClassName }) {
   );
 }
 
-// Login + Register, or the account's home (Dashboard/Admin) once signed in.
+// Once signed in, a button to the account's home (Dashboard/Admin). Visitors
+// reach Login and Get Started from the menu links instead.
 function AccountActions({ nav, className, buttonClassName = '' }) {
   const { isAuthenticated, merchant } = useAuth();
-  if (isAuthenticated) {
-    return (
-      <div className={className}>
-        <ButtonLink to={homePathFor(merchant)} size="sm" className={buttonClassName}>
-          {nav.account[roleOf(merchant)]}
-        </ButtonLink>
-      </div>
-    );
-  }
+  if (!isAuthenticated) return null;
   return (
     <div className={className}>
-      <ButtonLink to={nav.login.to} variant="outline" size="sm" className={buttonClassName}>
-        {nav.login.label}
-      </ButtonLink>
-      <ButtonLink to={nav.register.to} size="sm" className={buttonClassName}>
-        {nav.register.label}
+      <ButtonLink to={homePathFor(merchant)} size="sm" className={buttonClassName}>
+        {nav.account[roleOf(merchant)]}
       </ButtonLink>
     </div>
   );
 }
 
 /**
- * Sticky white site header: logo, navigation and account buttons. Below lg the
- * links and buttons move into a toggle menu (closes on navigation and Escape).
+ * Sticky white site header: logo, navigation and, when signed in, the account
+ * button. Below lg the links and button move into a toggle menu (closes on
+ * navigation and Escape).
  *   brand  { name, homeLabel }
- *   nav    { navLabel, links: [{ label, to }], login, register: { label, to },
- *            account: { merchant, superadmin } labels, menu: { open, close } }
+ *   nav    { navLabel, links: [{ label, to }], account: { merchant, superadmin }
+ *            labels, menu: { open, close } }
  */
 function SiteHeader({ brand, nav }) {
   const location = useLocation();
