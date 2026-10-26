@@ -7,12 +7,15 @@ import Container from './Container';
  *   title        H1 text
  *   description  supporting sentence
  *   actions      [{ label, to, variant? }] -- see ActionLinks
- *   visual       node shown beside the text (decorative art, a screenshot...)
+ *   visual       node shown beside the text (decorative art, a screenshot...);
+ *                without one the text keeps the full width
  */
 function Hero({ title, description, actions = [], visual }) {
   return (
     <section aria-labelledby="hero-title" className="bg-navy">
-      <Container className="grid grid-cols-1 items-center gap-12 py-16 md:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
+      <Container
+        className={`grid grid-cols-1 items-center gap-12 py-16 md:py-20 lg:gap-16 lg:py-24 ${visual ? 'lg:grid-cols-2' : ''}`}
+      >
         <div className="min-w-0">
           <h1 id="hero-title" className="type-h1 break-words text-inverse">
             {title}

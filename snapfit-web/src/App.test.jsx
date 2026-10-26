@@ -50,9 +50,13 @@ describe('public routes', () => {
     expect(screen.getByRole('link', { name: 'Skip to main content' }).getAttribute('href')).toBe('#main-content');
   });
 
-  it('renders the pricing placeholder at /pricing', async () => {
+  it('renders the pricing page at /pricing', async () => {
+    api.get.mockResolvedValue({ data: { plans: [] } });
     renderAt('/pricing');
-    expect(await screen.findByRole('heading', { level: 1, name: 'SnapFit Pricing Plans' })).toBeTruthy();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'SnapFit Pricing Plans for AI Clothing Size Estimation' })
+    ).toBeTruthy();
+    expect(api.get).toHaveBeenCalledWith('/subscription/plans');
   });
 
   it('renders the login page at /login', async () => {

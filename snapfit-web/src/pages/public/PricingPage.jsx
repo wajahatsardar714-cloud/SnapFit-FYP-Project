@@ -1,15 +1,124 @@
-import Container from '../../components/public/Container';
+import { useEffect, useState } from 'react';
+import CardGrid from '../../components/public/CardGrid';
+import CtaBanner from '../../components/public/CtaBanner';
+import DataTable from '../../components/public/DataTable';
+import FaqAccordion from '../../components/public/FaqAccordion';
+import FeatureCard from '../../components/public/FeatureCard';
+import Hero from '../../components/public/Hero';
 import { usePageMeta } from '../../components/public/PageMeta';
-import { meta, title } from '../../content/pricing';
+import PricingCard from '../../components/public/PricingCard';
+import Prose from '../../components/public/Prose';
+import Section from '../../components/public/Section';
+import StepList from '../../components/public/StepList';
+import TableOfContents from '../../components/public/TableOfContents';
+import { hero, intro, meta, sections, tableOfContents } from '../../content/pricing';
+import api from '../../services/api';
+import { RECOMMENDED_PLAN, formatChartsLimit, formatPlanPrice, formatRequestsLimit } from '../../utils/plans';
 
-// Placeholder until the full pricing page lands; rendered inside PublicLayout.
+// Prices and limits from the public plans endpoint, keyed by plan id. `failed`
+// is set when they could not be loaded; until then (or after) the cards show
+// their text without a price.
+function usePublishedPlans() {
+  const [state, setState] = useState({ byId: {}, failed: false });
+
+  useEffect(() => {
+    let active = true;
+    api
+      .get('/subscription/plans')
+      .then((res) => {
+        if (active) setState({ byId: Object.fromEntries(res.data.plans.map((p) => [p.plan, p])), failed: false });
+      })
+      .catch(() => {
+        if (active) setState({ byId: {}, failed: true });
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return state;
+}
+
+// The card's price line and limit bullets for a published plan. A null price
+// is a custom plan ("Custom", no "/ month").
+function publishedDetails(published, priceNote) {
+  if (!published) return {};
+  const custom = published.price == null;
+  return {
+    price: custom ? formatPlanPrice(published.price) : `$${published.price.toLocaleString()}`,
+    priceNote: custom ? undefined : priceNote,
+    features: [formatRequestsLimit(published.requestsLimit), formatChartsLimit(published.chartsLimit)],
+  };
+}
+
+function PlanCards({ section, published }) {
+  return (
+    <>
+      <CardGrid>
+        {section.plans.map(({ plan, ...card }) => (
+          <PricingCard
+            key={plan}
+            {...card}
+            {...publishedDetails(published.byId[plan], section.priceNote)}
+            recommended={plan === RECOMMENDED_PLAN}
+            badge={section.badge}
+          />
+        ))}
+      </CardGrid>
+      {published.failed && <p className="mt-8 text-center text-sm text-muted-foreground">{section.unavailableNote}</p>}
+    </>
+  );
+}
+
+// How each content `layout` renders inside its Section (see content/pricing.js).
+const LAYOUTS = {
+  plans: (section, published) => <PlanCards section={section} published={published} />,
+  table: (section) => <DataTable columns={section.columns} rows={section.rows} caption={section.title} />,
+  features: (section) => (
+    <CardGrid columns={section.columns}>
+      {section.items.map((item) => (
+        <FeatureCard key={item.title} {...item} />
+      ))}
+    </CardGrid>
+  ),
+  steps: (section) => <StepList steps={section.items} />,
+  faq: (section) => <FaqAccordion items={section.items} />,
+};
+
+const tocItems = sections.map(({ id, title }) => ({ id, label: title }));
+
 function PricingPage() {
-  usePageMeta(meta.title, meta.description);
+  usePageMeta(meta.title, meta.description, meta.keywords);
+  const published = usePublishedPlans();
 
   return (
-    <Container as="section" className="py-16 md:py-24">
-      <h1 className="type-h1 break-words text-center text-foreground">{title}</h1>
-    </Container>
+    <>
+      <Hero {...hero} />
+
+      <Section>
+        <Prose paragraphs={intro} />
+        <div className="mt-12">
+          <TableOfContents title={tableOfContents.title} items={tocItems} />
+        </div>
+      </Section>
+
+      {sections.map((section, index) =>
+        section.layout === 'cta' ? (
+          <CtaBanner key={section.id} {...section} />
+        ) : (
+          <Section
+            key={section.id}
+            id={section.id}
+            eyebrow={section.eyebrow}
+            title={section.title}
+            intro={section.intro}
+            tone={index % 2 === 0 ? 'surface' : 'default'}
+          >
+            {LAYOUTS[section.layout](section, published)}
+          </Section>
+        )
+      )}
+    </>
   );
 }
 

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import DataTable from './DataTable';
 import FaqAccordion from './FaqAccordion';
 import FeatureCard from './FeatureCard';
+import Hero from './Hero';
 import PageMeta, { usePageMeta } from './PageMeta';
 import PricingCard from './PricingCard';
 import ProsConsTable from './ProsConsTable';
@@ -113,6 +114,22 @@ describe('FeatureCard', () => {
     expect(row.className).toContain('justify-between');
     expect(icon.className).toContain('bg-primary-soft');
     expect(icon.querySelector('svg')).toBeTruthy();
+  });
+});
+
+describe('Hero', () => {
+  const heroGrid = () => screen.getByRole('region', { name: 'Title' }).firstElementChild;
+
+  it('puts the visual beside the text from desktop', () => {
+    inRouter(<Hero title="Title" visual={<span>Art</span>} />);
+    expect(heroGrid().className).toContain('lg:grid-cols-2');
+    expect(screen.getByText('Art')).toBeTruthy();
+  });
+
+  it('gives the text the full width without a visual', () => {
+    inRouter(<Hero title="Title" />);
+    expect(heroGrid().className).not.toContain('lg:grid-cols-2');
+    expect(heroGrid().children).toHaveLength(1);
   });
 });
 
