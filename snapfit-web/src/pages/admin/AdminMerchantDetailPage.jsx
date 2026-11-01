@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, FlaskConical, Shirt } from 'lucide-react';
+import { ArrowLeft, Shirt } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Alert from '../../components/ui/Alert';
@@ -102,13 +102,6 @@ function AdminMerchantDetailPage() {
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{merchant.email}</p>
         </div>
-        <Link
-          to={`/admin/demo?merchantId=${merchant._id}`}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors duration-150 hover:bg-surface-2 hover:text-foreground"
-        >
-          <FlaskConical size={14} aria-hidden="true" />
-          Open in demo studio
-        </Link>
       </div>
 
       {merchant.status === 'suspended' && (

@@ -29,6 +29,9 @@ export const exportAnalyticsCsv = () => data(api.get('/admin/analytics/export', 
 
 export const getAuditLog = (params) => data(api.get('/admin/audit-log', { params }));
 
+// The demo studio's one product, set on the server (never a merchant pick).
+export const getDemoProduct = () => data(api.get('/admin/demo'));
+
 // The demo studio's widget calls this through fetch, not axios; the path is
 // relative to the API base URL.
-export const demoRecommendPath = (merchantId) => `/admin/demo/recommend?merchantId=${encodeURIComponent(merchantId)}`;
+export const DEMO_RECOMMEND_PATH = '/admin/demo/recommend';

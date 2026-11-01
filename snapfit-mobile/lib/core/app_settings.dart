@@ -16,7 +16,6 @@ class AppSettings extends ChangeNotifier {
   static const _themeKey = 'snapfit-theme';
   static const _demoApiKeyKey = 'demo_api_key';
   static const _demoProductIdKey = 'demo_product_id';
-  static const _adminDemoApiKeyKey = 'snapfit_admin_demo_api_key';
 
   final SharedPreferences _prefs;
 
@@ -53,10 +52,4 @@ class AppSettings extends ChangeNotifier {
     await _prefs.setString(_demoApiKeyKey, apiKey);
     await _prefs.setString(_demoProductIdKey, productId);
   }
-
-  /// The admin demo studio's "use an API key instead" key.
-  String get adminDemoApiKey => _prefs.getString(_adminDemoApiKeyKey) ?? '';
-
-  Future<void> setAdminDemoApiKey(String value) =>
-      value.isEmpty ? _prefs.remove(_adminDemoApiKeyKey) : _prefs.setString(_adminDemoApiKeyKey, value);
 }

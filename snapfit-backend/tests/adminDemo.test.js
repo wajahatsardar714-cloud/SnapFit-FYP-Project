@@ -36,17 +36,31 @@ beforeEach(async () => {
     subscription: { plan: 'small', status: 'inactive', requestsLimit: 1, requestsUsed: 1 },
   });
   const chart = await createChart(merchant);
-  await ProductMapping.create({ merchantId: merchant._id, productId: 'SKU-1', sizeChartId: chart._id });
+  await ProductMapping.create({
+    merchantId: merchant._id,
+    productId: 'SKU-1',
+    productName: 'Demo Tee',
+    sizeChartId: chart._id,
+  });
+  // The demo store and product come from the server's .env, never the request.
+  process.env.DEMO_MERCHANT_ID = String(merchant._id);
+  process.env.DEMO_PRODUCT_ID = 'SKU-1';
   analyzeImage.mockReset();
   tryOnImage.mockReset();
 });
 
-function demo(path, merchantId, { token = tokenFor(admin), frames = 0, fields = {} } = {}) {
+afterEach(() => {
+  delete process.env.DEMO_MERCHANT_ID;
+  delete process.env.DEMO_PRODUCT_ID;
+});
+
+// The request's productId and merchantId are ignored: the demo product is used.
+function demo(path, { token = tokenFor(admin), frames = 0, fields = {} } = {}) {
   const req = request(app)
-    .post(`/api/admin/demo/${path}?merchantId=${merchantId}`)
+    .post(`/api/admin/demo/${path}?merchantId=64b000000000000000000000`)
     .set('Authorization', `Bearer ${token}`)
     .attach('image', makePng(64, 64), { filename: 'me.png', contentType: 'image/png' })
-    .field('productId', 'SKU-1');
+    .field('productId', 'SOME-OTHER-PRODUCT');
   for (let i = 0; i < frames; i += 1) {
     req.attach('frames', makePng(64, 64), { filename: `frame${i}.png`, contentType: 'image/png' });
   }
@@ -54,14 +68,39 @@ function demo(path, merchantId, { token = tokenFor(admin), frames = 0, fields = 
   return req;
 }
 
-const demoRecommend = (merchantId, options = {}) =>
-  demo('recommend', merchantId, { ...options, fields: { userHeight: '178', ...options.fields } });
+const demoRecommend = (options = {}) => demo('recommend', { ...options, fields: { userHeight: '178', ...options.fields } });
+
+describe('GET /api/admin/demo', () => {
+  it('returns only the demo product, no merchant details', async () => {
+    const res = await request(app).get('/api/admin/demo').set('Authorization', `Bearer ${tokenFor(admin)}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      product: { productId: 'SKU-1', productName: 'Demo Tee', productImage: null, tryOnStatus: 'image_missing' },
+    });
+  });
+
+  it('says so until the server names the demo product', async () => {
+    delete process.env.DEMO_MERCHANT_ID;
+
+    const res = await request(app).get('/api/admin/demo').set('Authorization', `Bearer ${tokenFor(admin)}`);
+
+    expect(res.status).toBe(503);
+    expect(res.body.message).toMatch(/demo product is not set up/);
+  });
+
+  it('is for the super admin only', async () => {
+    const res = await request(app).get('/api/admin/demo').set('Authorization', `Bearer ${tokenFor(merchant)}`);
+
+    expect([401, 403]).toContain(res.status);
+  });
+});
 
 describe('POST /api/admin/demo/recommend', () => {
   it('answers like /api/recommend without an API key, frames included', async () => {
     analyzeImage.mockResolvedValue({ ...AI_RESULT, framesUsed: 3 });
 
-    const res = await demoRecommend(merchant._id, { frames: 2, fields: { clothingFit: 'loose' } });
+    const res = await demoRecommend({ frames: 2, fields: { clothingFit: 'loose' } });
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -78,7 +117,7 @@ describe('POST /api/admin/demo/recommend', () => {
   it('stores the run as admin_demo and never counts usage', async () => {
     analyzeImage.mockResolvedValue(AI_RESULT);
 
-    await demoRecommend(merchant._id);
+    await demoRecommend();
 
     const saved = await Recommendation.find({ merchantId: merchant._id }).lean();
     expect(saved).toHaveLength(1);
@@ -89,7 +128,7 @@ describe('POST /api/admin/demo/recommend', () => {
   it('tags failed demo analyses too', async () => {
     analyzeImage.mockResolvedValue({ ...AI_RESULT, size_recommendation: null });
 
-    const res = await demoRecommend(merchant._id);
+    const res = await demoRecommend();
 
     expect(res.status).toBe(502);
     expect((await Recommendation.findOne({ merchantId: merchant._id })).source).toBe('admin_demo');
@@ -98,7 +137,7 @@ describe('POST /api/admin/demo/recommend', () => {
   it('keeps demo runs out of the merchant and admin analytics', async () => {
     analyzeImage.mockResolvedValue(AI_RESULT);
     await Merchant.updateOne({ _id: merchant._id }, { status: 'active', 'subscription.status': 'active' });
-    await demoRecommend(merchant._id);
+    await demoRecommend();
     await Recommendation.create({ merchantId: merchant._id, productId: 'SKU-1', recommendedSize: 'L', status: 'success' });
 
     const merchantAuth = { Authorization: `Bearer ${tokenFor(merchant)}` };
@@ -141,7 +180,7 @@ describe('POST /api/admin/demo/recommend', () => {
   });
 
   it('validates the body exactly like /api/recommend', async () => {
-    const res = await demoRecommend(merchant._id, { fields: { userHeight: '50' } });
+    const res = await demoRecommend({ fields: { userHeight: '50' } });
 
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ success: false, message: 'userHeight must be between 100 and 230 cm' });
@@ -149,26 +188,41 @@ describe('POST /api/admin/demo/recommend', () => {
   });
 
   it('allows at most 4 extra frames', async () => {
-    const res = await demoRecommend(merchant._id, { frames: 5 });
+    const res = await demoRecommend({ frames: 5 });
 
     expect(res.status).toBe(400);
     expect(res.body.message).toBe('At most 4 extra frames are allowed');
   });
 
-  it.each([
-    ['an unknown merchant', () => '64b000000000000000000000'],
-    ['a malformed id', () => 'nope'],
-    ['the super admin', () => admin._id],
-  ])('404s for %s', async (label, id) => {
-    const res = await demoRecommend(id());
+  it('always sizes the demo product, whatever the request names', async () => {
+    analyzeImage.mockResolvedValue(AI_RESULT);
 
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual({ success: false, message: 'Merchant not found' });
+    const res = await demoRecommend();
+
+    expect(res.status).toBe(200);
+    expect(res.body.product.productId).toBe('SKU-1');
+  });
+
+  it.each([
+    ['is not set', () => undefined],
+    ['is unknown', () => '64b000000000000000000000'],
+    ['is malformed', () => 'nope'],
+    ['is the super admin', () => String(admin._id)],
+  ])('refuses while the demo store %s', async (label, id) => {
+    const value = id();
+    if (value === undefined) delete process.env.DEMO_MERCHANT_ID;
+    else process.env.DEMO_MERCHANT_ID = value;
+
+    const res = await demoRecommend();
+
+    expect(res.status).toBe(503);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/demo product is not set up/);
     expect(analyzeImage).not.toHaveBeenCalled();
   });
 
   it('is for the super admin only', async () => {
-    const res = await demoRecommend(merchant._id, { token: tokenFor(merchant) });
+    const res = await demoRecommend({ token: tokenFor(merchant) });
 
     expect([401, 403]).toContain(res.status);
     expect(analyzeImage).not.toHaveBeenCalled();
@@ -176,10 +230,10 @@ describe('POST /api/admin/demo/recommend', () => {
 });
 
 describe('POST /api/admin/demo/try-on', () => {
-  it('answers like /api/try-on for the given merchant, without an API key or usage', async () => {
+  it('answers like /api/try-on for the demo product, without an API key or usage', async () => {
     tryOnImage.mockResolvedValue({ image: TRY_ON_IMAGE });
 
-    const res = await demo('try-on', merchant._id);
+    const res = await demo('try-on');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, image: TRY_ON_IMAGE });
@@ -190,20 +244,24 @@ describe('POST /api/admin/demo/try-on', () => {
     expect(env.listTmpPhotos()).toEqual([]);
   });
 
-  it('requires a product id like the public route', async () => {
+  it('needs no product id: the demo product is used', async () => {
+    tryOnImage.mockResolvedValue({ image: TRY_ON_IMAGE });
+
     const res = await request(app)
-      .post(`/api/admin/demo/try-on?merchantId=${merchant._id}`)
+      .post('/api/admin/demo/try-on')
       .set('Authorization', `Bearer ${tokenFor(admin)}`)
       .attach('image', makePng(64, 64), { filename: 'me.png', contentType: 'image/png' });
 
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({ success: false, message: 'productId is required' });
+    expect(res.status).toBe(200);
+    expect(tryOnImage.mock.calls[0][2]).toBe('SKU-1');
   });
 
-  it('404s for an unknown merchant', async () => {
-    const res = await demo('try-on', '64b000000000000000000000');
+  it('refuses while the demo store is not set', async () => {
+    delete process.env.DEMO_MERCHANT_ID;
 
-    expect(res.status).toBe(404);
+    const res = await demo('try-on');
+
+    expect(res.status).toBe(503);
     expect(tryOnImage).not.toHaveBeenCalled();
   });
 });

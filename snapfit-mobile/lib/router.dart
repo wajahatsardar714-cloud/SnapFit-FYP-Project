@@ -77,10 +77,7 @@ GoRouter buildRouter(AuthState auth, {String? initialLocation}) {
             ),
           ),
           GoRoute(path: '/admin/analytics', builder: (context, state) => const AdminAnalyticsScreen()),
-          GoRoute(
-            path: '/admin/demo',
-            builder: (context, state) => DemoStudioScreen(merchantId: state.uri.queryParameters['merchantId']),
-          ),
+          GoRoute(path: '/admin/demo', builder: (context, state) => const DemoStudioScreen()),
           GoRoute(path: '/admin/audit-log', builder: (context, state) => const AdminAuditLogScreen()),
           GoRoute(path: '/admin/settings', builder: (context, state) => const AdminSettingsScreen()),
         ],

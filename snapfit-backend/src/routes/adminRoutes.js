@@ -1,7 +1,8 @@
 const express = require('express');
 const { body, query } = require('express-validator');
 const { protect, requireSuperAdmin } = require('../middlewares/authMiddleware');
-const { loadTargetMerchant, loadDemoMerchant } = require('../middlewares/adminMiddleware');
+const { loadTargetMerchant, loadDemoMerchant, useDemoProduct } = require('../middlewares/adminMiddleware');
+const { getDemoProduct } = require('../controllers/adminDemoController');
 const Merchant = require('../models/Merchant');
 const { PLAN_IDS } = require('../config/plans');
 const { uploadShopperPhoto, MAX_EXTRA_FRAMES } = require('../utils/shopperPhotoUpload');
@@ -120,10 +121,18 @@ router.get('/analytics/export', exportAnalytics);
 
 router.get('/audit-log', paginationValidation(100), getAuditLog);
 
-// The public widget endpoints, run as ?merchantId=<id> without an API key and
-// never billed -- same upload rules and controllers as /api/recommend and
-// /api/try-on.
-router.post('/demo/recommend', loadDemoMerchant, uploadShopperPhoto({ extraFrames: MAX_EXTRA_FRAMES }), recommend);
-router.post('/demo/try-on', loadDemoMerchant, uploadShopperPhoto(), tryOn);
+// The demo studio: the public widget endpoints on SnapFit's own demo store and
+// product (from the server's .env), without an API key and never billed --
+// same upload rules and controllers as /api/recommend and /api/try-on. The
+// admin never picks a merchant.
+router.get('/demo', getDemoProduct);
+router.post(
+  '/demo/recommend',
+  loadDemoMerchant,
+  uploadShopperPhoto({ extraFrames: MAX_EXTRA_FRAMES }),
+  useDemoProduct,
+  recommend
+);
+router.post('/demo/try-on', loadDemoMerchant, uploadShopperPhoto(), useDemoProduct, tryOn);
 
 module.exports = router;

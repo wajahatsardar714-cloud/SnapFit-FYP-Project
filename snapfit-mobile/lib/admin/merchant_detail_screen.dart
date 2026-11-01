@@ -103,17 +103,6 @@ class _AdminMerchantDetailScreenState extends State<AdminMerchantDetailScreen> {
         ),
         gap4,
         Text('${merchant['email'] ?? ''}', style: snapText(size: 14, color: c.mutedForeground)),
-        gap12,
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SnapButton(
-            label: 'Open in demo studio',
-            icon: LucideIcons.flaskConical,
-            variant: ButtonVariant.secondary,
-            size: ButtonSize.sm,
-            onPressed: () => context.go('/admin/demo?merchantId=${merchant['_id']}'),
-          ),
-        ),
         if (merchant['status'] == 'suspended') ...[
           gap16,
           SnapAlert(

@@ -126,6 +126,26 @@ void main() {
     expect(find.text('90%'), findsOneWidget);
   });
 
+  testWidgets('the demo studio shows only the demo product, run on the admin session', (tester) async {
+    final app = await TestApp.create(account: superAdmin, location: '/admin/demo');
+    app.backend.on('GET /admin/demo', {
+      'product': {
+        'productId': 'demo-product-1',
+        'productName': 'White Crew Neck T-Shirt',
+        'productImage': null,
+        'tryOnStatus': 'ready',
+      },
+    });
+    await app.pump(tester);
+
+    expect(find.text('White Crew Neck T-Shirt'), findsOneWidget);
+    expect(find.text('Try-on ready'), findsOneWidget);
+    expect(find.text('Merchant'), findsNothing);
+    expect(find.text('Merchant API key'), findsNothing);
+    expect(find.text('Check My Size'), findsOneWidget);
+    expect(app.backend.called('GET /admin/merchants'), isFalse);
+  });
+
   testWidgets('an unsubscribed merchant is sent to plan selection, with locked pages', (tester) async {
     final app = await TestApp.create(account: unsubscribedMerchant, location: '/dashboard/api-key');
     app.backend.on('GET /subscription/plans', publishedPlans);
