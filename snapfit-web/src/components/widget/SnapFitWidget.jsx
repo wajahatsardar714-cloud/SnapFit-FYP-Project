@@ -57,11 +57,14 @@ function heightError(heightValue) {
 // Authenticates with the merchant's `apiKey` (the public widget), or -- for
 // the super admin demo studio -- with a signed-in `authToken` sent as a bearer
 // token, together with an `endpoint` that accepts it. `endpoint` is the
-// recommend path relative to `apiUrl`.
+// recommend path relative to `apiUrl`; `handoffPath`, the phone-handoff
+// sessions path for a token-authed widget (the API-key widget uses the public
+// /handoff/sessions).
 function SnapFitWidget({
   apiKey,
   authToken,
   endpoint = '/recommend',
+  handoffPath,
   productId,
   apiUrl,
   buttonLabel = 'Check My Size',
@@ -93,9 +96,9 @@ function SnapFitWidget({
 
   const isConfigured = Boolean((apiKey || authToken) && productId && apiUrl);
   const authHeaders = apiKey ? { 'x-api-key': apiKey } : { Authorization: `Bearer ${authToken}` };
-  // The phone handoff sessions are API-key authed, so a token-only widget
-  // offers camera and upload only.
-  const offersPhone = isDesktop && Boolean(apiKey);
+  // "Use my phone" (a QR code) on desktops: the public handoff with an API
+  // key, or the demo studio's own handoff route with the admin session.
+  const offersPhone = isDesktop && Boolean(apiKey || (authToken && handoffPath));
   // The result shows a try-on panel unless the product isn't try-on ready.
   const hasTryOnView = Boolean(tryOn && tryOn.status !== 'unavailable');
   const heightValue = heightToCm(heightUnit, heightCm, heightFeet, heightInches);
@@ -282,7 +285,8 @@ function SnapFitWidget({
                 <div className="mt-4">
                   <Suspense fallback={<p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>}>
                     <MobileHandoff
-                      apiKey={apiKey}
+                      authHeaders={authHeaders}
+                      sessionsPath={apiKey ? undefined : handoffPath}
                       apiUrl={apiUrl}
                       onCapture={(capturedFile) => onFilesSelected([capturedFile])}
                       onSwitchToUpload={() => {

@@ -265,3 +265,31 @@ describe('POST /api/admin/demo/try-on', () => {
     expect(tryOnImage).not.toHaveBeenCalled();
   });
 });
+
+describe('the demo studio phone handoff', () => {
+  const adminAuth = () => ({ Authorization: `Bearer ${tokenFor(admin)}` });
+
+  it('lets the admin start a session, the phone upload, and the admin collect the photo', async () => {
+    const created = await request(app).post('/api/admin/demo/handoff').set(adminAuth());
+    expect(created.status).toBe(201);
+    const { sessionId } = created.body;
+
+    expect((await request(app).get(`/api/admin/demo/handoff/${sessionId}`).set(adminAuth())).body.status).toBe('pending');
+
+    const upload = await request(app)
+      .post(`/api/handoff/sessions/${sessionId}/photo`)
+      .attach('image', makePng(64, 64), { filename: 'phone.png', contentType: 'image/png' });
+    expect(upload.status).toBe(200);
+
+    expect((await request(app).get(`/api/admin/demo/handoff/${sessionId}`).set(adminAuth())).body.status).toBe('ready');
+    const photo = await request(app).get(`/api/admin/demo/handoff/${sessionId}/photo`).set(adminAuth());
+    expect(photo.status).toBe(200);
+    expect(photo.headers['content-type']).toMatch(/^image\//);
+  });
+
+  it('is for the super admin only, and needs the demo store set', async () => {
+    expect([401, 403]).toContain((await request(app).post('/api/admin/demo/handoff').set('Authorization', `Bearer ${tokenFor(merchant)}`)).status);
+    delete process.env.DEMO_MERCHANT_ID;
+    expect((await request(app).post('/api/admin/demo/handoff').set(adminAuth())).status).toBe(503);
+  });
+});

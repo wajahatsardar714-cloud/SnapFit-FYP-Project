@@ -6,6 +6,7 @@ import AdminDemoStudioPage from './AdminDemoStudioPage';
 
 vi.mock('../../services/adminApi', async (importOriginal) => ({
   DEMO_RECOMMEND_PATH: (await importOriginal()).DEMO_RECOMMEND_PATH,
+  DEMO_HANDOFF_PATH: (await importOriginal()).DEMO_HANDOFF_PATH,
   getDemoProduct: vi.fn(),
 }));
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ token: 'admin.jwt' }) }));
@@ -40,6 +41,7 @@ describe('AdminDemoStudioPage', () => {
     expect(widgetProps()).toEqual({
       authToken: 'admin.jwt',
       endpoint: '/admin/demo/recommend',
+      handoffPath: '/admin/demo/handoff',
       productId: 'demo-product-1',
       apiUrl: expect.any(String),
     });

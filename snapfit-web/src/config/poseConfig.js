@@ -78,28 +78,30 @@ export const PASS_GRACE_MS = 600;
 export const BRIGHTNESS_SAMPLE_SIZE = 32;
 
 // Pose guide silhouette, in head-heights (the classic 8-heads-tall figure).
-// Shoulder width uses 2 head-heights -- the figure-drawing canon's broad,
-// clothed-shoulder width -- so a real body fills the guide rather than spilling
-// out of it. The guide's total height is the middle of the accepted distance
-// range, so standing inside it passes the distance check.
+// Drawn tall and loose so a real, clothed person fills it rather than dwarfing
+// it: its height is 80% of the way up the accepted distance range (still
+// inside it, so standing in the outline passes the distance check), and its
+// widths are a clothed body's, not a figure drawing's.
 export const POSE_GUIDE = Object.freeze({
   headsTall: 8,
-  bodyHeightFraction: (POSE_RULES.bodyHeightMin + POSE_RULES.bodyHeightMax) / 2,
-  headWidth: 0.75,
+  bodyHeightFraction: POSE_RULES.bodyHeightMin + (POSE_RULES.bodyHeightMax - POSE_RULES.bodyHeightMin) * 0.8,
+  headWidth: 0.8,
   neckLength: 0.3,
   shoulderY: 1.45,
-  shoulderWidth: 2,
+  shoulderWidth: 2.4,
   waistY: 3.1,
-  waistWidth: 1.3,
+  waistWidth: 1.7,
   hipY: 4,
-  hipWidth: 1.75,
+  hipWidth: 2.1,
   crotchY: 4.25,
   armLength: 3.3,
-  armAngleDeg: (POSE_RULES.armAbductionMinDeg + POSE_RULES.armAbductionMaxDeg) / 2,
-  upperArmWidth: 0.5,
-  forearmWidth: 0.4,
+  // Arms a little closer than the middle of the accepted 8-60 degrees, so the
+  // taller figure's hands stay inside a narrow portrait frame.
+  armAngleDeg: 26,
+  upperArmWidth: 0.62,
+  forearmWidth: 0.5,
   legLength: 3.75,
-  thighWidth: 0.8,
-  ankleWidth: 0.4,
-  feetApart: 1.05,
+  thighWidth: 0.98,
+  ankleWidth: 0.5,
+  feetApart: 1.3,
 });

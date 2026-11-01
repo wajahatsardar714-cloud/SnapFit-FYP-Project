@@ -3,6 +3,7 @@ const { body, query } = require('express-validator');
 const { protect, requireSuperAdmin } = require('../middlewares/authMiddleware');
 const { loadTargetMerchant, loadDemoMerchant, useDemoProduct } = require('../middlewares/adminMiddleware');
 const { getDemoProduct } = require('../controllers/adminDemoController');
+const { createHandoffSession, getHandoffStatus, getHandoffPhoto } = require('../controllers/handoffController');
 const Merchant = require('../models/Merchant');
 const { PLAN_IDS } = require('../config/plans');
 const { uploadShopperPhoto, MAX_EXTRA_FRAMES } = require('../utils/shopperPhotoUpload');
@@ -134,5 +135,11 @@ router.post(
   recommend
 );
 router.post('/demo/try-on', loadDemoMerchant, uploadShopperPhoto(), useDemoProduct, tryOn);
+// "Use my phone" for the demo studio: the desktop side of the QR handoff, on
+// the admin session and the demo store. The phone uploads through the public
+// /api/handoff/sessions/:sessionId/photo route, scoped by the QR's session id.
+router.post('/demo/handoff', loadDemoMerchant, createHandoffSession);
+router.get('/demo/handoff/:sessionId', loadDemoMerchant, getHandoffStatus);
+router.get('/demo/handoff/:sessionId/photo', loadDemoMerchant, getHandoffPhoto);
 
 module.exports = router;

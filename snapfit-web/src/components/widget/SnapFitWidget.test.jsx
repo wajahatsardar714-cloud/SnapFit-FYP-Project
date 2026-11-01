@@ -337,3 +337,29 @@ describe('SnapFitWidget dialog', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
+
+describe('Use my phone with the admin session (demo studio)', () => {
+  function openTokenWidget(props) {
+    render(<SnapFitWidget authToken="admin.jwt" productId="demo-product-1" apiUrl="https://api.test/api" {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Check My Size' }));
+  }
+
+  it('is offered once a handoff route is given, and starts the session with the admin token', async () => {
+    globalThis.fetch = vi.fn(async () => ({ ok: false, json: async () => ({ message: 'nope' }) }));
+    openTokenWidget({ endpoint: '/admin/demo/recommend', handoffPath: '/admin/demo/handoff' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use My Phone' }));
+
+    await vi.waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith('https://api.test/api/admin/demo/handoff', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer admin.jwt' },
+      })
+    );
+  });
+
+  it('is not offered without a handoff route', () => {
+    openTokenWidget({ endpoint: '/admin/demo/recommend' });
+    expect(screen.queryByRole('button', { name: 'Use My Phone' })).toBeNull();
+  });
+});

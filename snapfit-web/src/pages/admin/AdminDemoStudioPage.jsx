@@ -3,7 +3,7 @@ import { Shirt } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
 import SnapFitWidget from '../../components/widget/SnapFitWidget';
 import { useAuth } from '../../context/AuthContext';
-import { DEMO_RECOMMEND_PATH, getDemoProduct } from '../../services/adminApi';
+import { DEMO_HANDOFF_PATH, DEMO_RECOMMEND_PATH, getDemoProduct } from '../../services/adminApi';
 import { TRY_ON_STATUS, resolveProductImageUrl } from '../../utils/productImage';
 import { LoadError, PageLoader } from './components/PageStatus';
 
@@ -64,7 +64,13 @@ function AdminDemoStudioPage() {
                 </div>
               )}
               <div className="mt-5">
-                <SnapFitWidget authToken={token} endpoint={DEMO_RECOMMEND_PATH} productId={product.productId} apiUrl={API_URL} />
+                <SnapFitWidget
+                  authToken={token}
+                  endpoint={DEMO_RECOMMEND_PATH}
+                  handoffPath={DEMO_HANDOFF_PATH}
+                  productId={product.productId}
+                  apiUrl={API_URL}
+                />
               </div>
             </div>
           </div>

@@ -4,27 +4,29 @@ import 'package:flutter/material.dart';
 
 // The web widget's A-pose guide (src/components/widget/PoseGuideOverlay.jsx
 // and the POSE_GUIDE numbers in src/config/poseConfig.js): a classic
-// 8-heads-tall figure sized to the middle of the accepted distance range, so
-// standing inside it frames the shopper the way the AI service expects.
+// 8-heads-tall figure, drawn tall and loose so a real, clothed person fills it.
+// Its height is 80% of the way up the accepted distance range (0.55-0.93 of
+// the frame), so standing inside it still passes the distance check.
 const _headsTall = 8.0;
-const _bodyHeightFraction = (0.55 + 0.93) / 2;
-const _headWidth = 0.75;
+const _bodyHeightFraction = 0.55 + (0.93 - 0.55) * 0.8;
+const _headWidth = 0.8;
 const _neckLength = 0.3;
 const _shoulderY = 1.45;
-const _shoulderWidth = 2.0;
+const _shoulderWidth = 2.4;
 const _waistY = 3.1;
-const _waistWidth = 1.3;
+const _waistWidth = 1.7;
 const _hipY = 4.0;
-const _hipWidth = 1.75;
+const _hipWidth = 2.1;
 const _crotchY = 4.25;
 const _armLength = 3.3;
-const _armAngleDeg = (8 + 60) / 2;
-const _upperArmWidth = 0.5;
-const _forearmWidth = 0.4;
+// Inside the accepted 8-60 degrees, closer in so the hands stay in frame.
+const _armAngleDeg = 26.0;
+const _upperArmWidth = 0.62;
+const _forearmWidth = 0.5;
 const _legLength = 3.75;
-const _thighWidth = 0.8;
-const _ankleWidth = 0.4;
-const _feetApart = 1.05;
+const _thighWidth = 0.98;
+const _ankleWidth = 0.5;
+const _feetApart = 1.3;
 const _outline = 0.07;
 
 /// Draws the guide over the camera preview: a faint fill and a bright outline.

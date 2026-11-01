@@ -35,3 +35,6 @@ export const getDemoProduct = () => data(api.get('/admin/demo'));
 // The demo studio's widget calls this through fetch, not axios; the path is
 // relative to the API base URL.
 export const DEMO_RECOMMEND_PATH = '/admin/demo/recommend';
+
+// The demo studio's "Use my phone" QR handoff (desktop side, admin session).
+export const DEMO_HANDOFF_PATH = '/admin/demo/handoff';

@@ -31,9 +31,12 @@ async function resolvePhoneReachableOrigin(apiBase) {
   return window.location.origin;
 }
 
-// `sessionsPath` lets the dev-only /test/ai page use the backend's key-less
-// /handoff/test-sessions routes; the widget keeps the default, API-key-authed ones.
-function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload, sessionsPath = '/handoff/sessions' }) {
+// `authHeaders` authenticate the desktop side (the merchant's x-api-key, or
+// the admin session's bearer token). `sessionsPath` picks the routes: the
+// API-key-authed /handoff/sessions by default, the demo studio's
+// /admin/demo/handoff, or the dev-only /test/ai page's key-less
+// /handoff/test-sessions.
+function MobileHandoff({ authHeaders = {}, apiUrl, onCapture, onSwitchToUpload, sessionsPath = '/handoff/sessions' }) {
   const [status, setStatus] = useState('creating'); // creating | waiting | expired | error
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -42,7 +45,6 @@ function MobileHandoff({ apiKey, apiUrl, onCapture, onSwitchToUpload, sessionsPa
 
   const apiBase = apiUrl.replace(/\/$/, '');
   const sessionsBase = `${apiBase}${sessionsPath}`;
-  const authHeaders = apiKey ? { 'x-api-key': apiKey } : {};
 
   async function startSession() {
     clearInterval(pollIdRef.current);
