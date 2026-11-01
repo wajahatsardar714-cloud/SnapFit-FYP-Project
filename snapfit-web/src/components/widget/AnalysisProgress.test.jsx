@@ -33,6 +33,29 @@ describe('AnalysisProgress', () => {
     expect(screen.getByRole('status').textContent).toBe('Measuring you…');
   });
 
+  it('ticks off the steps as time passes, ending on the try-on', () => {
+    render(<AnalysisProgress includesTryOn />);
+    const steps = () => screen.getAllByRole('listitem').map((item) => item.textContent);
+    expect(steps()).toEqual([
+      'Finding your pose',
+      'Measuring your body',
+      'Matching the size chart',
+      'Creating your try-on preview',
+    ]);
+
+    advance(6);
+    // Every step but the try-on is done (a check); the try-on is current.
+    const items = screen.getAllByRole('listitem');
+    expect(items.slice(0, 3).every((item) => item.querySelector('svg'))).toBe(true);
+    expect(items[3].querySelector('svg')).toBeNull();
+  });
+
+  it('leaves the try-on step out when no try-on was asked for', () => {
+    render(<AnalysisProgress includesTryOn={false} />);
+    expect(screen.queryByText('Creating your try-on preview')).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+  });
+
   it('stops its timer when unmounted', () => {
     const { unmount } = render(<AnalysisProgress includesTryOn />);
     expect(vi.getTimerCount()).toBe(1);

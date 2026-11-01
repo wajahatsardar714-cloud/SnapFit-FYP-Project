@@ -1,5 +1,6 @@
 import ActionLinks from './ActionLinks';
 import Container from './Container';
+import Reveal from './Reveal';
 import SectionHeading from './SectionHeading';
 
 /**
@@ -15,10 +16,10 @@ function CtaBanner({ id, eyebrow, title, paragraphs = [], actions = [] }) {
   return (
     <section id={id} aria-labelledby={headingId} className="scroll-mt-20 bg-background py-16 md:py-24">
       <Container>
-        <div className="rounded-2xl bg-navy px-5 py-12 sm:px-10 md:py-16">
+        <Reveal className="rounded-2xl bg-navy px-5 py-12 sm:px-10 md:py-16">
           <SectionHeading id={headingId} eyebrow={eyebrow} title={title} intro={paragraphs} tone="inverse" />
           <ActionLinks actions={actions} align="center" className="mt-8" />
-        </div>
+        </Reveal>
       </Container>
     </section>
   );

@@ -203,7 +203,10 @@ function DashboardLayout() {
         <main className="flex-1 overflow-y-auto bg-background">
           <div className="mx-auto max-w-7xl p-8">
             <SubscriptionGate>
-              <Outlet />
+              {/* Each page fades in as it replaces the last. */}
+              <div key={location.pathname} className="animate-fade-in">
+                <Outlet />
+              </div>
             </SubscriptionGate>
           </div>
         </main>

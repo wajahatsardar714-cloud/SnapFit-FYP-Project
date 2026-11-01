@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
+import 'motion.dart';
 
 enum ButtonVariant { primary, secondary, danger, ghost, admin }
 
@@ -593,13 +594,15 @@ class Segmented<T> extends StatelessWidget {
 }
 
 /// A centred spinner for a page that is loading.
+/// A page (or, [compact], a card) that is loading: shimmering placeholders
+/// shaped like the content, so nothing jumps when it arrives.
 class PageLoader extends StatelessWidget {
-  const PageLoader({super.key});
+  const PageLoader({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
-  Widget build(BuildContext context) => const Center(
-    child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()),
-  );
+  Widget build(BuildContext context) => LoadingSkeleton(compact: compact);
 }
 
 /// A page that failed to load, with a retry.
@@ -769,10 +772,20 @@ class PageBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The page's blocks rise in one after another (the first few only, so a
+    // long page is never kept waiting).
     final list = ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-      children: children,
+      children: [
+        for (var i = 0; i < children.length; i++)
+          children[i] is SizedBox
+              ? children[i]
+              : FadeSlideIn(
+                  delay: Duration(milliseconds: 45 * (i < 8 ? i : 8)),
+                  child: children[i],
+                ),
+      ],
     );
     return onRefresh == null ? list : RefreshIndicator(onRefresh: onRefresh!, child: list);
   }
@@ -790,13 +803,20 @@ class ProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(99),
-      child: LinearProgressIndicator(
-        value: (percent.clamp(0, 100)) / 100,
-        minHeight: height,
-        backgroundColor: c.surface2,
-        color: color ?? c.primary,
+    final value = (percent.clamp(0, 100)) / 100;
+    // Fills up from empty when it appears, and slides when the value changes.
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: value.toDouble()),
+      duration: reduceMotion(context) ? Duration.zero : const Duration(milliseconds: 800),
+      curve: Curves.easeOutCubic,
+      builder: (context, v, _) => ClipRRect(
+        borderRadius: BorderRadius.circular(99),
+        child: LinearProgressIndicator(
+          value: v,
+          minHeight: height,
+          backgroundColor: c.surface2,
+          color: color ?? c.primary,
+        ),
       ),
     );
   }

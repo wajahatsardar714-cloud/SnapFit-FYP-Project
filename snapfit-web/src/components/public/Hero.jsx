@@ -17,7 +17,7 @@ function Hero({ title, note, description, actions = [], visual }) {
       <Container
         className={`grid grid-cols-1 items-center gap-12 py-16 md:py-20 lg:gap-16 lg:py-24 ${visual ? 'lg:grid-cols-2' : ''}`}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 animate-fade-up">
           <h1 id="hero-title" className="type-h1 break-words text-inverse">
             {title}
           </h1>
@@ -27,7 +27,7 @@ function Hero({ title, note, description, actions = [], visual }) {
           )}
           {actions.length > 0 && <ActionLinks actions={actions} className="mt-8" />}
         </div>
-        {visual && <div className="flex min-w-0 justify-center">{visual}</div>}
+        {visual && <div className="flex min-w-0 animate-fade-up justify-center [animation-delay:150ms]">{visual}</div>}
       </Container>
     </section>
   );

@@ -142,10 +142,10 @@ function SizeResult({ result }) {
   const fitNotes = result.fitNotes?.length ? result.fitNotes : result.notes ? [result.notes] : [];
 
   return (
-    <div className="text-center">
+    <div className="animate-fade-up text-center">
       <Warnings warnings={result.warnings || []} />
 
-      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
+      <div className="mx-auto flex h-20 w-20 animate-scale-in items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
         {result.size}
       </div>
       {result.alternativeSize && (
@@ -160,7 +160,7 @@ function SizeResult({ result }) {
           <span className={tone.text}>{pct}%</span>
         </div>
         <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-2">
-          <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${pct}%` }} />
+          <div className={`h-full origin-left animate-grow-x rounded-full ${tone.bar}`} style={{ width: `${pct}%` }} />
         </div>
         {result.framesUsed > 1 && (
           <p className="mt-1 text-xs text-muted-foreground">Measured from {result.framesUsed} camera frames</p>

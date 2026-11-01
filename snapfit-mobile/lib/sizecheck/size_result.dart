@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../core/json.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
+import '../widgets/motion.dart';
 import '../widgets/ui.dart';
 
 const _measurementLabels = {
@@ -87,15 +88,18 @@ class SizeResultView extends StatelessWidget {
           ),
           gap16,
         ],
+        // The size pops in.
         Center(
-          child: Container(
-            width: 80,
-            height: 80,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle),
-            child: Text(
-              '${result['size']}',
-              style: snapText(size: 24, weight: FontWeight.w700, color: c.primaryForeground),
+          child: _PopIn(
+            child: Container(
+              width: 80,
+              height: 80,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle),
+              child: Text(
+                '${result['size']}',
+                style: snapText(size: 24, weight: FontWeight.w700, color: c.primaryForeground),
+              ),
             ),
           ),
         ),
@@ -374,10 +378,14 @@ class _TryOnPreviewState extends State<TryOnPreview> {
               Center(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image(
-                    image: showTryOn ? _image! : FileImage(File(original)),
-                    fit: BoxFit.contain,
-                    semanticLabel: showTryOn ? 'You wearing size ${widget.size}' : 'Your photo',
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: Image(
+                      key: ValueKey(showTryOn),
+                      image: showTryOn ? _image! : FileImage(File(original)),
+                      fit: BoxFit.contain,
+                      semanticLabel: showTryOn ? 'You wearing size ${widget.size}' : 'Your photo',
+                    ),
                   ),
                 ),
               ),
@@ -406,6 +414,28 @@ class _TryOnPreviewState extends State<TryOnPreview> {
           style: snapText(size: 11, color: c.mutedForeground),
         ),
       ],
+    );
+  }
+}
+
+/// Scales its child up from small with a slight overshoot.
+class _PopIn extends StatelessWidget {
+  const _PopIn({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (reduceMotion(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.6, end: 1),
+      duration: const Duration(milliseconds: 520),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) => Opacity(
+        opacity: ((scale - 0.6) / 0.4).clamp(0.0, 1.0),
+        child: Transform.scale(scale: scale, child: child),
+      ),
+      child: child,
     );
   }
 }

@@ -40,6 +40,25 @@
     transition-timing-function: ease !important;
   }
 
+  /* Smooth in-page jumps (table of contents, #section links). */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Reduced motion: every animation lands on its last frame at once (looping
+     ones stop), so content still shows -- it just doesn't move. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html.theme-transition,
     html.theme-transition *,

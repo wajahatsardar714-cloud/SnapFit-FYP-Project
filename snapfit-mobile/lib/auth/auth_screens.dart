@@ -10,6 +10,7 @@ import '../core/app_settings.dart';
 import '../core/auth_state.dart';
 import '../core/plans.dart';
 import '../widgets/logo.dart';
+import '../widgets/motion.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
 import '../widgets/ui.dart';
@@ -41,21 +42,23 @@ class AuthFormScreen extends StatelessWidget {
                   children: [
                     const Logo(),
                     const SizedBox(height: 28),
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 520),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: c.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: c.border),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Semantics(header: true, child: Text(title, style: TypeScale.h3(c.foreground))),
-                          const SizedBox(height: 24),
-                          child,
-                        ],
+                    FadeSlideIn(
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 520),
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: c.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: c.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Semantics(header: true, child: Text(title, style: TypeScale.h3(c.foreground))),
+                            const SizedBox(height: 24),
+                            child,
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),

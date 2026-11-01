@@ -519,7 +519,7 @@ function SnapFitWidget({
                   <SizeResult result={result} />
                 </div>
                 {hasTryOnView && (
-                  <div className="min-w-0 rounded-xl border border-border bg-surface p-4 lg:sticky lg:top-0 lg:order-first">
+                  <div className="min-w-0 animate-fade-up rounded-xl border border-border bg-surface p-4 [animation-delay:150ms] lg:sticky lg:top-0 lg:order-first">
                     <TryOnPreview tryOn={tryOn} originalUrl={previewUrl} size={result.size} />
                   </div>
                 )}

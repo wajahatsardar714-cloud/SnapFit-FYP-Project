@@ -1,5 +1,6 @@
 import { SectionIdContext } from './anchors';
 import Container from './Container';
+import Reveal from './Reveal';
 import SectionHeading from './SectionHeading';
 
 const TONE_CLASSES = {
@@ -21,10 +22,15 @@ function Section({ id, eyebrow, title, intro, tone = 'default', className = '', 
   return (
     <section id={id} aria-labelledby={headingId} className={`scroll-mt-20 py-16 md:py-24 ${TONE_CLASSES[tone]} ${className}`}>
       <Container>
-        {title && <SectionHeading id={headingId} anchor={id} eyebrow={eyebrow} title={title} intro={intro} />}
+        {/* Heading and content fade up as each scrolls into view. */}
+        {title && (
+          <Reveal>
+            <SectionHeading id={headingId} anchor={id} eyebrow={eyebrow} title={title} intro={intro} />
+          </Reveal>
+        )}
         {children && (
           <SectionIdContext.Provider value={id ?? null}>
-            <div className={title ? 'mt-12' : ''}>{children}</div>
+            <Reveal className={title ? 'mt-12' : ''}>{children}</Reveal>
           </SectionIdContext.Provider>
         )}
       </Container>

@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Circle,
   KeyRound,
-  Loader2,
   Package,
 } from 'lucide-react';
 import api from '../../services/api';
@@ -17,6 +16,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import StatCard from '../../components/ui/StatCard';
 import { formatLimit, formatPlanName } from '../../utils/plans';
+import { PageSkeleton } from '../../components/ui/Skeleton';
 
 function formatDateTime(value) {
   return new Date(value).toLocaleString(undefined, {
@@ -119,9 +119,7 @@ function DashboardHomePage() {
 
   if (loading || !dashboard) {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-muted" size={28} />
-      </div>
+      <PageSkeleton />
     );
   }
 

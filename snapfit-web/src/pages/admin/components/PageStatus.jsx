@@ -1,14 +1,9 @@
-import { Loader2, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import Alert from '../../../components/ui/Alert';
 import Button from '../../../components/ui/Button';
 
-export function PageLoader() {
-  return (
-    <div className="flex justify-center py-16" role="status" aria-label="Loading">
-      <Loader2 className="animate-spin text-muted" size={28} />
-    </div>
-  );
-}
+// Shimmering placeholders in the shape of an admin page.
+export { PageSkeleton as PageLoader } from '../../../components/ui/Skeleton';
 
 export function LoadError({ message, onRetry }) {
   return (

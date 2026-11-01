@@ -12,7 +12,7 @@ import { Paragraphs } from './RichText';
 function PageHeader({ title, actions = [], intro = [] }) {
   return (
     <section aria-labelledby="page-title" className="bg-surface py-16 md:py-20">
-      <Container className="text-center">
+      <Container className="animate-fade-up text-center">
         <h1 id="page-title" className="type-h1 break-words text-foreground">
           {title}
         </h1>

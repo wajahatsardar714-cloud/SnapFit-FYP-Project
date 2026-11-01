@@ -163,7 +163,10 @@ function AdminLayout() {
 
         <main className="flex-1 overflow-y-auto bg-background">
           <div className="mx-auto max-w-7xl p-4 md:p-8">
-            <Outlet />
+            {/* Each page fades in as it replaces the last. */}
+            <div key={location.pathname} className="animate-fade-in">
+              <Outlet />
+            </div>
           </div>
         </main>
       </div>

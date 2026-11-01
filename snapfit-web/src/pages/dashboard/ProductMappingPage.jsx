@@ -11,6 +11,7 @@ import Select from '../../components/ui/Select';
 import Alert from '../../components/ui/Alert';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { FIELD_LABEL_CLASSES } from '../../components/ui/fieldStyles';
+import { PageSkeleton } from '../../components/ui/Skeleton';
 import {
   PRODUCT_IMAGE_ACCEPT,
   PRODUCT_IMAGE_HINT,
@@ -233,9 +234,7 @@ function ProductMappingPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-muted" size={28} />
-      </div>
+      <PageSkeleton />
     );
   }
 

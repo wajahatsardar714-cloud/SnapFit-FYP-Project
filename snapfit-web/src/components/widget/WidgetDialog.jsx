@@ -68,7 +68,11 @@ function WidgetDialog({ title, wide = false, onBack, onClose, closeDisabled = fa
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6 sm:py-6">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6 sm:py-6">
+          <div key={title} className="animate-fade-in">
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );

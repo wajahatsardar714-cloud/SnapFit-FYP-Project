@@ -72,6 +72,10 @@ ThemeData buildTheme(Brightness brightness) {
     fontFamily: fontFamily,
     textTheme: textTheme(),
     scaffoldBackgroundColor: c.background,
+    // Pages fade forward into each other, the modern Android transition.
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {TargetPlatform.android: FadeForwardsPageTransitionsBuilder()},
+    ),
     extensions: [c],
     dividerTheme: DividerThemeData(color: c.border, thickness: 1, space: 1),
     appBarTheme: AppBarTheme(

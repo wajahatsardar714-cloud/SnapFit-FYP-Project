@@ -37,9 +37,10 @@ function TryOnPreview({ tryOn, originalUrl, size }) {
       </div>
       <div className="relative mt-2">
         <img
+          key={showTryOn ? 'try-on' : 'original'}
           src={showTryOn ? tryOn.image : originalUrl}
           alt={showTryOn ? `You wearing size ${size}` : 'Your photo'}
-          className="mx-auto max-h-[60vh] w-auto max-w-full rounded-lg object-contain lg:max-h-[70vh]"
+          className="mx-auto max-h-[60vh] w-auto max-w-full animate-fade-in rounded-lg object-contain lg:max-h-[70vh]"
         />
         {showTryOn && (
           <span className="absolute left-2 top-2 rounded bg-primary/80 px-2 py-0.5 text-xs font-semibold text-primary-foreground">

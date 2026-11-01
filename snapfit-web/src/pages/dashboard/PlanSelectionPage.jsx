@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import { PageSkeleton } from '../../components/ui/Skeleton';
 import {
   RECOMMENDED_PLAN,
   formatChartsLimit,
@@ -77,9 +78,7 @@ function PlanSelectionPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-muted" size={28} />
-      </div>
+      <PageSkeleton />
     );
   }
 

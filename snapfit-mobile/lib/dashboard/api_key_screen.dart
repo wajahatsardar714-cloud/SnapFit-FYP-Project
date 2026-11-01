@@ -106,7 +106,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
         gap16,
         SnapCard(
           child: _loading
-              ? const PageLoader()
+              ? const PageLoader(compact: true)
               : key == null
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ImagePlus, Loader2 } from 'lucide-react';
+import { ImagePlus } from 'lucide-react';
 import api from '../../services/api';
 import Button from '../../components/ui/Button';
 import {
+import { PageSkeleton } from '../../components/ui/Skeleton';
   PRODUCT_IMAGE_ACCEPT,
   PRODUCT_IMAGE_HINT,
   resolveProductImageUrl,
@@ -147,9 +148,7 @@ function AnchorPointsPage() {
 
   if (loading || !mapping) {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-muted" size={28} />
-      </div>
+      <PageSkeleton />
     );
   }
 

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
@@ -9,6 +8,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { formatChartsLimit, formatLimit, formatPlanName } from '../../utils/plans';
+import { PageSkeleton } from '../../components/ui/Skeleton';
 
 // Same 3-way mapping as DashboardHomePage's PLAN_STATUS_BADGE_VARIANT -- keeps
 // "expired" visually distinct (danger) from a merchant who never picked a plan
@@ -67,9 +67,7 @@ function SubscriptionStatusPage() {
 
   if (loading || !data) {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-muted" size={28} />
-      </div>
+      <PageSkeleton />
     );
   }
 

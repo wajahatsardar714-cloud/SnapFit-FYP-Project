@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Ruler, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Plus, Ruler, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import { ListSkeleton } from '../../components/ui/Skeleton';
 
 const CATEGORY_OPTIONS = ['tops', 'bottoms', 'dresses', 'footwear', 'outerwear'];
 const PAGE_SIZE = 10;
@@ -88,9 +89,7 @@ function SizeChartsPage() {
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-muted" size={28} />
-          </div>
+          <ListSkeleton />
         ) : charts.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
             <Ruler size={36} className="text-muted" />

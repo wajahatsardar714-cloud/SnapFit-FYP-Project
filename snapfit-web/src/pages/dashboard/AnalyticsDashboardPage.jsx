@@ -22,6 +22,7 @@ import Button from '../../components/ui/Button';
 import StatCard from '../../components/ui/StatCard';
 import { useChartTheme } from '../../utils/chartTheme';
 import { saveBlob } from '../../utils/download';
+import { PageSkeleton } from '../../components/ui/Skeleton';
 
 const AUTO_REFRESH_MS = 60000;
 const PERIOD_OPTIONS = [
@@ -336,9 +337,7 @@ function AnalyticsDashboardPage() {
 
   if (loading || !dashboard) {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="animate-spin text-muted" size={28} />
-      </div>
+      <PageSkeleton />
     );
   }
 

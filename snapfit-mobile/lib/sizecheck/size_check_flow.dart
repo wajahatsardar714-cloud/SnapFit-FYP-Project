@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -12,6 +11,7 @@ import '../core/json.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
 import '../widgets/ui.dart';
+import 'analysis_progress.dart';
 import 'camera_capture.dart';
 import 'size_result.dart';
 
@@ -289,12 +289,27 @@ class _SizeCheckFlowState extends State<SizeCheckFlow> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
                   children: [
-                    switch (_step) {
-                      _Step.form => _buildForm(context),
-                      _Step.loading => const _AnalysisProgress(includesTryOn: _includeTryOn),
-                      _Step.result => _buildResult(context),
-                      _Step.error => _buildError(context),
-                    },
+                    // Each step fades and lifts in as it replaces the last.
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 320),
+                      switchInCurve: Curves.easeOutCubic,
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween(begin: const Offset(0, 0.03), end: Offset.zero).animate(animation),
+                          child: child,
+                        ),
+                      ),
+                      child: KeyedSubtree(
+                        key: ValueKey(_step),
+                        child: switch (_step) {
+                          _Step.form => _buildForm(context),
+                          _Step.loading => const AnalysisProgress(includesTryOn: _includeTryOn),
+                          _Step.result => _buildResult(context),
+                          _Step.error => _buildError(context),
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -599,70 +614,6 @@ class _SizeCheckFlowState extends State<SizeCheckFlow> {
           ],
           gap24,
           SnapButton(label: 'Try Again', onPressed: () => setState(() => _step = _Step.form)),
-        ],
-      ),
-    );
-  }
-}
-
-/// A spinner, the current stage and the seconds elapsed. The try-on can take
-/// up to a minute on the GPU, so the copy changes as time passes.
-class _AnalysisProgress extends StatefulWidget {
-  const _AnalysisProgress({required this.includesTryOn});
-
-  final bool includesTryOn;
-
-  @override
-  State<_AnalysisProgress> createState() => _AnalysisProgressState();
-}
-
-class _AnalysisProgressState extends State<_AnalysisProgress> {
-  final _started = DateTime.now();
-  late final Timer _timer;
-  int _elapsed = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() => _elapsed = DateTime.now().difference(_started).inSeconds);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  String get _message {
-    if (!widget.includesTryOn || _elapsed < 5) return 'Measuring you…';
-    if (_elapsed < 30) return 'Creating your try-on preview — this can take up to a minute.';
-    return 'Almost there — your preview is still rendering…';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        children: [
-          SizedBox(width: 32, height: 32, child: CircularProgressIndicator(color: c.foreground, strokeWidth: 3)),
-          gap16,
-          Semantics(
-            liveRegion: true,
-            child: Text(
-              _message,
-              textAlign: TextAlign.center,
-              style: snapText(size: 14, weight: FontWeight.w500, color: c.foreground),
-            ),
-          ),
-          gap4,
-          Text(
-            '$_elapsed s elapsed',
-            style: snapText(size: 12, color: c.mutedForeground, fontFeatures: const [FontFeature.tabularFigures()]),
-          ),
         ],
       ),
     );
