@@ -4,6 +4,7 @@ import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, BookOpen, Lo
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Badge from '../components/ui/Badge';
+import logo from '../assets/snapfit-logo.png';
 import { notifyInfo } from '../components/ui/toast';
 import SubscriptionGate from '../components/SubscriptionGate';
 import { PLAN_BADGE_VARIANT, formatPlanName, isSubscribed } from '../utils/plans';
@@ -81,7 +82,12 @@ function DashboardLayout() {
   return (
     <div className="flex h-screen overflow-hidden">
       <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface">
-        <div className="px-5 py-5 text-lg font-bold text-primary">SnapFit</div>
+        <div className="px-5 py-5">
+          {/* The logo's wordmark is navy, so it sits on a light chip in dark mode too. */}
+          <span className="inline-flex rounded-lg bg-inverse px-2 py-1">
+            <img src={logo} alt="SnapFit" className="block h-7 w-auto" />
+          </span>
+        </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
           {navItems.map(({ label, to, icon: Icon, end }) =>

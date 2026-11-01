@@ -16,7 +16,7 @@ function AuthFormScreen({ content, children }) {
   return (
     <div data-theme="light" className="flex min-h-screen flex-col items-center bg-background px-4 py-10 sm:py-16">
       <Link to="/" aria-label={brand.homeLabel} className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <Logo name={brand.name} />
+        <Logo name={brand.name} size="lg" />
       </Link>
       <main className="mt-8 w-full min-w-0 max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8">
         <h1 className="type-h3 break-words text-foreground">{content.title}</h1>

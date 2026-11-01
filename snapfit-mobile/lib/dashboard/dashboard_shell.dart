@@ -9,6 +9,7 @@ import '../core/plans.dart';
 import '../core/toast.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
+import '../widgets/logo.dart';
 import '../widgets/ui.dart';
 
 class _NavItem {
@@ -268,10 +269,7 @@ class _DashboardDrawer extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-              child: Text(
-                'SnapFit',
-                style: snapText(size: 18, weight: FontWeight.w700, color: c.primary),
-              ),
+              child: const Align(alignment: Alignment.centerLeft, child: Logo(height: 30)),
             ),
             Expanded(child: ListView(children: [for (final nav in _navItems) item(nav)])),
             Divider(color: c.border),

@@ -33,6 +33,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # The SnapFit logo (the website's main logo, cropped, transparent background).
+  assets:
+    - assets/images/
+
   # Manrope, the web app's typeface (one variable font; weights via the wght axis).
   fonts:
     - family: Manrope
