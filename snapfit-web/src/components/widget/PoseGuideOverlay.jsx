@@ -82,8 +82,9 @@ function Shapes({ shapes, toPx, unit, extra, color }) {
 // A-pose body outline in standard proportions, sized to the accepted framing
 // zone of the live pose gate and drawn in video-pixel space (width x height), so
 // a correctly placed person fills it in both portrait and landscape.
-// state: 'searching' | 'partial' | 'aligned'.
-function PoseGuideOverlay({ width, height, state = 'searching' }) {
+// state: 'searching' | 'partial' | 'aligned'. hidden fades it out (the live
+// camera's fitted outline has taken over).
+function PoseGuideOverlay({ width, height, state = 'searching', hidden = false }) {
   // Frame size in the id too: separate React roots (several widgets on one page)
   // can produce the same useId, and a shared id would borrow the wrong mask.
   const maskId = `pose-guide-${useId().replace(/:/g, '')}-${width}x${height}`;
@@ -100,7 +101,7 @@ function PoseGuideOverlay({ width, height, state = 'searching' }) {
     <svg
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
-      className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
+      className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-300 ${hidden ? 'opacity-0' : 'opacity-100'} ${className}`}
       aria-hidden="true"
       data-state={state}
     >

@@ -113,7 +113,7 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
   } = useCameraStream({ enabled: cameraEnabled, initialFacingMode });
   const cameraReady = cameraStatus === 'granted';
 
-  const { isModelReady, validation, error: poseError, checkFrame } = useLivePoseDetection(videoRef, {
+  const { isModelReady, validation, error: poseError, checkFrame, bodyDetected } = useLivePoseDetection(videoRef, {
     enabled: cameraEnabled && cameraReady,
     overlayRef,
     resetKey: stream?.id,
@@ -278,10 +278,13 @@ function LiveCapture({ file, previewUrl, onCapture, onRetake, onSwitchToUpload, 
             className="h-full w-full object-cover"
           />
           <canvas ref={overlayRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+          {/* The fixed outline shows where to stand until a body is found; then
+              the fitted outline (on the canvas) follows the shopper instead. */}
           <PoseGuideOverlay
             width={videoSize.width}
             height={videoSize.height}
             state={poseError || !isModelReady ? 'searching' : alignmentState(validation)}
+            hidden={Boolean(bodyDetected)}
           />
         </div>
 

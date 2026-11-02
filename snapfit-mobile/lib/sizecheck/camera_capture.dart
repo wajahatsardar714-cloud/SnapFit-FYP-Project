@@ -1,26 +1,42 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
+import '../widgets/motion.dart';
+import 'fitted_guide.dart';
+import 'live_pose.dart';
 import 'pose_guide.dart';
+import 'pose_rules.dart';
 
 /// Extra frames taken right after the photo (the web's EXTRA_CAPTURE_FRAMES):
 /// the server combines body landmarks across all of them, which steadies the
 /// measurements. At most 4 -- the API rejects more.
 const extraCaptureFrames = 4;
 const _frameInterval = Duration(milliseconds: 200);
+// Once the pose passes, this countdown takes the photo hands-free (the web's
+// AUTO_CAPTURE_COUNTDOWN_S).
+const _autoCaptureSeconds = 2;
+// Without live detection (it failed to start), a self-timer instead.
 const _timerSeconds = 5;
+// How quickly the drawn outline catches up with a detection, and how long it
+// lingers once the body is lost.
+const _smoothingMs = 90.0;
+const _lostAfterMs = 450;
 
 /// The photo and its extra frames.
 typedef CaptureResult = ({XFile photo, List<XFile> frames});
 
-/// Full-screen camera with the A-pose guide. The shutter takes the photo now;
-/// the timer gives the shopper [_timerSeconds] seconds to step back into the
-/// guide first (the phone's take on the web's hands-free auto-capture).
+/// Full-screen camera with a live pose guide. Until a body is found it shows
+/// a fixed A-pose outline; then a fitted outline follows the shopper (arms,
+/// legs, distance), coloured by what to fix, with arrows for arm and feet
+/// moves. Once every check passes, a short countdown takes the photo.
 class CameraCaptureScreen extends StatefulWidget {
   const CameraCaptureScreen({super.key});
 
@@ -32,20 +48,34 @@ class CameraCaptureScreen extends StatefulWidget {
   State<CameraCaptureScreen> createState() => _CameraCaptureScreenState();
 }
 
-class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsBindingObserver {
+class _CameraCaptureScreenState extends State<CameraCaptureScreen>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   List<CameraDescription> _cameras = const [];
   CameraController? _controller;
   int _cameraIndex = 0;
   String? _error;
   int? _countdown;
+  bool _timerIsAuto = false;
   Timer? _timer;
   String? _status;
   bool _capturing = false;
+
+  late final LivePoseTracker _tracker = LivePoseTracker(onPose: _onPose);
+  bool _liveDetection = Platform.isAndroid || Platform.isIOS;
+  PoseResult? _result;
+  List<Lm?>? _target;
+  List<Lm?>? _drawn;
+  final _drawnNotifier = ValueNotifier<List<Lm?>?>(null);
+  int _lastSeenMs = 0;
+  late final Ticker _ticker = createTicker(_onTick);
+  Duration _lastTick = Duration.zero;
+  final _clock = Stopwatch()..start();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _ticker.start();
     _start();
   }
 
@@ -53,7 +83,10 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _ticker.dispose();
+    _drawnNotifier.dispose();
     _controller?.dispose();
+    _tracker.close();
     super.dispose();
   }
 
@@ -86,9 +119,16 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
 
   Future<void> _open(CameraDescription camera) async {
     final previous = _controller;
-    final controller = CameraController(camera, ResolutionPreset.high, enableAudio: false);
+    final controller = CameraController(
+      camera,
+      ResolutionPreset.high,
+      enableAudio: false,
+      // NV21 is what ML Kit reads on Android.
+      imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
+    );
     setState(() => _controller = null);
     await previous?.dispose();
+    _resetLive();
     try {
       await controller.initialize();
       await controller.setFlashMode(FlashMode.off);
@@ -100,10 +140,56 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
         _controller = controller;
         _error = null;
       });
+      await _startStream(controller, camera);
     } on CameraException catch (e) {
       await controller.dispose();
       if (mounted) setState(() => _error = _describe(e));
     }
+  }
+
+  Future<void> _startStream(CameraController controller, CameraDescription camera) async {
+    if (!_liveDetection) return;
+    try {
+      await controller.startImageStream((image) => _tracker.process(image, camera, controller.value.deviceOrientation));
+    } catch (_) {
+      // No live frames on this device: fall back to the fixed guide and timer.
+      if (mounted) setState(() => _liveDetection = false);
+    }
+  }
+
+  void _resetLive() {
+    _tracker.reset();
+    _cancelCountdown();
+    _result = null;
+    _target = null;
+    _drawn = null;
+    _drawnNotifier.value = null;
+  }
+
+  void _onPose(LivePose pose) {
+    if (!mounted || _capturing) return;
+    _target = pose.landmarks;
+    if (pose.landmarks != null) _lastSeenMs = _clock.elapsedMilliseconds;
+    final passed = pose.result.ok;
+    setState(() => _result = pose.result);
+    // Hands-free: a passing pose starts the countdown; losing it cancels.
+    if (passed && _countdown == null) {
+      _startCountdown(_autoCaptureSeconds, auto: true);
+    } else if (!passed && _timerIsAuto) {
+      _cancelCountdown();
+    }
+  }
+
+  /// Every frame: ease the drawn outline toward the newest detection.
+  void _onTick(Duration elapsed) {
+    final dt = (elapsed - _lastTick).inMicroseconds / 1000;
+    _lastTick = elapsed;
+    if (_target != null) {
+      _drawn = smoothLandmarks(_drawn, _target, reduceMotion(context) ? 1 : 1 - math.exp(-dt / _smoothingMs));
+    } else if (_clock.elapsedMilliseconds - _lastSeenMs > _lostAfterMs) {
+      _drawn = null;
+    }
+    if (!identical(_drawn, _drawnNotifier.value)) _drawnNotifier.value = _drawn;
   }
 
   String _describe(CameraException e) {
@@ -119,9 +205,10 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
     _open(_cameras[_cameraIndex]);
   }
 
-  void _startTimer() {
+  void _startCountdown(int seconds, {required bool auto}) {
     if (_capturing || _countdown != null) return;
-    setState(() => _countdown = _timerSeconds);
+    _timerIsAuto = auto;
+    setState(() => _countdown = seconds);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final next = (_countdown ?? 1) - 1;
       if (next <= 0) {
@@ -134,19 +221,22 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
     });
   }
 
-  void _cancelTimer() {
+  void _cancelCountdown() {
     _timer?.cancel();
-    setState(() => _countdown = null);
+    _timerIsAuto = false;
+    if (_countdown != null && mounted) setState(() => _countdown = null);
   }
 
   Future<void> _capture() async {
     final controller = _controller;
     if (controller == null || _capturing) return;
+    _cancelCountdown();
     setState(() {
       _capturing = true;
       _status = 'Hold still — taking your photo…';
     });
     try {
+      if (controller.value.isStreamingImages) await controller.stopImageStream();
       final photo = await controller.takePicture();
       final frames = <XFile>[];
       for (var i = 1; i <= extraCaptureFrames; i++) {
@@ -171,11 +261,36 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
     }
   }
 
+  /// What to tell the shopper now (the web's LiveCapture status).
+  ({String text, Color color}) _statusLine(SnapColors c) {
+    if (_status != null) return (text: _status!, color: Colors.white);
+    if (_countdown != null) {
+      return _timerIsAuto
+          ? (text: 'Hold still — taking your photo in $_countdown…', color: c.success)
+          : (text: 'Step back into the outline — taking your photo in $_countdown…', color: Colors.white);
+    }
+    final result = _result;
+    if (!_liveDetection || result == null) {
+      return (
+        text: 'Stand inside the outline: whole body visible, facing the camera, arms slightly away from your body, feet hip-width apart.',
+        color: Colors.white,
+      );
+    }
+    if (result.ok) return (text: 'Perfect — hold still', color: c.success);
+    if (result.alignment == 'searching' && _drawn == null) {
+      return (text: 'Step into the frame so we can see your whole body', color: Colors.white);
+    }
+    return (text: result.instruction ?? 'Adjust your position', color: c.warning);
+  }
+
   @override
   Widget build(BuildContext context) {
     // The camera view always uses the dark palette's bright shades.
     const c = SnapColors.dark;
     final controller = _controller;
+    final status = _statusLine(c);
+    final tones = {GuideTone.foreground: Colors.white, GuideTone.warning: c.warning, GuideTone.success: c.success};
+    final aligned = _result?.ok == true;
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -207,62 +322,65 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
             ),
             Expanded(
               child: _error != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(LucideIcons.cameraOff, color: Colors.white70, size: 36),
-                            const SizedBox(height: 12),
-                            Text(
-                              _error!,
-                              textAlign: TextAlign.center,
-                              style: snapText(size: 14, color: Colors.white),
-                            ),
-                            const SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: Text(
-                                'Upload a photo instead',
-                                style: snapText(size: 14, weight: FontWeight.w600, color: c.link),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
+                  ? _CameraError(message: _error!, linkColor: c.link)
                   : controller == null
                   ? const Center(child: CircularProgressIndicator(color: Colors.white))
                   : Center(
-                      child: AspectRatio(
-                        aspectRatio: 1 / controller.value.aspectRatio,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            CameraPreview(controller),
-                            CustomPaint(
-                              painter: PoseGuidePainter(
-                                color: _countdown != null || _capturing ? c.success : Colors.white,
-                              ),
-                            ),
-                            if (_countdown != null)
-                              Center(
-                                child: Container(
-                                  width: 96,
-                                  height: 96,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: c.overlay.withValues(alpha: 0.55),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text(
-                                    '$_countdown',
-                                    style: snapText(size: 44, weight: FontWeight.w700, color: Colors.white),
-                                  ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: aligned ? c.success : (_result?.alignment == 'partial' ? c.warning : Colors.white24),
+                            width: 3,
+                          ),
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: 1 / controller.value.aspectRatio,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              CameraPreview(controller),
+                              // The fixed outline shows where to stand until a
+                              // body is found; then the fitted one takes over.
+                              ValueListenableBuilder<List<Lm?>?>(
+                                valueListenable: _drawnNotifier,
+                                builder: (context, drawn, _) => Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    AnimatedOpacity(
+                                      opacity: drawn == null ? 1 : 0,
+                                      duration: const Duration(milliseconds: 300),
+                                      child: CustomPaint(
+                                        painter: PoseGuidePainter(
+                                          color: _countdown != null || _capturing ? c.success : Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    if (drawn != null)
+                                      CustomPaint(
+                                        painter: FittedGuidePainter(landmarks: drawn, result: _result, colors: tones),
+                                      ),
+                                  ],
                                 ),
                               ),
-                          ],
+                              if (_countdown != null)
+                                Center(
+                                  child: Container(
+                                    width: 96,
+                                    height: 96,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: c.overlay.withValues(alpha: 0.55),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      '$_countdown',
+                                      style: snapText(size: 44, weight: FontWeight.w700, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -270,13 +388,13 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text(
-                _status ??
-                    (_countdown != null
-                        ? 'Step back into the outline — taking your photo in $_countdown…'
-                        : 'Stand inside the outline: whole body visible, facing the camera, arms slightly away from your body, feet hip-width apart.'),
-                textAlign: TextAlign.center,
-                style: snapText(size: 13, color: Colors.white, height: 1.45),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  status.text,
+                  textAlign: TextAlign.center,
+                  style: snapText(size: 14, weight: FontWeight.w500, color: status.color, height: 1.45),
+                ),
               ),
             ),
             Padding(
@@ -284,23 +402,28 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _RoundAction(
-                    icon: _countdown != null ? LucideIcons.x : LucideIcons.timer,
-                    label: _countdown != null ? 'Cancel' : '${_timerSeconds}s timer',
-                    onTap: controller == null || _capturing ? null : (_countdown != null ? _cancelTimer : _startTimer),
-                  ),
+                  if (!_liveDetection)
+                    _RoundAction(
+                      icon: _countdown != null ? LucideIcons.x : LucideIcons.timer,
+                      label: _countdown != null ? 'Cancel' : '${_timerSeconds}s timer',
+                      onTap: controller == null || _capturing
+                          ? null
+                          : (_countdown != null ? _cancelCountdown : () => _startCountdown(_timerSeconds, auto: false)),
+                    )
+                  else
+                    const SizedBox(width: 64),
                   Semantics(
                     button: true,
                     label: 'Capture',
                     child: GestureDetector(
-                      onTap: controller == null || _capturing || _countdown != null ? null : _capture,
+                      onTap: controller == null || _capturing ? null : _capture,
                       child: Container(
                         width: 76,
                         height: 76,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 4),
+                          border: Border.all(color: aligned ? c.success : Colors.white, width: 4),
                         ),
                         child: Container(
                           decoration: BoxDecoration(
@@ -323,6 +446,42 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> with WidgetsB
                     onTap: _cameras.length > 1 && !_capturing ? _switchCamera : null,
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CameraError extends StatelessWidget {
+  const _CameraError({required this.message, required this.linkColor});
+
+  final String message;
+  final Color linkColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(LucideIcons.cameraOff, color: Colors.white70, size: 36),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: snapText(size: 14, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Upload a photo instead',
+                style: snapText(size: 14, weight: FontWeight.w600, color: linkColor),
               ),
             ),
           ],

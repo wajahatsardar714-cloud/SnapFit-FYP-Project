@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BRIGHTNESS_SAMPLE_SIZE, DETECTION_INTERVAL_MS, PASS_GRACE_MS, POSE_RULES } from '../config/poseConfig';
 import { primaryInstruction, validatePose } from '../utils/poseValidation';
+import { drawFittedGuide, fitBodyShapes, hintArrows, regionTones, smoothLandmarks } from '../utils/fittedGuide';
 
 // Same package version on the client (WASM) and server (Python mediapipe==1.0.1, see
 // snapfit-ai/requirements.txt) so the two never drift apart.
@@ -17,10 +18,6 @@ const MODEL_LOAD_TIMEOUT_MS = 6000;
 // Frames kept for the stillness check: its window plus one detection of slack.
 const HISTORY_MS = POSE_RULES.stillnessWindowMs + DETECTION_INTERVAL_MS;
 
-const SKELETON = [
-  [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24],
-  [23, 24], [23, 25], [25, 27], [24, 26], [26, 28], [27, 29], [28, 30],
-];
 
 async function createLandmarker() {
   // Dynamic import so @mediapipe/tasks-vision (and its WASM) is code-split into its
@@ -93,29 +90,15 @@ function tokenColor(element, name) {
   return `rgb(${getComputedStyle(element).getPropertyValue(`--color-${name}`).trim()})`;
 }
 
-function drawSkeleton(canvas, video, landmarks, tone) {
-  if (!canvas) return;
+// How quickly the drawn outline catches up with a new detection (ms), and how
+// long it lingers after the body is lost (a missed frame shouldn't flicker it).
+const SMOOTHING_MS = 90;
+const LOST_AFTER_MS = 450;
+
+function syncCanvasSize(canvas, video) {
   if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-  }
-  clearOverlay(canvas);
-  if (!landmarks) return;
-  const ctx = canvas.getContext('2d');
-
-  const scale = Math.max(canvas.width, canvas.height) / 400;
-  const visible = (lm) => lm && (lm.visibility ?? 0) >= POSE_RULES.visibilityThreshold;
-  const color = tokenColor(canvas, tone);
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = 2 * scale;
-  ctx.lineCap = 'round';
-  for (const [a, b] of SKELETON) {
-    if (!visible(landmarks[a]) || !visible(landmarks[b])) continue;
-    ctx.beginPath();
-    ctx.moveTo(landmarks[a].x * canvas.width, landmarks[a].y * canvas.height);
-    ctx.lineTo(landmarks[b].x * canvas.width, landmarks[b].y * canvas.height);
-    ctx.stroke();
   }
 }
 
@@ -127,13 +110,16 @@ const summarize = (result) =>
 // gating. These landmarks never leave the browser -- the measurement landmarks
 // still come from the server-side BlazePose pipeline after capture.
 //
-// overlayRef: optional <canvas> to draw the detected skeleton on (drawn
-// directly, no React state per frame). resetKey: change it (e.g. on camera
-// switch) to restart the stillness history and gate.
+// overlayRef: optional <canvas> to draw the fitted guide on -- a body outline
+// on the shopper's own pose, eased every animation frame toward the newest
+// detection (drawn directly, no React state per frame). bodyDetected says
+// whether it is showing, so the static guide can step aside. resetKey: change
+// it (e.g. on camera switch) to restart the stillness history and gate.
 export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = null, resetKey = null } = {}) {
   const [isModelReady, setIsModelReady] = useState(false);
   const [validation, setValidation] = useState(null);
   const [error, setError] = useState(null);
+  const [bodyDetected, setBodyDetected] = useState(false);
   const landmarkerRef = useRef(null);
   const sampleCanvasRef = useRef(null);
 
@@ -182,6 +168,16 @@ export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = nu
     let lastPass = null; // { time, result } of the most recent passing frame
     const history = [];
     sampleCanvasRef.current ??= document.createElement('canvas');
+    // The fitted guide: newest detection, the eased pose being drawn, and the
+    // validation it is coloured by.
+    let target = null;
+    let drawn = null;
+    let shownResult = null;
+    let lastSeenAt = 0;
+    let lastFrameAt = performance.now();
+    let detected = false;
+    let colors = null;
+    const scratch = document.createElement('canvas');
 
     function tick() {
       const video = videoRef.current;
@@ -211,7 +207,9 @@ export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = nu
         // keeps reporting the pass, so the countdown isn't reset.
         if (result.ok) lastPass = { time: now, result };
         const shown = !result.ok && lastPass && now - lastPass.time < PASS_GRACE_MS ? lastPass.result : result;
-        drawSkeleton(overlayRef?.current, video, landmarks, shown.ok ? 'success' : 'foreground');
+        target = landmarks;
+        if (landmarks) lastSeenAt = now;
+        shownResult = shown;
 
         const summary = summarize(shown);
         if (summary !== lastSummary) {
@@ -219,6 +217,36 @@ export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = nu
           setValidation(shown);
         }
       }
+
+      // Every frame: ease the drawn pose toward the newest detection and paint it.
+      const canvas = overlayRef?.current;
+      if (video && canvas && video.videoWidth) {
+        const dt = now - lastFrameAt;
+        if (target) drawn = smoothLandmarks(drawn, target, 1 - Math.exp(-dt / SMOOTHING_MS));
+        else if (now - lastSeenAt > LOST_AFTER_MS) drawn = null;
+        syncCanvasSize(canvas, video);
+        const size = { width: canvas.width, height: canvas.height };
+        const shapes = drawn && fitBodyShapes(drawn, size);
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          colors ??= {
+            success: tokenColor(canvas, 'success'),
+            warning: tokenColor(canvas, 'warning'),
+            foreground: tokenColor(canvas, 'foreground'),
+          };
+          drawFittedGuide(ctx, scratch, {
+            shapes,
+            tones: regionTones(shownResult),
+            arrows: shapes ? hintArrows(shownResult, drawn, size) : [],
+            colors,
+          });
+        }
+        if (Boolean(shapes) !== detected) {
+          detected = Boolean(shapes);
+          setBodyDetected(detected);
+        }
+      }
+      lastFrameAt = now;
 
       rafId = requestAnimationFrame(tick);
     }
@@ -229,6 +257,7 @@ export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = nu
       clearOverlay(overlayRef?.current);
       // Start the next session (retake, camera switch) from a clean gate.
       setValidation(null);
+      setBodyDetected(false);
     };
     // videoRef/overlayRef are stable ref objects, not reactive values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,5 +276,5 @@ export function useLivePoseDetection(videoRef, { enabled = true, overlayRef = nu
     });
   }, []);
 
-  return { isModelReady, validation, error, checkFrame };
+  return { isModelReady, validation, error, checkFrame, bodyDetected };
 }
