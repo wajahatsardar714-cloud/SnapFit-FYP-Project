@@ -31,6 +31,10 @@ const mapValidation = [
     .optional()
     .isIn(ProductMapping.schema.path('garmentLength').enumValues)
     .withMessage('Garment length must be cropped, regular or long'),
+  body('sleeveLength')
+    .optional()
+    .isIn(ProductMapping.schema.path('sleeveLength').enumValues)
+    .withMessage('Sleeve length must be none, short or long'),
 ];
 
 // Internal, service-to-service lookup for the AI microservice's try-on endpoint

@@ -24,7 +24,8 @@ async function tryOn(req, res) {
     const imageBuffer = await fs.readFile(req.file.path);
     const aiResult = await tryOnImage(imageBuffer, merchant._id, productId);
     await cleanupUpload(req.file);
-    return res.status(200).json({ success: true, image: aiResult.image });
+    // tip (e.g. 'FITTED_TOP'): only when the shopper's own clothes may still show.
+    return res.status(200).json({ success: true, image: aiResult.image, ...(aiResult.tip && { tip: aiResult.tip }) });
   } catch (err) {
     await cleanupUpload(req.file);
     const { status: statusCode, body } = aiErrorResponse(err, {

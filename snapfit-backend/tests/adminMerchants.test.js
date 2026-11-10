@@ -171,6 +171,7 @@ describe('GET /api/admin/merchants/:id', () => {
         productName: 'Tee',
         tryOnStatus: 'ready',
         garmentLength: 'regular',
+        sleeveLength: 'short',
         productImage: '/uploads/products/tee.png',
       },
     ]);

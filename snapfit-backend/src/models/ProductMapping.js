@@ -28,6 +28,10 @@ const productMappingSchema = new mongoose.Schema(
     // mid-thigh). The AI try-on uses it to decide how far down the shopper's own
     // top gets repainted.
     garmentLength: { type: String, enum: ['cropped', 'regular', 'long'], default: 'regular' },
+    // How far the sleeves reach (none: sleeveless, short: half sleeves, long:
+    // full sleeves). The AI try-on uses it to know which parts of the shopper's
+    // arms the product covers.
+    sleeveLength: { type: String, enum: ['none', 'short', 'long'], default: 'short' },
   },
   { timestamps: true }
 );

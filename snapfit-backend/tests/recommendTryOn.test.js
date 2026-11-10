@@ -84,6 +84,15 @@ describe('POST /api/recommend with includeTryOn=true', () => {
     expect(env.listTmpPhotos()).toEqual([]);
   });
 
+  it('passes the AI try-on tip through when it is sent', async () => {
+    analyzeImage.mockResolvedValue(aiResult({ image: TRY_ON_IMAGE, engine: 'catvton', tip: 'FITTED_TOP' }));
+
+    const res = await postRecommend('SKU-READY', { includeTryOn: 'true' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.tryOn).toEqual({ status: 'success', image: TRY_ON_IMAGE, engine: 'catvton', tip: 'FITTED_TOP' });
+  });
+
   it('skips the try-on for a product that is not try-on ready', async () => {
     analyzeImage.mockResolvedValue(aiResult(null));
 
@@ -132,6 +141,16 @@ describe('POST /api/try-on (existing integrations)', () => {
     const res = await post('/api/try-on', 'SKU-READY');
     expect(res.body).toEqual({ success: true, image: TRY_ON_IMAGE });
     expect(env.listTmpPhotos()).toEqual([]);
+  });
+
+  it('passes the AI try-on tip through, and adds none when the AI sends none', async () => {
+    tryOnImage.mockResolvedValue({ image: TRY_ON_IMAGE, tip: 'FITTED_TOP' });
+    const withTip = await post('/api/try-on', 'SKU-READY');
+    expect(withTip.body).toEqual({ success: true, image: TRY_ON_IMAGE, tip: 'FITTED_TOP' });
+
+    tryOnImage.mockResolvedValue({ image: TRY_ON_IMAGE });
+    const withoutTip = await post('/api/try-on', 'SKU-READY');
+    expect(withoutTip.body).not.toHaveProperty('tip');
   });
 
   it('explains when the product has no try-on set up', async () => {

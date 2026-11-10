@@ -16,8 +16,16 @@ const RECOMMEND_FALLBACK_MESSAGE =
 // status: a try-on problem must not hide the size result.
 function tryOnResult(aiTryOn, requested) {
   if (!requested) return { status: 'unavailable' };
-  // engine: 'catvton' (GPU diffusion model) or 'warp' (local fallback).
-  if (aiTryOn?.image) return { status: 'success', image: aiTryOn.image, engine: aiTryOn.engine || 'warp' };
+  // engine: 'catvton' (GPU diffusion model) or 'warp' (local fallback). tip
+  // (e.g. 'FITTED_TOP'): only when the shopper's own clothes may still show.
+  if (aiTryOn?.image) {
+    return {
+      status: 'success',
+      image: aiTryOn.image,
+      engine: aiTryOn.engine || 'warp',
+      ...(aiTryOn.tip && { tip: aiTryOn.tip }),
+    };
+  }
   const code = aiTryOn?.error;
   if (code === 'TRYON_NOT_AVAILABLE') return { status: 'unavailable' };
   return { status: 'failed', message: TRY_ON_ERROR_MESSAGES[code] || TRY_ON_FALLBACK_MESSAGE };

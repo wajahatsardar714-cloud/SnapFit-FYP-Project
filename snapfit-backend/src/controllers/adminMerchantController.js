@@ -164,6 +164,7 @@ async function getMerchant(req, res) {
         productName: mapping.productName ?? null,
         tryOnStatus: tryOnStatus(mapping),
         garmentLength: mapping.garmentLength,
+        sleeveLength: mapping.sleeveLength,
         productImage: mapping.productImage ?? null,
       })),
       recentRecommendations: recommendations.map((r) => ({

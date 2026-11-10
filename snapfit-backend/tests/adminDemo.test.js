@@ -114,6 +114,27 @@ describe('POST /api/admin/demo/recommend', () => {
     expect(env.listTmpPhotos()).toEqual([]);
   });
 
+  it('passes the AI try-on tip through with includeTryOn', async () => {
+    await ProductMapping.updateOne(
+      { merchantId: merchant._id, productId: 'SKU-1' },
+      {
+        productImage: '/uploads/products/tee.png',
+        anchorPoints: {
+          shoulderLeft: { x: 0.3, y: 0.2 },
+          shoulderRight: { x: 0.7, y: 0.2 },
+          hipLeft: { x: 0.3, y: 0.7 },
+          hipRight: { x: 0.7, y: 0.7 },
+        },
+      }
+    );
+    analyzeImage.mockResolvedValue({ ...AI_RESULT, tryOn: { image: TRY_ON_IMAGE, engine: 'catvton', tip: 'FITTED_TOP' } });
+
+    const res = await demoRecommend({ fields: { includeTryOn: 'true' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.tryOn).toEqual({ status: 'success', image: TRY_ON_IMAGE, engine: 'catvton', tip: 'FITTED_TOP' });
+  });
+
   it('stores the run as admin_demo and never counts usage', async () => {
     analyzeImage.mockResolvedValue(AI_RESULT);
 
@@ -242,6 +263,15 @@ describe('POST /api/admin/demo/try-on', () => {
     expect(productId).toBe('SKU-1');
     expect((await Merchant.findById(merchant._id)).subscription.requestsUsed).toBe(1);
     expect(env.listTmpPhotos()).toEqual([]);
+  });
+
+  it('passes the AI try-on tip through', async () => {
+    tryOnImage.mockResolvedValue({ image: TRY_ON_IMAGE, tip: 'FITTED_TOP' });
+
+    const res = await demo('try-on');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, image: TRY_ON_IMAGE, tip: 'FITTED_TOP' });
   });
 
   it('needs no product id: the demo product is used', async () => {
