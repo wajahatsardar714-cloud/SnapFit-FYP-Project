@@ -314,6 +314,11 @@ ImageProvider? tryOnImage(Object? image) {
   return null;
 }
 
+/// Shown under the try-on when the GPU service sends `tip: 'FITTED_TOP'`:
+/// the shopper's own clothes may still show through.
+const fittedTopTip =
+    'Some of your own clothes may still show. For the clearest try-on, wear a fitted, short-sleeve top.';
+
 /// "See it on you": the shopper's photo with the product, with an
 /// Original / Try-on toggle. Nothing unless the product is try-on ready.
 class TryOnPreview extends StatefulWidget {
@@ -408,6 +413,26 @@ class _TryOnPreviewState extends State<TryOnPreview> {
             ],
           ),
         ),
+        if (tryOn?['tip'] == 'FITTED_TOP') ...[
+          gap8,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(8)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(LucideIcons.lightbulb, size: 14, color: c.mutedForeground),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(fittedTopTip, style: snapText(size: 12, color: c.mutedForeground, height: 1.45)),
+                ),
+              ],
+            ),
+          ),
+        ],
         gap8,
         Text(
           'Preview is approximate and does not reflect fabric drape or exact fit.',

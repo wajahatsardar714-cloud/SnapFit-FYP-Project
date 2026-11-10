@@ -146,6 +146,74 @@ void main() {
     expect(app.backend.called('GET /admin/merchants'), isFalse);
   });
 
+  testWidgets('a product mapping sends its garment and sleeve length', (tester) async {
+    final app = await TestApp.create(account: merchant, location: '/dashboard/product-mapping');
+    app.backend
+      ..on('GET /charts', {
+        'charts': [
+          {'_id': 'c1', 'name': 'Tees', 'category': 'tops', 'isActive': true, 'sizes': []},
+        ],
+        'pagination': {'total': 1},
+      })
+      ..on('GET /products/mappings', {
+        'mappings': [
+          {
+            '_id': 'p1',
+            'productId': 'SKU-1',
+            'productName': 'Kurta',
+            'sizeChartId': {'name': 'Tees'},
+            'garmentLength': 'long',
+            'sleeveLength': 'long',
+            'tryOnStatus': 'image_missing',
+          },
+          {
+            '_id': 'p2',
+            'productId': 'SKU-2',
+            'productName': 'Old tee',
+            'sizeChartId': {'name': 'Tees'},
+            'tryOnStatus': 'image_missing',
+          },
+        ],
+      })
+      ..on('POST /products/map', {
+        'mapping': {'_id': 'p3'},
+      });
+    await app.pump(tester);
+
+    await tester.enterText(find.byType(TextFormField).first, 'SKU-3');
+    await tester.tap(find.text('Select a size chart'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tees (tops)').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Short — Half sleeves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Short — Half sleeves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Long — Full sleeves').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.widgetWithText(SnapButton, 'Map'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(SnapButton, 'Map'));
+    await tester.pumpAndSettle();
+
+    final post = app.backend.requests.firstWhere((r) => r.path == '/products/map');
+    expect(post.data, {
+      'productId': 'SKU-3',
+      'productName': '',
+      'sizeChartId': 'c1',
+      'garmentLength': 'regular',
+      'sleeveLength': 'long',
+    });
+
+    // Each mapping shows its lengths; a mapping without sleeveLength is short.
+    final kurta = find.text('Tees · Long · Full sleeves', findRichText: true);
+    await tester.scrollUntilVisible(kurta, 300, scrollable: find.byType(Scrollable).first);
+    expect(kurta, findsOneWidget);
+    expect(find.text('Tees · Regular · Half sleeves', findRichText: true), findsOneWidget);
+  });
+
   testWidgets('an unsubscribed merchant is sent to plan selection, with locked pages', (tester) async {
     final app = await TestApp.create(account: unsubscribedMerchant, location: '/dashboard/api-key');
     app.backend.on('GET /subscription/plans', publishedPlans);

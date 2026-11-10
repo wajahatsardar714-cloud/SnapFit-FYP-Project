@@ -45,6 +45,10 @@ final _result = <String, dynamic>{
   ],
 };
 
+// A 1x1 PNG, as the GPU service would send it.
+const _pixel =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
 Future<void> _pump(WidgetTester tester, Widget child) => tester.pumpWidget(
   MaterialApp(
     theme: buildTheme(Brightness.light),
@@ -83,6 +87,26 @@ void main() {
 
     await _pump(tester, const TryOnPreview(tryOn: {'status': 'unavailable'}, originalPath: null, size: 'M'));
     expect(find.text('See it on you'), findsNothing);
+  });
+
+  testWidgets('the try-on preview shows the fitted-top tip only when the service sends it', (tester) async {
+    await _pump(
+      tester,
+      const TryOnPreview(
+        tryOn: {'status': 'success', 'image': _pixel, 'tip': 'FITTED_TOP'},
+        originalPath: null,
+        size: 'M',
+      ),
+    );
+    expect(find.text('See it on you'), findsOneWidget);
+    expect(find.text(fittedTopTip), findsOneWidget);
+
+    await _pump(
+      tester,
+      const TryOnPreview(tryOn: {'status': 'success', 'image': _pixel}, originalPath: null, size: 'M'),
+    );
+    expect(find.text('See it on you'), findsOneWidget);
+    expect(find.text(fittedTopTip), findsNothing);
   });
 
   test('decodes the try-on image from a data URL', () {

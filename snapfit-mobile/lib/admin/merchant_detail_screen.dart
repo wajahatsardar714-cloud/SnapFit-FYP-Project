@@ -9,7 +9,7 @@ import '../core/api_client.dart';
 import '../core/format.dart';
 import '../core/plans.dart';
 import '../core/toast.dart';
-import '../dashboard/product_mapping_screens.dart' show productImageUrl;
+import '../dashboard/product_mapping_screens.dart' show productImageUrl, sleeveLengthLabel;
 import '../core/json.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
@@ -231,7 +231,8 @@ class _AdminMerchantDetailScreenState extends State<AdminMerchantDetailScreen> {
                               style: snapText(size: 14, weight: FontWeight.w500, color: c.foreground),
                             ),
                             Text(
-                              '${product['productId']} · ${capitalize('${product['garmentLength'] ?? '—'}')}',
+                              '${product['productId']} · ${capitalize('${product['garmentLength'] ?? '—'}')}'
+                              ' · ${sleeveLengthLabel(product['sleeveLength'])}',
                               style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: c.mutedForeground),
                             ),
                           ],

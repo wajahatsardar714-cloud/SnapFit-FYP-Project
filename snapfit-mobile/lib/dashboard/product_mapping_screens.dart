@@ -22,6 +22,16 @@ const _garmentLengths = {
   'long': ('Long', 'ends at mid-thigh'),
 };
 
+// Matches the backend's mapping.sleeveLength values (default short).
+const _sleeveLengths = {
+  'none': ('None', 'Sleeveless'),
+  'short': ('Short', 'Half sleeves'),
+  'long': ('Long', 'Full sleeves'),
+};
+
+/// A mapping's sleeve length as shown to people ("Half sleeves" when missing).
+String sleeveLengthLabel(Object? sleeveLength) => (_sleeveLengths[sleeveLength] ?? _sleeveLengths['short']!).$2;
+
 // Matches the backend's mapping.tryOnStatus values.
 const _tryOnStatus = {
   'ready': ('Try-on ready', BadgeVariant.success),
@@ -75,6 +85,7 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
   final _productName = TextEditingController();
   String _sizeChartId = '';
   String _garmentLength = 'regular';
+  String _sleeveLength = 'short';
   XFile? _imageFile;
   Map<String, String> _fieldErrors = {};
   String _formError = '';
@@ -119,6 +130,7 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
     setState(() {
       _sizeChartId = '';
       _garmentLength = 'regular';
+      _sleeveLength = 'short';
       _imageFile = null;
       _fieldErrors = {};
       _formError = '';
@@ -148,6 +160,7 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
       'productName': _productName.text.trim(),
       'sizeChartId': _sizeChartId,
       'garmentLength': _garmentLength,
+      'sleeveLength': _sleeveLength,
     };
     final image = _imageFile;
     final api = context.read<ApiClient>();
@@ -287,6 +300,18 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
               gap4,
               Text(
                 "Try-on replaces the shopper's own top down to this length.",
+                style: snapText(size: 12, color: c.mutedForeground),
+              ),
+              gap16,
+              SnapSelect<String>(
+                label: 'Sleeve length',
+                value: _sleeveLength,
+                options: {for (final e in _sleeveLengths.entries) e.key: '${e.value.$1} — ${e.value.$2}'},
+                onChanged: (v) => setState(() => _sleeveLength = v ?? 'short'),
+              ),
+              gap4,
+              Text(
+                "Try-on replaces the shopper's own sleeves down to this length.",
                 style: snapText(size: 12, color: c.mutedForeground),
               ),
               gap16,
@@ -440,6 +465,7 @@ class _MappingTile extends StatelessWidget {
     final imageUrl = productImageUrl(context, mapping['productImage']);
     final chartName = (mapping['sizeChartId'] as Map?)?['name'];
     final length = (_garmentLengths[mapping['garmentLength']] ?? _garmentLengths['regular']!).$1;
+    final sleeves = sleeveLengthLabel(mapping['sleeveLength']);
     Widget link(String label, IconData? icon, VoidCallback? onTap, {Color? color}) => InkWell(
       onTap: busy ? null : onTap,
       child: Padding(
@@ -506,7 +532,7 @@ class _MappingTile extends StatelessWidget {
                             style: snapText(size: 12, color: c.muted),
                           )
                         : TextSpan(text: '$chartName'),
-                    TextSpan(text: ' · $length'),
+                    TextSpan(text: ' · $length · $sleeves'),
                   ],
                 ),
               ),
