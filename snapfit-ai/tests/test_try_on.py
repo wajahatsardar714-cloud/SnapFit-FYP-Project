@@ -12,6 +12,7 @@ from PIL import Image
 from app import main, try_on
 from app.try_on import (
     TryOnError,
+    arm_masks,
     body_bands,
     fetch_product_anchor_data,
     garment_ease,
@@ -160,13 +161,57 @@ class TestFetchProductAnchorData:
         monkeypatch.setattr(try_on.httpx, "AsyncClient", lambda **kwargs: real_client(transport=transport, **kwargs))
         return asyncio.run(fetch_product_anchor_data("m1", "SKU-1"))
 
-    def test_returns_anchors_image_and_garment_length(self, monkeypatch):
-        payload = {"anchorPoints": ANCHORS, "imageUrl": "http://backend.test/tee.png", "garmentLength": "long"}
-        assert self._fetch(monkeypatch, payload) == (ANCHORS, "http://backend.test/tee.png", "long")
+    def test_returns_anchors_image_garment_and_sleeve_length(self, monkeypatch):
+        payload = {
+            "anchorPoints": ANCHORS,
+            "imageUrl": "http://backend.test/tee.png",
+            "garmentLength": "long",
+            "sleeveLength": "long",
+        }
+        assert self._fetch(monkeypatch, payload) == (ANCHORS, "http://backend.test/tee.png", "long", "long")
 
     def test_backends_without_garment_lengths_mean_regular(self, monkeypatch):
         payload = {"anchorPoints": ANCHORS, "imageUrl": "http://backend.test/tee.png"}
         assert self._fetch(monkeypatch, payload)[2] == "regular"
+
+    @pytest.mark.parametrize("payload_extra", [{}, {"sleeveLength": None}], ids=["missing", "null"])
+    def test_backends_without_sleeve_lengths_mean_short(self, monkeypatch, payload_extra):
+        payload = {"anchorPoints": ANCHORS, "imageUrl": "http://backend.test/tee.png", **payload_extra}
+        assert self._fetch(monkeypatch, payload)[3] == "short"
+
+
+class TestArmMasks:
+    @staticmethod
+    def _px(landmark):
+        return np.array([landmark["x"] * 768, landmark["y"] * 1024])
+
+    def test_the_hand_cut_out_spares_the_wrist_but_covers_the_fingers(self, a_pose):
+        lm = a_pose["landmarks"]
+        _, shoulder_span = body_bands(lm, 768, 1024)
+        arms, hands = arm_masks(lm, 768, 1024, shoulder_span)
+        for side in ("LEFT", "RIGHT"):
+            wrist = self._px(lm[f"{side}_WRIST"])
+            x, y = wrist.astype(int)
+            assert hands[y, x] == 0
+            assert arms[y, x] == 255
+            for finger in ("PINKY", "INDEX", "THUMB"):
+                x, y = self._px(lm[f"{side}_{finger}"]).astype(int)
+                assert hands[y, x] == 255
+            for finger in ("PINKY", "INDEX"):
+                knuckle = self._px(lm[f"{side}_{finger}"])
+                x, y = (knuckle + (knuckle - wrist) * try_on.FINGER_EXTENSION).astype(int)
+                assert hands[y, x] == 255
+
+    def test_a_hidden_wrist_draws_no_forearm_or_hand(self, a_pose):
+        lm = a_pose["landmarks"]
+        lm["LEFT_WRIST"]["visibility"] = 0.1
+        _, shoulder_span = body_bands(lm, 768, 1024)
+        arms, hands = arm_masks(lm, 768, 1024, shoulder_span)
+        elbow, wrist = self._px(lm["LEFT_ELBOW"]), self._px(lm["LEFT_WRIST"])
+        x, y = ((elbow + wrist) / 2).astype(int)
+        assert arms[y, x] == 0
+        x, y = self._px(lm["LEFT_INDEX"]).astype(int)
+        assert hands[y, x] == 0
 
 
 class TestEndpoints:
@@ -182,7 +227,7 @@ class TestEndpoints:
         async def anchors(_merchant_id, _product_id):
             if anchor_error:
                 raise TryOnError(anchor_error)
-            return ANCHORS, "http://backend.test/uploads/products/tee.png", "regular"
+            return ANCHORS, "http://backend.test/uploads/products/tee.png", "regular", "short"
 
         async def image_bytes(_url):
             return _product_png()
@@ -198,7 +243,9 @@ class TestEndpoints:
             data={"try_on_product_id": "SKU-1", "merchant_id": "m1"},
         )
         assert response.status_code == 200
-        data_url = response.json()["tryOn"]["image"]
+        try_on_result = response.json()["tryOn"]
+        assert "tip" not in try_on_result
+        data_url = try_on_result["image"]
         assert data_url.startswith("data:image/jpeg;base64,")
         assert Image.open(io.BytesIO(base64.b64decode(data_url.split(",", 1)[1]))).size == (768, 1024)
 

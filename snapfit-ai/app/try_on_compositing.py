@@ -27,10 +27,12 @@ MAX_OUTPUT_SIDE = 1600
 PERSON_JPEG_QUALITY = 95
 OUTPUT_JPEG_QUALITY = 92
 
-# Blending, in model-output pixels (scaled to the photo). The feather ramps up
-# inward from the mask edge, so every pixel outside the mask stays the
-# original's; about 1.5 cells of the model's 8x-downsampled latent, the width
-# over which its edit fades in at the mask edge.
+# Blending, in model-output pixels (scaled to the photo). The feather ramps
+# down outward from the mask edge, so every pixel of the mask is the generated
+# image's (a ramp inside it let the shopper's old clothes show through along
+# every edge) and the photo is its own beyond the ramp; about 1.5 cells of the
+# model's 8x-downsampled latent, the width over which its edit fades in at the
+# mask edge.
 FEATHER = 12.0
 # Mild unsharp mask on the garment, which comes back soft (and upscaled).
 UNSHARP_SIGMA = 1.0
@@ -114,7 +116,7 @@ def _letterbox(width, height):
     return padded_w, padded_h, (padded_w - width) // 2, (padded_h - height) // 2
 
 
-def _model_pixel(width, height):
+def model_pixel(width, height):
     """Photo pixels per model-output pixel."""
     return _letterbox(width, height)[1] / MODEL_SIZE[1]
 
@@ -134,6 +136,14 @@ def from_model_frame(frame, width, height):
     to the width x height photo's frame, padding removed."""
     padded_w, padded_h, left, top = _letterbox(width, height)
     return _resize(frame, (padded_w, padded_h))[top : top + height, left : left + width]
+
+
+def labels_from_model_frame(frame, width, height):
+    """from_model_frame for a label map (one class id per pixel, at any
+    resolution): nearest-neighbour, so ids are never blended into other ids."""
+    padded_w, padded_h, left, top = _letterbox(width, height)
+    resized = cv2.resize(frame, (padded_w, padded_h), interpolation=cv2.INTER_NEAREST)
+    return resized[top : top + height, left : left + width]
 
 
 # --- colour correction --------------------------------------------------------
@@ -223,12 +233,19 @@ def correct_garment_colour(generated, region, torso, target):
 
 def composite_garment(photo, generated, mask):
     """The photo with the (mildly sharpened) generated image blended in over
-    the mask, feathered inward from its edge: every pixel outside the mask is
-    the photo's own."""
+    the mask, feathered outward from its edge: every pixel of the mask is the
+    generated image's, and every pixel outside the mask dilated by (just
+    over) the feather width is the photo's own."""
     height, width = photo.shape[:2]
-    scale = _model_pixel(width, height)
-    inside = (mask > 127).astype(np.uint8)
-    alpha = np.clip(cv2.distanceTransform(inside, cv2.DIST_L2, 5) / (FEATHER * scale), 0.0, 1.0)[..., None]
+    scale = model_pixel(width, height)
+    feather = FEATHER * scale
+    # Grown one pixel more than the feather, so the distance transform's
+    # approximation cannot leave a pixel of the mask itself short of full alpha.
+    reach = math.ceil(feather) + 1
+    grown = cv2.dilate(
+        (mask > 127).astype(np.uint8), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * reach + 1, 2 * reach + 1))
+    )
+    alpha = np.clip(cv2.distanceTransform(grown, cv2.DIST_L2, 5) / feather, 0.0, 1.0)[..., None]
     # Brightness only: sharpening each colour channel fringes colour edges
     # (sleeve hems, arms against the garment).
     luma = cv2.cvtColor(generated, cv2.COLOR_BGR2GRAY).astype(np.float32)

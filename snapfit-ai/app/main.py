@@ -149,11 +149,15 @@ TRY_ON_ERROR_STATUS = {"TRYON_NOT_AVAILABLE": 404, "BACKEND_UNREACHABLE": 502, "
 
 
 async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
-    """{"image": data URL, "engine": "catvton" | "warp"}. Uses the remote GPU
+    """{"image": data URL, "engine": "catvton" | "warp"}, plus "tip":
+    "FITTED_TOP" when the GPU model's result still shows the shopper's own top
+    (no "tip" key otherwise, and never for the warp). Uses the remote GPU
     model when configured and falls back to the local warp if it fails.
     Raises TryOnError with a code when neither can produce an image."""
     try:
-        anchor_points, product_image_url, garment_length = await fetch_product_anchor_data(merchant_id, product_id)
+        anchor_points, product_image_url, garment_length, sleeve_length = await fetch_product_anchor_data(
+            merchant_id, product_id
+        )
     except httpx.HTTPError:
         raise TryOnError("BACKEND_UNREACHABLE")
     try:
@@ -162,16 +166,21 @@ async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
         raise TryOnError("PRODUCT_IMAGE_UNREACHABLE")
 
     engine = "warp"
-    result_bytes = None
+    result_bytes, tip = None, None
     if gpu_try_on_config():
         try:
-            result_bytes = await generate_gpu_try_on(image_bytes, product_image_bytes, pose, ease, length=garment_length)
+            result_bytes, tip = await generate_gpu_try_on(
+                image_bytes, product_image_bytes, pose, ease, length=garment_length, sleeves=sleeve_length
+            )
             engine = "catvton"
         except TryOnError as e:
             logger.warning(f"GPU try-on failed ({e}); using the local warp")
     if result_bytes is None:
         result_bytes = generate_try_on(image_bytes, product_image_bytes, anchor_points, pose=pose, ease=ease)
-    return {"image": f"data:image/jpeg;base64,{base64.b64encode(result_bytes).decode('ascii')}", "engine": engine}
+    result = {"image": f"data:image/jpeg;base64,{base64.b64encode(result_bytes).decode('ascii')}", "engine": engine}
+    if tip:
+        result["tip"] = tip
+    return result
 
 
 @app.get("/health")

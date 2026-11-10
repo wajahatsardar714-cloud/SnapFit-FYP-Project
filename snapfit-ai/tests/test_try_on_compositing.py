@@ -92,7 +92,7 @@ class TestFitWithin:
 
 
 class TestCompositeGarment:
-    def test_pixels_outside_the_mask_are_the_original(self, a_pose):
+    def test_the_mask_is_all_garment_and_beyond_the_feather_all_photo(self, a_pose):
         photo = np.random.default_rng(1).integers(0, 256, (H, W, 3), dtype=np.uint8)
         generated = np.full((H, W, 3), RED, np.uint8)
         mask = clothing_mask(a_pose["landmarks"], W, H)
@@ -100,9 +100,10 @@ class TestCompositeGarment:
         result = composite_garment(photo, generated, mask)
 
         assert result.shape == photo.shape
-        assert np.array_equal(result[mask <= 127], photo[mask <= 127])
-        deep_inside = cv2.erode(mask, np.ones((61, 61), np.uint8)) > 0
-        assert np.array_equal(result[deep_inside], generated[deep_inside])
+        assert np.array_equal(result[mask > 127], generated[mask > 127])
+        reach = 2 * (int(FEATHER) + 3) + 1
+        beyond = cv2.dilate(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (reach, reach))) <= 127
+        assert np.array_equal(result[beyond], photo[beyond])
 
     def test_sharpens_the_garment(self, a_pose):
         photo = np.full((H, W, 3), 128, np.uint8)
@@ -116,16 +117,20 @@ class TestCompositeGarment:
         deep_inside = cv2.erode(mask, np.ones((61, 61), np.uint8)) > 0
         assert result[deep_inside].std() > 1.1 * generated[deep_inside].std()
 
-    def test_the_seam_is_feathered_inside_the_mask(self, a_pose):
+    def test_the_seam_is_feathered_outside_the_mask(self, a_pose):
         photo = np.full((H, W, 3), 100, np.uint8)
         generated = np.full((H, W, 3), 200, np.uint8)
         mask = clothing_mask(a_pose["landmarks"], W, H)
 
         result = composite_garment(photo, generated, mask)
 
-        distance = cv2.distanceTransform((mask > 127).astype(np.uint8), cv2.DIST_L2, 5)
-        halfway = np.abs(distance - FEATHER / 2) < 0.5
-        assert result[halfway].mean() == pytest.approx(150, abs=10)
+        # Distance of each pixel outside the mask from the mask.
+        outside = cv2.distanceTransform((mask <= 127).astype(np.uint8), cv2.DIST_L2, 5)
+        assert result[mask > 127].min() == 200
+        assert result[(outside > 0) & (outside <= 1.5)].mean() > 185
+        halfway = np.abs(outside - FEATHER / 2) < 0.5
+        assert 110 < result[halfway].mean() < 190
+        assert result[outside > FEATHER + 3].max() == 100
 
 
 def _tinted_scene(a_pose, background):

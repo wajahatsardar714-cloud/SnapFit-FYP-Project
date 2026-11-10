@@ -5,22 +5,48 @@ built from its own MediaPipe pose (so the GPU side needs no DensePose), and
 blends the garment it generates back into the shopper's own photo
 (try_on_compositing.py). Configured with TRYON_GPU_URL / TRYON_GPU_TOKEN;
 when unset or failing, callers fall back to the local warp try-on.
+
+Newer GPU servers also parse clothes (/parse: an ATR label id per pixel) and
+inpaint from a text prompt (/inpaint). With them the mask also covers the
+shopper's own top wherever the parser finds it (loose sleeves, a flared
+kameez), a long top's part below the new garment's hem is repainted as plain
+trousers, and the result is parsed again to tell the shopper when their own
+top still shows. Older servers answer 404 there and the try-on works from the
+pose mask alone. These extra steps never fail a try-on.
 """
 
+import io
+import logging
 import os
+import time
+from typing import NamedTuple, Optional
 
 import cv2
 import httpx
 import numpy as np
+from PIL import Image
 
-from app.try_on import TryOnError, arm_masks, body_bands, body_silhouette
+from app.try_on import (
+    FABRIC_ALLOWANCE,
+    TryOnError,
+    arm_capsules,
+    arm_masks,
+    body_bands,
+    body_masks,
+    body_silhouette,
+)
 from app.try_on_compositing import (
+    BODY_EDGE_SOFTNESS,
+    FEATHER,
+    MODEL_SIZE,
     PERSON_JPEG_QUALITY,
     composite_garment,
     correct_garment_colour,
     encode_jpeg,
     fit_within,
     from_model_frame,
+    labels_from_model_frame,
+    model_pixel,
     on_body,
     product_garment_colour,
     to_model_frame,
@@ -28,9 +54,25 @@ from app.try_on_compositing import (
 )
 from app.utils import decode_image
 
+logger = logging.getLogger("snapfit-ai")
+
 GPU_TIMEOUT_SECONDS = 120
 # The startup health check only needs the tunnel and server to answer.
 HEALTH_TIMEOUT_SECONDS = 10
+# Parsing is one quick segmentation pass, inpainting a diffusion run shorter
+# than the try-on's. A slow optional step is skipped rather than waited for.
+PARSE_TIMEOUT_SECONDS = 30
+INPAINT_TIMEOUT_SECONDS = 60
+# The backend and the phone wait 150 s for the whole answer, so every GPU call
+# of one try-on ends within this, leaving room for the local warp fallback.
+# A step with less than MIN_STEP_SECONDS left is skipped (the optional ones)
+# or fails as a timeout (the try-on itself).
+TRY_ON_BUDGET_SECONDS = 140
+MIN_STEP_SECONDS = 5
+# A server that answered 404 on an optional endpoint (an older notebook) is
+# not asked again for this long: a newer notebook may come up behind the same
+# tunnel URL.
+FEATURE_RETRY_SECONDS = 600
 # Mask allowance beyond the body for the garment region, as a fraction of
 # shoulder span; scaled up by the size ease so a looser size gets more room.
 MASK_ALLOWANCE = 0.12
@@ -50,6 +92,65 @@ HEM_BELOW_HIPS = {
 }
 INFERENCE_STEPS = 40
 GUIDANCE_SCALE = 2.5
+
+# The product's sleeves (the backend's sleeveLength); unknown values count as
+# short, the most common.
+SLEEVE_LENGTHS = ("none", "short", "long")
+
+# ATR label ids in the GPU server's /parse maps (SegFormer-B2 Clothes).
+SKIRT = 5
+# The shopper's own top: upper clothes and dress (a kameez is labelled either).
+OLD_TOP_LABELS = (4, 7)
+# The parsed top is grown by this fraction of shoulder span: the parser's
+# edges are a few pixels off, and the old fabric's last pixels must go too.
+OLD_TOP_GROWTH = 0.04
+# Parsed top within this fraction of shoulder span beyond the landmark arm
+# capsules counts as sleeve and is repainted at any height: a loose kurta
+# sleeve hangs well past the capsules plus MASK_ALLOWANCE.
+SLEEVE_ALLOWANCE = 0.3
+# The parser calls the lower part of a kameez or tunic "skirt". Skirt counts
+# as the shopper's top only when the top itself (sleeves aside) reaches this
+# fraction of the shoulder-to-hip distance below the hip line; a short top
+# ends above the hips, so a real skirt under one is left alone.
+LONG_TOP_REACH = 0.1
+# The old top below the new garment's hem (a kameez under a shirt) is
+# repainted as trousers when it covers more than this share of the body area;
+# less is parser noise along the hem, not worth a diffusion run.
+MIN_TROUSERS_AREA = 0.02
+TROUSERS_PROMPT = "plain trousers, natural fabric, matching the person's lower legs, photo"
+TROUSERS_NEGATIVE_PROMPT = "shirt, kameez, kurta, tunic, long top, dress, skirt, text, watermark"
+# Stable Diffusion inpainting's usual settings; a fixed seed so the same
+# photo always gets the same trousers.
+INPAINT_STEPS = 30
+INPAINT_GUIDANCE = 7.5
+INPAINT_SEED = 0
+# The shopper is told their own top may still show (tip FITTED_TOP) when the
+# parser still finds it outside where the product sits on more than this
+# share of the body area: a whole sleeve or a band below the hem, not stray
+# pixels along an edge.
+FITTED_TOP_LEFTOVER = 0.03
+FITTED_TOP_TIP = "FITTED_TOP"
+
+# url -> {feature: time.monotonic() of its 404}
+_unsupported_features = {}
+
+
+class GpuTryOn(NamedTuple):
+    """generate_gpu_try_on's result: the JPEG bytes, and a try-on tip code
+    (FITTED_TOP_TIP) or None."""
+
+    image: bytes
+    tip: Optional[str]
+
+
+def reset_feature_cache():
+    """Forgets which GPU servers lacked /parse or /inpaint."""
+    _unsupported_features.clear()
+
+
+def _supports(url, feature):
+    since = _unsupported_features.get(url, {}).get(feature)
+    return since is None or time.monotonic() - since > FEATURE_RETRY_SECONDS
 
 
 def _request_headers(token):
@@ -78,29 +179,167 @@ async def gpu_health(config):
         raise TryOnError("GPU_UNREACHABLE")
 
 
+# --- masks --------------------------------------------------------------------
+
+
+class _Body(NamedTuple):
+    bands: list
+    shoulder_span: float
+    shoulder_y: float
+    hip_y: float
+    # First row at the garment's hem line, and the neck row: nothing above it
+    # is repainted (the face).
+    hem_row: int
+    neck_row: int
+
+
+def _body(landmarks, width, height, ease=1.0, length="regular"):
+    bands, shoulder_span = body_bands(landmarks, width, height, ease)
+    shoulder_y = (bands[0][0][1] + bands[0][1][1]) / 2
+    hip_y = (bands[-1][0][1] + bands[-1][1][1]) / 2
+    hem = HEM_BELOW_HIPS.get(length, HEM_BELOW_HIPS["regular"])
+    # The neck: halfway between mouth and shoulder line.
+    mouth_y = (landmarks["MOUTH_LEFT"]["y"] + landmarks["MOUTH_RIGHT"]["y"]) / 2 * height
+    return _Body(
+        bands,
+        shoulder_span,
+        shoulder_y,
+        hip_y,
+        max(0, int(hip_y + hem * (hip_y - shoulder_y))),
+        max(0, int(mouth_y + 0.5 * (shoulder_y - mouth_y))),
+    )
+
+
+def _disc(radius):
+    radius = max(1, int(radius))
+    return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * radius + 1, 2 * radius + 1))
+
+
 def clothing_mask(landmarks, width, height, ease=1.0, length="regular"):
     """Garment region the model may repaint, as a PNG-ready uint8 mask: the
     torso down to the hem line for the garment's length (unknown lengths count
     as regular) and both whole arms, so old sleeves of any length are replaced;
     never the face or the hands. Looser sizes (ease > 1) get a wider mask so
     the generated garment can sit looser."""
-    bands, shoulder_span = body_bands(landmarks, width, height, ease)
-    arms, hands = arm_masks(landmarks, width, height, shoulder_span)
-    allowance = max(1, int(shoulder_span * MASK_ALLOWANCE * ease))
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * allowance + 1, 2 * allowance + 1))
-    torso = cv2.dilate(body_silhouette(landmarks, width, height, bands, shoulder_span), kernel)
-    shoulder_y = (bands[0][0][1] + bands[0][1][1]) / 2
-    hip_y = (bands[-1][0][1] + bands[-1][1][1]) / 2
-    hem = HEM_BELOW_HIPS.get(length, HEM_BELOW_HIPS["regular"])
+    body = _body(landmarks, width, height, ease, length)
+    arms, hands = arm_masks(landmarks, width, height, body.shoulder_span)
+    kernel = _disc(body.shoulder_span * MASK_ALLOWANCE * ease)
+    torso = cv2.dilate(body_silhouette(landmarks, width, height, body.bands, body.shoulder_span), kernel)
     # The hem bounds the torso and legs only: in an A-pose the forearms reach
     # below a cropped hem line.
-    torso[max(0, int(hip_y + hem * (hip_y - shoulder_y))) :, :] = 0
+    torso[body.hem_row :, :] = 0
     region = cv2.bitwise_or(torso, cv2.dilate(arms, kernel))
-    # Keep the face out: nothing above the neck (halfway between mouth and
-    # shoulder line).
-    mouth_y = (landmarks["MOUTH_LEFT"]["y"] + landmarks["MOUTH_RIGHT"]["y"]) / 2 * height
-    region[: max(0, int(mouth_y + 0.5 * (shoulder_y - mouth_y))), :] = 0
+    region[: body.neck_row, :] = 0
     return cv2.bitwise_and(region, cv2.bitwise_not(hands))
+
+
+def _sleeve_region(landmarks, width, height, shoulder_span):
+    arms = arm_capsules(landmarks, width, height, shoulder_span)
+    return cv2.dilate(arms, _disc(shoulder_span * SLEEVE_ALLOWANCE))
+
+
+def _old_top(labels, include_skirt):
+    ids = OLD_TOP_LABELS + ((SKIRT,) if include_skirt else ())
+    return np.isin(labels, ids).astype(np.uint8) * 255
+
+
+def wears_long_top(landmarks, width, height, labels):
+    """Whether the shopper's own top in a parsed photo (`labels`: an ATR id
+    per pixel, photo frame), sleeves aside, reaches LONG_TOP_REACH below the
+    hip line, as a kameez or tunic does: then the parser's "skirt" under it is
+    part of that top."""
+    body = _body(landmarks, width, height)
+    top = _old_top(labels, include_skirt=False)
+    top[_sleeve_region(landmarks, width, height, body.shoulder_span) > 0] = 0
+    # A speck of mislabelled pixels doesn't make a top long.
+    top = cv2.morphologyEx(top, cv2.MORPH_OPEN, _disc(body.shoulder_span * OLD_TOP_GROWTH))
+    rows = np.flatnonzero(top.any(axis=1))
+    return bool(len(rows)) and rows[-1] > body.hip_y + LONG_TOP_REACH * (body.hip_y - body.shoulder_y)
+
+
+def clothes_aware_masks(landmarks, width, height, labels, ease=1.0, length="regular"):
+    """(mask, lower) uint8 masks from the pose and the parsed photo (`labels`:
+    an ATR id per pixel, photo frame). mask is what CatVTON repaints:
+    clothing_mask, plus the shopper's own top (grown by OLD_TOP_GROWTH) above
+    the garment's hem line and, at any height, near the arms (loose sleeves);
+    never the face or the hands. lower is the rest of that top: below the hem
+    and away from the arms, the part of a long top the new garment doesn't
+    cover, to be repainted as trousers."""
+    body = _body(landmarks, width, height, ease, length)
+    _, hands = arm_masks(landmarks, width, height, body.shoulder_span)
+    keep = cv2.bitwise_not(hands)
+    include_skirt = wears_long_top(landmarks, width, height, labels)
+    top = cv2.dilate(_old_top(labels, include_skirt), _disc(body.shoulder_span * OLD_TOP_GROWTH))
+    sleeves = _sleeve_region(landmarks, width, height, body.shoulder_span)
+
+    above = top.copy()
+    above[body.hem_row :, :] = 0
+    mask = cv2.bitwise_or(clothing_mask(landmarks, width, height, ease, length), above)
+    mask = cv2.bitwise_or(mask, cv2.bitwise_and(top, sleeves))
+    mask[: body.neck_row, :] = 0
+
+    lower = top.copy()
+    lower[: body.hem_row, :] = 0
+    lower = cv2.bitwise_and(lower, cv2.bitwise_not(sleeves))
+    return cv2.bitwise_and(mask, keep), cv2.bitwise_and(lower, keep)
+
+
+def _torso(body, width, height):
+    """uint8 torso polygon through the band edges, from the shoulder line
+    down to the hem row (straight down below the hips)."""
+    left = [edge[0] for edge in body.bands]
+    right = [edge[1] for edge in reversed(body.bands)]
+    drop = np.float32([0, max(0.0, body.hem_row - body.hip_y)])
+    hem = [body.bands[-1][0] + drop, body.bands[-1][1] + drop]
+    torso = np.zeros((height, width), np.uint8)
+    cv2.fillPoly(torso, [np.int32(left + hem + right)], 255)
+    torso[body.hem_row :, :] = 0
+    return torso
+
+
+def colour_region(mask, landmarks, width, height, ease=1.0, sleeves="short"):
+    """Soft uint8 region whose generated garment is colour corrected: the
+    mask on the body, minus the arm parts the product leaves bare (forearms
+    for short sleeves, whole arms for none), so bare skin is never pulled
+    toward the product's colour. The torso always stays in."""
+    region = cv2.min(mask, on_body(landmarks, width, height, ease))
+    if sleeves == "long":
+        return region
+    body = _body(landmarks, width, height, ease)
+    kernel = _disc(body.shoulder_span * MASK_ALLOWANCE * ease)
+    bare = cv2.dilate(arm_capsules(landmarks, width, height, body.shoulder_span, upper=sleeves == "none"), kernel)
+    bare = cv2.bitwise_and(bare, cv2.bitwise_not(cv2.dilate(_torso(body, width, height), kernel)))
+    # Softened as on_body's edge, so a garment crossing it shows no seam.
+    bare = cv2.GaussianBlur(bare, (0, 0), body.shoulder_span * BODY_EDGE_SOFTNESS)
+    return cv2.min(region, cv2.bitwise_not(bare))
+
+
+def _body_area(landmarks, width, height):
+    bands, shoulder_span = body_bands(landmarks, width, height)
+    return max(1, int((body_masks(landmarks, width, height, bands, shoulder_span)[0] > 0).sum()))
+
+
+def leftover_share(landmarks, width, height, labels, include_skirt, ease=1.0, length="regular", sleeves="short"):
+    """Share of the body area where a parsed try-on result (`labels`) still
+    shows the shopper's own top outside where the product sits: the torso
+    above the hem plus the arm parts its sleeves cover (upper arms for short,
+    whole arms for long, none for none). The slack around them is everything
+    the new garment may fill: the silhouette's fabric allowance, the mask's
+    allowance, the blend's feather and OLD_TOP_GROWTH. include_skirt: whether
+    the shopper's own top was a long one (wears_long_top on the original
+    photo)."""
+    body = _body(landmarks, width, height, ease, length)
+    expected = _torso(body, width, height)
+    if sleeves != "none":
+        arms = arm_capsules(landmarks, width, height, body.shoulder_span, forearms=sleeves == "long")
+        expected = cv2.bitwise_or(expected, arms)
+    slack = body.shoulder_span * (FABRIC_ALLOWANCE + MASK_ALLOWANCE * ease + OLD_TOP_GROWTH)
+    expected = cv2.dilate(expected, _disc(slack + FEATHER * model_pixel(width, height)))
+    leftover = (_old_top(labels, include_skirt) > 0) & (expected == 0)
+    return float(leftover.sum()) / _body_area(landmarks, width, height)
+
+
+# --- GPU calls ----------------------------------------------------------------
 
 
 def _png(array):
@@ -121,17 +360,106 @@ def garment_on_white(product_image_bytes):
     return _png(image)
 
 
-async def generate_gpu_try_on(customer_image_bytes, product_image_bytes, pose, ease=1.0, config=None, length="regular"):
-    """JPEG of the shopper's own photo (upright, longest side capped at
-    try_on_compositing.MAX_OUTPUT_SIDE) with the garment generated by the
-    remote CatVTON server blended into the clothing region; everything outside
-    it is the original photo. Raises TryOnError on any failure (unconfigured,
-    unreachable, timeout, bad response)."""
+async def _optional_call(config, feature, files, data, timeout):
+    """Body of a 200 answer from an optional GPU endpoint (/parse, /inpaint),
+    or None. A 404 (an older server) is remembered for FEATURE_RETRY_SECONDS;
+    any other failure is logged and skipped, never raised."""
+    url, token = config
+    if not _supports(url, feature):
+        return None
+    if timeout < MIN_STEP_SECONDS:
+        logger.warning(f"No time left for GPU /{feature}; try-on continues without it")
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(f"{url}/{feature}", files=files, data=data, headers=_request_headers(token))
+    except httpx.HTTPError as e:
+        logger.warning(f"GPU /{feature} failed ({type(e).__name__}); try-on continues without it")
+        return None
+    if response.status_code == 404:
+        _unsupported_features.setdefault(url, {})[feature] = time.monotonic()
+        logger.info(f"GPU server has no /{feature}; try-ons skip it")
+        return None
+    if response.status_code != 200:
+        logger.warning(f"GPU /{feature} answered {response.status_code}; try-on continues without it")
+        return None
+    return response.content
+
+
+def _decode_labels(content):
+    """A 2-D label map from a single-channel (or palette) PNG, scaled to
+    MODEL_SIZE without blending ids; None when it isn't one."""
+    try:
+        with Image.open(io.BytesIO(content)) as image:
+            labels = np.asarray(image)
+    except (OSError, ValueError):
+        return None
+    if labels.ndim != 2 or not labels.size:
+        return None
+    return cv2.resize(labels.astype(np.uint8), MODEL_SIZE, interpolation=cv2.INTER_NEAREST)
+
+
+def _time_left(deadline, cap):
+    return min(cap, deadline - time.monotonic())
+
+
+async def _parse(config, frame_jpeg, width, height, timeout=PARSE_TIMEOUT_SECONDS):
+    """ATR labels of a model-frame JPEG, mapped back to the width x height
+    photo frame (nearest-neighbour); None when unsupported or failing."""
+    files = {"image": ("image.jpg", frame_jpeg, "image/jpeg")}
+    content = await _optional_call(config, "parse", files, {}, timeout)
+    if content is None:
+        return None
+    labels = _decode_labels(content)
+    if labels is None:
+        logger.warning("GPU /parse returned no label map; try-on continues without it")
+        return None
+    return labels_from_model_frame(labels, width, height)
+
+
+async def _inpaint_trousers(config, image, lower, timeout=INPAINT_TIMEOUT_SECONDS):
+    """`image` with the `lower` region repainted as plain trousers by the
+    GPU's /inpaint and blended in like the garment; unchanged when that is
+    unsupported or fails."""
+    height, width = image.shape[:2]
+    files = {
+        "image": ("image.jpg", encode_jpeg(to_model_frame(image, cv2.BORDER_REPLICATE), PERSON_JPEG_QUALITY), "image/jpeg"),
+        "mask": ("mask.png", _png(to_model_frame(lower, cv2.BORDER_CONSTANT)), "image/png"),
+    }
+    data = {
+        "prompt": TROUSERS_PROMPT,
+        "negative_prompt": TROUSERS_NEGATIVE_PROMPT,
+        "steps": str(INPAINT_STEPS),
+        "guidance": str(INPAINT_GUIDANCE),
+        "seed": str(INPAINT_SEED),
+    }
+    content = await _optional_call(config, "inpaint", files, data, timeout)
+    inpainted = decode_image(content) if content is not None else None
+    if inpainted is None:
+        if content is not None:
+            logger.warning("GPU /inpaint returned no image; try-on continues without it")
+        return image
+    return composite_garment(image, from_model_frame(inpainted, width, height), lower)
+
+
+async def generate_gpu_try_on(
+    customer_image_bytes, product_image_bytes, pose, ease=1.0, config=None, length="regular", sleeves="short"
+):
+    """GpuTryOn(image, tip): a JPEG of the shopper's own photo (upright,
+    longest side capped at try_on_compositing.MAX_OUTPUT_SIDE) with the garment
+    generated by the remote CatVTON server blended into the clothing region,
+    everything outside it the original photo; and FITTED_TOP_TIP when the
+    shopper's own top still shows in it, else None. `sleeves` is the
+    product's sleeve length (SLEEVE_LENGTHS; unknown counts as short). Raises
+    TryOnError when the try-on itself fails (unconfigured, unreachable,
+    timeout, bad response); the parse and inpaint steps never raise."""
     config = config or gpu_try_on_config()
     if not config:
         raise TryOnError("GPU_NOT_CONFIGURED")
     url, token = config
+    deadline = time.monotonic() + TRY_ON_BUDGET_SECONDS
     landmarks = pose["landmarks"]
+    sleeves = sleeves if sleeves in SLEEVE_LENGTHS else "short"
 
     # Upright pixels, as the pose (and so the mask) saw them: the server
     # ignores EXIF orientation.
@@ -140,17 +468,31 @@ async def generate_gpu_try_on(customer_image_bytes, product_image_bytes, pose, e
         raise TryOnError("INVALID_CUSTOMER_IMAGE")
     photo = fit_within(photo)
     height, width = photo.shape[:2]
-    mask = clothing_mask(landmarks, width, height, ease, length)
+    person_jpeg = encode_jpeg(to_model_frame(photo, cv2.BORDER_REPLICATE), PERSON_JPEG_QUALITY)
+
+    mask, lower, long_top = clothing_mask(landmarks, width, height, ease, length), None, False
+    labels = await _parse(config, person_jpeg, width, height, _time_left(deadline, PARSE_TIMEOUT_SECONDS))
+    if labels is not None:
+        try:
+            long_top = wears_long_top(landmarks, width, height, labels)
+            mask, lower = clothes_aware_masks(landmarks, width, height, labels, ease, length)
+        except (cv2.error, ValueError, IndexError) as e:
+            logger.warning(f"Clothes-aware mask failed ({e}); using the pose mask")
+            labels = None
+
     product_colour = product_garment_colour(product_image_bytes)
     files = {
-        "person": ("person.jpg", encode_jpeg(to_model_frame(photo, cv2.BORDER_REPLICATE), PERSON_JPEG_QUALITY), "image/jpeg"),
+        "person": ("person.jpg", person_jpeg, "image/jpeg"),
         "garment": ("garment.png", garment_on_white(product_image_bytes), "image/png"),
         "mask": ("mask.png", _png(to_model_frame(mask, cv2.BORDER_CONSTANT)), "image/png"),
     }
     data = {"steps": str(INFERENCE_STEPS), "guidance": str(GUIDANCE_SCALE)}
 
+    timeout = _time_left(deadline, GPU_TIMEOUT_SECONDS)
+    if timeout < MIN_STEP_SECONDS:
+        raise TryOnError("GPU_TIMEOUT")
     try:
-        async with httpx.AsyncClient(timeout=GPU_TIMEOUT_SECONDS) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(f"{url}/tryon", files=files, data=data, headers=_request_headers(token))
     except httpx.TimeoutException:
         raise TryOnError("GPU_TIMEOUT")
@@ -162,6 +504,23 @@ async def generate_gpu_try_on(customer_image_bytes, product_image_bytes, pose, e
         raise TryOnError(f"GPU_ERROR:{response.status_code}")
 
     generated = from_model_frame(generated, width, height)
-    region = cv2.min(mask, on_body(landmarks, width, height, ease))
+    region = colour_region(mask, landmarks, width, height, ease, sleeves)
     generated = correct_garment_colour(generated, region, torso_core(landmarks, width, height), product_colour)
-    return encode_jpeg(composite_garment(photo, generated, mask))
+    result = composite_garment(photo, generated, mask)
+
+    if lower is not None and (lower > 127).sum() > MIN_TROUSERS_AREA * _body_area(landmarks, width, height):
+        result = await _inpaint_trousers(config, result, lower, _time_left(deadline, INPAINT_TIMEOUT_SECONDS))
+
+    tip = None
+    # Only when the first parse worked: a server that just failed it would
+    # most likely fail (or time out on) this one too.
+    if labels is not None:
+        result_jpeg = encode_jpeg(to_model_frame(result, cv2.BORDER_REPLICATE), PERSON_JPEG_QUALITY)
+        final = await _parse(config, result_jpeg, width, height, _time_left(deadline, PARSE_TIMEOUT_SECONDS))
+        try:
+            if final is not None:
+                share = leftover_share(landmarks, width, height, final, long_top, ease, length, sleeves)
+                tip = FITTED_TOP_TIP if share > FITTED_TOP_LEFTOVER else None
+        except (cv2.error, ValueError, IndexError) as e:
+            logger.warning(f"Leftover check failed ({e}); try-on returned without it")
+    return GpuTryOn(encode_jpeg(result), tip)
