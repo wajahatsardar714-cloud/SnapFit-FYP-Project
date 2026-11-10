@@ -1,8 +1,17 @@
 import { useState } from 'react';
+import { Lightbulb } from 'lucide-react';
+
+// Try-on tips the server may attach to a successful result (tryOn.tip).
+// FITTED_TOP: the shopper's own longer sleeves or kameez may still show
+// around a shorter product.
+export const TRY_ON_TIPS = {
+  FITTED_TOP: 'Some of your own clothes may still show. For the clearest try-on, wear a fitted, short-sleeve top.',
+};
 
 // "See it on you": the shopper's own photo with the product, from the
 // combined recommend + try-on response. tryOn: { status: 'success', image } |
-// { status: 'failed', message } | { status: 'unavailable' }. Renders nothing
+// { status: 'failed', message } | { status: 'unavailable' }, with an optional
+// tip on success (see TRY_ON_TIPS). Renders nothing
 // unless the product is try-on ready.
 function TryOnPreview({ tryOn, originalUrl, size }) {
   const [view, setView] = useState('tryOn');
@@ -17,6 +26,7 @@ function TryOnPreview({ tryOn, originalUrl, size }) {
   if (tryOn?.status !== 'success') return null;
 
   const showTryOn = view === 'tryOn' || !originalUrl;
+  const tip = TRY_ON_TIPS[tryOn.tip];
   const toggleClass = (active) =>
     `rounded px-3 py-1 text-xs font-medium ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`;
 
@@ -48,6 +58,12 @@ function TryOnPreview({ tryOn, originalUrl, size }) {
           </span>
         )}
       </div>
+      {tip && (
+        <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-surface-2 px-3 py-2 text-left text-xs text-muted-foreground">
+          <Lightbulb size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+          {tip}
+        </p>
+      )}
       <p className="mt-2 text-[11px] text-muted-foreground">Preview is approximate and does not reflect fabric drape or exact fit.</p>
     </div>
   );

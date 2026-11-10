@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -165,5 +165,27 @@ describe('AdminMerchantDetailPage account actions', () => {
 
     await waitFor(() => expect(deleteMerchant).toHaveBeenCalledWith('m1'));
     expect(await screen.findByText('Merchants list')).toBeTruthy();
+  });
+});
+
+describe('AdminMerchantDetailPage products', () => {
+  it('shows each product garment length and sleeve length, a dash when missing', async () => {
+    getMerchant.mockResolvedValue({
+      ...detail(),
+      products: [
+        { _id: 'p1', productId: 'SKU-HALF', garmentLength: 'long', sleeveLength: 'short' },
+        { _id: 'p2', productId: 'SKU-OLD', garmentLength: 'regular' },
+      ],
+    });
+    renderPage();
+
+    const half = within((await screen.findByText('SKU-HALF', { selector: 'p.font-medium' })).closest('tr'));
+    expect(half.getByText('long')).toBeTruthy();
+    expect(half.getByText('short')).toBeTruthy();
+
+    const old = within(screen.getByText('SKU-OLD', { selector: 'p.font-medium' }).closest('tr'));
+    expect(old.getByText('regular')).toBeTruthy();
+    expect(old.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('Sleeves')).toBeTruthy();
   });
 });

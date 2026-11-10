@@ -161,7 +161,7 @@ function AdminMerchantDetailPage() {
         </ListCard>
 
         <ListCard title="Products" count={products.length} empty="No products mapped yet.">
-          <HeadRow columns={['Product', 'Try-on', 'Length']} />
+          <HeadRow columns={['Product', 'Try-on', 'Length', 'Sleeves']} />
           <tbody className="divide-y divide-border">
             {products.map((product) => {
               const imageUrl = resolveProductImageUrl(product.productImage);
@@ -185,6 +185,7 @@ function AdminMerchantDetailPage() {
                   </td>
                   <td className={TD}>{tryOn ? <Badge variant={tryOn.variant}>{tryOn.label}</Badge> : '—'}</td>
                   <td className={`${TD} capitalize`}>{product.garmentLength || '—'}</td>
+                  <td className={`${TD} capitalize`}>{product.sleeveLength || '—'}</td>
                 </tr>
               );
             })}

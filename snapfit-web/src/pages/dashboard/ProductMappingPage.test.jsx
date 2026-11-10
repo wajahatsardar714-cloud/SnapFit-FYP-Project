@@ -26,6 +26,7 @@ const MAPPINGS = [
     productImage: '/uploads/products/b.png',
     tryOnStatus: 'anchors_missing',
     garmentLength: 'cropped',
+    sleeveLength: 'long',
   },
 ];
 
@@ -85,10 +86,11 @@ describe('ProductMappingPage garment length', () => {
     );
   }
 
-  async function fillForm(garmentLength) {
+  async function fillForm(garmentLength, sleeveLength) {
     fireEvent.change(await screen.findByLabelText('Product ID'), { target: { value: 'SKU-NEW' } });
     fireEvent.change(screen.getByLabelText('Size Chart'), { target: { value: 'c1' } });
     if (garmentLength) fireEvent.change(screen.getByLabelText('Garment length'), { target: { value: garmentLength } });
+    if (sleeveLength) fireEvent.change(screen.getByLabelText('Sleeve length'), { target: { value: sleeveLength } });
   }
 
   beforeEach(() => {
@@ -133,5 +135,54 @@ describe('ProductMappingPage garment length', () => {
     expect(payload).toBeInstanceOf(FormData);
     expect(payload.get('garmentLength')).toBe('cropped');
     expect(payload.get('image').name).toBe('tee.png');
+  });
+
+  it('shows the sleeve length of each mapping, short when none is stored', async () => {
+    renderPage();
+    expect((await rowFor('SKU-READY')).getByText('Short')).toBeTruthy();
+    expect((await rowFor('SKU-NOIMG')).getByText('Short')).toBeTruthy();
+    expect((await rowFor('SKU-NOPTS')).getByText('Long')).toBeTruthy();
+  });
+
+  it('offers the three sleeve lengths, short by default, and sends the choice as JSON', async () => {
+    renderPage();
+    const select = await screen.findByLabelText('Sleeve length');
+    expect(select.value).toBe('short');
+    expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'None — sleeveless',
+      'Short — half sleeves',
+      'Long — full sleeves',
+    ]);
+
+    await fillForm(null, 'long');
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    expect(api.post).toHaveBeenCalledWith(
+      '/products/map',
+      expect.objectContaining({ garmentLength: 'regular', sleeveLength: 'long' })
+    );
+  });
+
+  it('sends the sleeve length with the product image in the multipart form', async () => {
+    renderPage();
+    await fillForm('long', 'none');
+    fireEvent.change(document.getElementById('mapping-image'), {
+      target: { files: [new File(['png'], 'tee.png', { type: 'image/png' })] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const payload = api.post.mock.calls[0][1];
+    expect(payload).toBeInstanceOf(FormData);
+    expect(payload.get('sleeveLength')).toBe('none');
+    expect(payload.get('garmentLength')).toBe('long');
+  });
+
+  it('resets the sleeve length to short on cancel', async () => {
+    renderPage();
+    await fillForm(null, 'none');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByLabelText('Sleeve length').value).toBe('short');
   });
 });

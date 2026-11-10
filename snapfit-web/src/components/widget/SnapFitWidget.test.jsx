@@ -97,6 +97,16 @@ describe('SnapFitWidget result', () => {
 
     expect(screen.getByText('See it on you')).toBeTruthy();
     expect(screen.getByAltText('You wearing size M')).toBeTruthy();
+    expect(screen.queryByText(/wear a fitted, short-sleeve top/)).toBeNull();
+  });
+
+  it('shows the fitted-top tip under the try-on when the server sends it', async () => {
+    respondWith({ tryOn: { status: 'success', image: 'data:image/jpeg;base64,X', tip: 'FITTED_TOP' } });
+    await getMySize();
+
+    expect(
+      screen.getByText('Some of your own clothes may still show. For the clearest try-on, wear a fitted, short-sleeve top.')
+    ).toBeTruthy();
   });
 
   it('hides the try-on view when the product is not try-on ready', async () => {

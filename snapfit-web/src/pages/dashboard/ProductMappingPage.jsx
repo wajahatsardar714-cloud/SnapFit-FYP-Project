@@ -27,7 +27,14 @@ const GARMENT_LENGTHS = {
   long: { label: 'Long', ends: 'ends at mid-thigh' },
 };
 
-const initialForm = { productId: '', productName: '', sizeChartId: '', garmentLength: 'regular' };
+// Matches the backend's mapping.sleeveLength values (default short).
+const SLEEVE_LENGTHS = {
+  none: { label: 'None', hint: 'sleeveless' },
+  short: { label: 'Short', hint: 'half sleeves' },
+  long: { label: 'Long', hint: 'full sleeves' },
+};
+
+const initialForm = { productId: '', productName: '', sizeChartId: '', garmentLength: 'regular', sleeveLength: 'short' };
 
 function validateMappingForm({ productId, sizeChartId }) {
   const errors = {};
@@ -297,7 +304,7 @@ function ProductMappingPage() {
                     </p>
                   )}
                 </div>
-                <div className="sm:col-span-2">
+                <div>
                   <Select
                     id="mapping-garmentLength"
                     name="garmentLength"
@@ -313,6 +320,24 @@ function ProductMappingPage() {
                   </Select>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Try-on replaces the shopper&apos;s own top down to this length.
+                  </p>
+                </div>
+                <div>
+                  <Select
+                    id="mapping-sleeveLength"
+                    name="sleeveLength"
+                    label="Sleeve length"
+                    value={form.sleeveLength}
+                    onChange={handleChange}
+                  >
+                    {Object.entries(SLEEVE_LENGTHS).map(([value, { label, hint }]) => (
+                      <option key={value} value={value}>
+                        {label} — {hint}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Try-on replaces the shopper&apos;s own sleeves down to this length.
                   </p>
                 </div>
                 <div className="sm:col-span-2">
@@ -366,6 +391,7 @@ function ProductMappingPage() {
                       <th className="px-6 py-3">Product Name</th>
                       <th className="px-6 py-3">Size Chart</th>
                       <th className="px-6 py-3">Length</th>
+                      <th className="px-6 py-3">Sleeves</th>
                       <th className="px-6 py-3">Try-On</th>
                       <th className="px-6 py-3" aria-hidden="true"></th>
                     </tr>
@@ -383,6 +409,9 @@ function ProductMappingPage() {
                         </td>
                         <td className="px-6 py-3 text-muted-foreground">
                           {(GARMENT_LENGTHS[mapping.garmentLength] || GARMENT_LENGTHS.regular).label}
+                        </td>
+                        <td className="px-6 py-3 text-muted-foreground">
+                          {(SLEEVE_LENGTHS[mapping.sleeveLength] || SLEEVE_LENGTHS.short).label}
                         </td>
                         <td className="px-6 py-3">
                           <TryOnCell
