@@ -5,8 +5,10 @@ import DataTable from './DataTable';
 import FaqAccordion from './FaqAccordion';
 import FeatureCard from './FeatureCard';
 import Hero from './Hero';
+import Logo from './Logo';
 import PageMeta, { usePageMeta } from './PageMeta';
 import PricingCard from './PricingCard';
+import PromoBanner from './PromoBanner';
 import ProsConsTable from './ProsConsTable';
 import SmartLink from './SmartLink';
 import TableOfContents from './TableOfContents';
@@ -130,6 +132,32 @@ describe('Hero', () => {
     inRouter(<Hero title="Title" />);
     expect(heroGrid().className).not.toContain('lg:grid-cols-2');
     expect(heroGrid().children).toHaveLength(1);
+  });
+});
+
+describe('Logo', () => {
+  it('shows the oval SnapFit badge, named for screen readers, at the header or form size', () => {
+    const { rerender } = render(<Logo name="SnapFit" />);
+    const image = screen.getByRole('img', { name: 'SnapFit' });
+    expect(image.getAttribute('src')).toMatch(/snapfit-logo\.webp/);
+    expect([image.getAttribute('width'), image.getAttribute('height')]).toEqual(['190', '161']);
+    expect(image.className).toContain('h-12');
+    rerender(<Logo name="SnapFit" size="lg" />);
+    expect(screen.getByRole('img', { name: 'SnapFit' }).className).toContain('h-20');
+  });
+});
+
+describe('PromoBanner', () => {
+  it('lazy-loads the artwork at its native size at most, with its space reserved', () => {
+    render(<PromoBanner src="/banner.webp" alt="SnapFit banner" />);
+    const image = screen.getByRole('img', { name: 'SnapFit banner' });
+    expect(image.getAttribute('src')).toBe('/banner.webp');
+    expect(image.getAttribute('loading')).toBe('lazy');
+    expect(image.getAttribute('decoding')).toBe('async');
+    expect([image.getAttribute('width'), image.getAttribute('height')]).toEqual(['699', '335']);
+    expect(image.className).toContain('w-full');
+    expect(image.className).toContain('h-auto');
+    expect(image.closest('figure').className).toContain('max-w-[699px]');
   });
 });
 

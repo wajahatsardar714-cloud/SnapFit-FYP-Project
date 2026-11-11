@@ -19,7 +19,7 @@ function SiteFooter({ brand, footer }) {
       <Container className="grid grid-cols-1 gap-10 py-14 lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] lg:gap-16">
         <div className="min-w-0">
           <Link to="/" aria-label={brand.homeLabel} className="inline-block rounded-lg">
-            <Logo name={brand.name} tone="inverse" />
+            <Logo name={brand.name} />
           </Link>
           <p className="mt-4 max-w-xs break-words text-[0.9375rem] leading-relaxed">{footer.blurb}</p>
         </div>

@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { hero, meta, sections } from '../../content/home';
+import { banners, hero, meta, sections } from '../../content/home';
 import HomePage from './HomePage';
 
 let container;
@@ -82,6 +82,40 @@ describe('HomePage', () => {
     expect(links.map((link) => link.textContent)).toEqual(sections.map((s) => s.title));
     expect(links.map((link) => link.getAttribute('href'))).toEqual(sections.map((s) => `#${s.id}`));
     for (const { id } of sections) expect(section(id)).toBeTruthy();
+  });
+
+  it('shows the two promo banners, lazy-loaded, after the contents and after the integration steps', () => {
+    const [advancedAi, shopperTools] = banners;
+    const first = screen.getByAltText(advancedAi.alt);
+    const second = screen.getByAltText(shopperTools.alt);
+    expect(advancedAi.alt).toMatch(/powered by advanced AI/i);
+    expect(shopperTools.alt).toMatch(/size recommendation, virtual try-on and a live pose guide/i);
+
+    for (const image of [first, second]) {
+      expect(image.getAttribute('loading')).toBe('lazy');
+      expect(image.getAttribute('decoding')).toBe('async');
+      expect(image.getAttribute('width')).toBe('699');
+      expect(image.getAttribute('height')).toBe('335');
+      expect(image.getAttribute('src')).toMatch(/snapfit-banner-[12]\.webp/);
+      expect(image.closest('figure').className).toContain('max-w-[699px]');
+    }
+    expect(first.getAttribute('src')).toMatch(/snapfit-banner-1\.webp/);
+    expect(second.getAttribute('src')).toMatch(/snapfit-banner-2\.webp/);
+
+    const follows = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const toc = screen.getByRole('navigation', { name: 'Table of contents' });
+    const integration = section('integration');
+    const pricing = section('pricing');
+    expect(integration.querySelector('h2').textContent).toBe('How to Integrate SnapFit with Your Online Store');
+    expect(pricing.querySelector('h2').textContent).toBe('SnapFit Pricing Plans');
+
+    // Banner 1: right after the table of contents, before the first section.
+    expect(follows(toc, first)).toBe(true);
+    expect(follows(first, section('what-is-snapfit'))).toBe(true);
+    // Banner 2: after the whole integration section, before the pricing section.
+    expect(integration.contains(second)).toBe(false);
+    expect(follows(integration, second)).toBe(true);
+    expect(follows(second, pricing)).toBe(true);
   });
 
   it('shows the steps as ordered lists', () => {

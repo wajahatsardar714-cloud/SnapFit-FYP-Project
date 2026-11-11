@@ -1,19 +1,22 @@
-import logo from '../../assets/snapfit-logo.png';
+import logo from '../../assets/snapfit-logo.webp';
 
-const SIZE_CLASSES = { md: 'h-8', lg: 'h-11' };
+// The badge is a 190x161 oval; the height sets its size and the width follows.
+// It is shown larger than the old wordmark so the "SnapFit" inside stays readable.
+const SIZE_CLASSES = { md: 'h-12', lg: 'h-20' };
 
 /**
- * The SnapFit logo (shirt mark and wordmark). Wrap it in a link where it
- * should go home.
+ * The SnapFit logo: an oval navy badge (shirt, tape measure and white wordmark)
+ * with a transparent surround, so it sits straight on light, dark and navy
+ * backgrounds without a chip. Wrap it in a link where it should go home.
  *   name  the brand name, for the image's alt text
- *   tone  'default' (light backgrounds) | 'inverse' (navy backgrounds: the
- *         logo sits on a light chip so its navy wordmark stays readable)
- *   size  'md' (header, footer, sidebar) | 'lg' (the sign-in and sign-up forms)
+ *   size  'md' (header, footer) | 'lg' (the sign-in and sign-up forms)
  */
-function Logo({ name, tone = 'default', size = 'md' }) {
-  const image = <img src={logo} alt={name} className={`block w-auto ${SIZE_CLASSES[size]}`} />;
-  if (tone !== 'inverse') return <span className="inline-flex items-center">{image}</span>;
-  return <span className="inline-flex items-center rounded-lg bg-surface px-2.5 py-1.5">{image}</span>;
+function Logo({ name, size = 'md' }) {
+  return (
+    <span className="inline-flex items-center">
+      <img src={logo} alt={name} width={190} height={161} className={`block w-auto ${SIZE_CLASSES[size]}`} />
+    </span>
+  );
 }
 
 export default Logo;

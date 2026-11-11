@@ -4,7 +4,7 @@ import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, BookOpen, Lo
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Badge from '../components/ui/Badge';
-import logo from '../assets/snapfit-logo.png';
+import logo from '../assets/snapfit-logo.webp';
 import { notifyInfo } from '../components/ui/toast';
 import SubscriptionGate from '../components/SubscriptionGate';
 import { PLAN_BADGE_VARIANT, formatPlanName, isSubscribed } from '../utils/plans';
@@ -83,10 +83,8 @@ function DashboardLayout() {
     <div className="flex h-screen overflow-hidden">
       <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface">
         <div className="px-5 py-5">
-          {/* The logo's wordmark is navy, so it sits on a light chip in dark mode too. */}
-          <span className="inline-flex rounded-lg bg-inverse px-2 py-1">
-            <img src={logo} alt="SnapFit" className="block h-7 w-auto" />
-          </span>
+          {/* The oval badge has a transparent surround, so it needs no chip in dark mode. */}
+          <img src={logo} alt="SnapFit" width={190} height={161} className="block h-12 w-auto" />
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">

@@ -47,6 +47,22 @@ export const intro = [
 
 export const tableOfContents = { title: 'Table of contents' };
 
+// Promo banners between the blocks of the page. `after` is the id of the
+// section a banner follows ('contents' = right after the table of contents);
+// HomePage maps each `id` to its image.
+export const banners = [
+  {
+    id: 'advanced-ai',
+    after: 'contents',
+    alt: 'SnapFit, powered by advanced AI: accurate body analysis and realistic try-on, built on modern computer vision, with 33-point body tracking, GPU-powered try-on and multi-frame accuracy.',
+  },
+  {
+    id: 'shopper-tools',
+    after: 'integration',
+    alt: 'SnapFit offers AI size recommendation, virtual try-on and a live pose guide: a smiling shopper in a navy T-shirt beside a phone showing his full-body photo and the recommended size, L.',
+  },
+];
+
 export const sections = [
   {
     id: 'what-is-snapfit',

@@ -4,8 +4,8 @@ import toast from 'react-hot-toast';
 import { ImagePlus } from 'lucide-react';
 import api from '../../services/api';
 import Button from '../../components/ui/Button';
-import {
 import { PageSkeleton } from '../../components/ui/Skeleton';
+import {
   PRODUCT_IMAGE_ACCEPT,
   PRODUCT_IMAGE_HINT,
   resolveProductImageUrl,
