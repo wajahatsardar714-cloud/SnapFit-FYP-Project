@@ -8,3 +8,5 @@ build/
 .vite/
 *.log
 uploads/
+# Try-on debug images (SNAPFIT_TRYON_DEBUG_DIR) hold shoppers' photos
+tryon-debug/

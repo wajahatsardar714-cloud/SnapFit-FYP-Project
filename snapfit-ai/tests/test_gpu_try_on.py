@@ -16,6 +16,7 @@ from app import gpu_try_on, main
 from app.gpu_try_on import (
     FITTED_TOP_TIP,
     INPAINT_STEPS,
+    MASK_ALLOWANCE_PARSED,
     TROUSERS_NEGATIVE_PROMPT,
     TROUSERS_PROMPT,
     GpuTryOn,
@@ -188,39 +189,72 @@ class TestClothingMask:
 
 
 class TestClothesAwareMasks:
-    def test_with_no_clothes_parsed_it_is_the_pose_mask(self, a_pose):
+    def test_with_no_clothes_parsed_it_is_the_body_hugging_pose_mask(self, a_pose):
         lm = a_pose["landmarks"]
         mask, lower = clothes_aware_masks(lm, W, H, _no_clothes())
-        assert np.array_equal(mask, clothing_mask(lm, W, H))
+        assert np.array_equal(mask, clothing_mask(lm, W, H, allowance=MASK_ALLOWANCE_PARSED))
         assert lower.max() == 0
 
-    def test_covers_a_sleeve_wider_than_the_arm(self, a_pose):
+    def test_the_parsed_mask_hugs_the_body_closer_than_the_pose_only_one(self, a_pose):
+        lm = a_pose["landmarks"]
+        tight = (clothing_mask(lm, W, H, allowance=MASK_ALLOWANCE_PARSED) > 0).sum()
+        assert tight < (clothing_mask(lm, W, H) > 0).sum()
+
+    def test_a_sleeve_wider_than_the_arm_is_repainted_not_given_to_catvton(self, a_pose):
         lm = a_pose["landmarks"]
         labels, (x, y) = _wide_left_sleeve(lm)
-        assert clothing_mask(lm, W, H)[y, x] == 0
         mask, lower = clothes_aware_masks(lm, W, H, labels)
-        assert mask[y, x] == 255
-        assert lower.max() == 0
+        assert mask[y, x] == 0
+        assert lower[y, x] == 255
+        # The forearm itself stays CatVTON's, so a half sleeve leaves bare skin.
+        elbow, wrist = _point(lm, "LEFT_ELBOW"), _point(lm, "LEFT_WRIST")
+        fx, fy = ((elbow + wrist) / 2).astype(int)
+        assert mask[fy, fx] == 255
         for finger in ("PINKY", "INDEX", "THUMB"):
             fx, fy = _px(lm[f"LEFT_{finger}"])
             assert mask[fy, fx] == 0
+            assert lower[fy, fx] == 0
 
-    def test_covers_a_flared_kameez_above_the_hem_and_leaves_the_rest_for_trousers(self, a_pose):
+    def test_a_flared_kameez_beyond_the_body_and_below_the_hem_is_repainted(self, a_pose):
         lm = a_pose["landmarks"]
         labels = _kameez()
         hem_row = gpu_try_on._body(lm, W, H).hem_row
         mask, lower = clothes_aware_masks(lm, W, H, labels)
 
-        # The flare just above the hem, wider than the pose mask.
-        flare = (labels > 0) & (clothing_mask(lm, W, H) == 0)
-        flare[hem_row - 5 :, :] = False
+        # The flare above the hem, wider than the mask: repainted, not stretched into.
+        flare = (labels > 0) & (mask == 0)
+        flare[hem_row:, :] = False
         assert flare.any()
-        assert (mask[flare] == 255).all()
-        # Below the hem: none of it for CatVTON, all of it for the trousers.
+        assert (lower[flare] == 255).all()
+        # Below the hem: none of it for CatVTON, all of it repainted.
         assert mask[700, W // 2] == 0
         assert lower[700, W // 2] == 255
-        assert lower[:hem_row].max() == 0
         assert not ((mask > 127) & (lower > 127)).any()
+
+    def test_the_collar_below_the_chin_is_repainted_but_never_the_face(self, a_pose):
+        lm = a_pose["landmarks"]
+        body = gpu_try_on._body(lm, W, H)
+        labels = _top(600)
+        labels[body.chin_row - 40 : body.neck_row + 5, 340:430] = 4
+        x = W // 2
+        # Pose-only, the fixed neck line keeps the collar out.
+        assert clothing_mask(lm, W, H)[body.neck_row - 5, x] == 0
+        mask, _ = clothes_aware_masks(lm, W, H, labels)
+        assert mask[body.neck_row - 5, x] == 255
+        assert mask[: body.chin_row].max() == 0
+
+        labels[body.neck_row - 12 : body.neck_row - 2, 340:430] = 11  # a beard parsed as face
+        mask, lower = clothes_aware_masks(lm, W, H, labels)
+        assert mask[body.neck_row - 7, x] == 0
+        assert lower[body.neck_row - 7, x] == 0
+
+    def test_clothes_not_on_the_shopper_are_left_alone(self, a_pose):
+        lm = a_pose["landmarks"]
+        labels = _top(440)
+        cv2.rectangle(labels, (10, 300), (110, 520), 4, -1)  # a jacket hanging on the wall
+        mask, lower = clothes_aware_masks(lm, W, H, labels)
+        assert mask[300:520, 10:110].max() == 0
+        assert lower[300:520, 10:110].max() == 0
 
     def test_the_face_and_hands_stay_out_whatever_the_parser_says(self, a_pose):
         lm = a_pose["landmarks"]
@@ -235,7 +269,7 @@ class TestClothesAwareMasks:
         labels = _top(440, skirt_to=760)
         assert not wears_long_top(lm, W, H, labels)
         mask, lower = clothes_aware_masks(lm, W, H, labels)
-        assert lower.max() == 0
+        assert lower[600:].max() == 0
         assert mask[700, W // 2] == 0
 
     def test_the_skirt_part_of_a_long_top_counts_as_the_top(self, a_pose):
@@ -403,7 +437,7 @@ class TestGenerateGpuTryOn:
         assert result.tip is None
         assert seen["url"] == "https://gpu.test/tryon"
         assert seen["token"] == "secret-token"
-        assert seen["steps"] == b"40"
+        assert seen["steps"] == b"30"
         assert seen["guidance"] == b"2.5"
         assert _decode(seen["person"]).shape == (H, W, 3)
         assert _decode(seen["mask"], cv2.IMREAD_GRAYSCALE).shape == (H, W)
@@ -473,19 +507,29 @@ class TestGenerateGpuTryOn:
 
         lm = a_pose["landmarks"]
         sent = _decode(seen["mask"], cv2.IMREAD_GRAYSCALE)
-        assert np.array_equal(sent, clothing_mask(lm, W, H, length="long"))
-        assert not np.array_equal(sent, clothing_mask(lm, W, H))
+        long_mask = clothing_mask(lm, W, H, length="long", allowance=MASK_ALLOWANCE_PARSED)
+        assert np.array_equal(sent, long_mask)
+        assert not np.array_equal(sent, clothing_mask(lm, W, H, allowance=MASK_ALLOWANCE_PARSED))
 
-    def test_the_mask_covers_the_shoppers_own_wide_sleeves(self, monkeypatch, a_pose):
+    def test_an_old_server_gets_the_wider_pose_mask(self, monkeypatch, a_pose):
+        seen = {}
+        _patch_transport(monkeypatch, _fake_gpu(seen, missing=("parse", "inpaint")))
+        _run(pose=_pose(a_pose))
+        sent = _decode(seen["mask"], cv2.IMREAD_GRAYSCALE)
+        assert np.array_equal(sent, clothing_mask(a_pose["landmarks"], W, H))
+
+    def test_the_shoppers_own_wide_sleeves_are_repainted(self, monkeypatch, a_pose):
         lm = a_pose["landmarks"]
         labels, (x, y) = _wide_left_sleeve(lm)
         seen = {}
         _patch_transport(monkeypatch, _fake_gpu(seen, labels=[labels, _no_clothes()]))
-        _run(pose=_pose(a_pose))
+        result = _run(pose=_pose(a_pose))
 
-        sent = _decode(seen["mask"], cv2.IMREAD_GRAYSCALE)
-        assert sent[y, x] == 255
-        assert np.array_equal(sent, clothes_aware_masks(lm, W, H, labels)[0])
+        mask, lower = clothes_aware_masks(lm, W, H, labels)
+        assert np.array_equal(_decode(seen["mask"], cv2.IMREAD_GRAYSCALE), mask)
+        assert np.array_equal(_decode(_fields(seen, "inpaint")["mask"], cv2.IMREAD_GRAYSCALE), lower)
+        assert lower[y, x] == 255
+        assert tuple(int(v) for v in _decode(result.image)[y, x]) == pytest.approx(TROUSER_GREEN, abs=30)
 
     def test_parsed_labels_map_back_to_a_letterboxed_photo_unblended(self, monkeypatch, a_pose):
         # 1200x900 is letterboxed top and bottom into the model's frame; the
@@ -677,9 +721,69 @@ class TestGenerateGpuTryOn:
         assert _paths(seen) == ["parse"]
 
     def test_the_whole_try_on_fits_in_what_the_backend_and_phone_wait(self):
-        # Both wait 150 s (backend aiService AI_TRY_ON_TIMEOUT_MS, the phone's
-        # receiveTimeout); the local warp fallback needs a few seconds after.
-        assert gpu_try_on.TRY_ON_BUDGET_SECONDS <= 145
+        # Both wait 180 s (backend aiService AI_TRY_ON_TIMEOUT_MS, the phone's
+        # receiveTimeout); the local warp fallback and the backend's own work
+        # need some seconds after.
+        assert gpu_try_on.TRY_ON_BUDGET_SECONDS <= 165
+
+    def test_a_deadline_from_the_request_start_is_honoured(self, monkeypatch, a_pose):
+        seen = {}
+        _patch_transport(monkeypatch, _fake_gpu(seen))
+        with pytest.raises(TryOnError, match="GPU_TIMEOUT"):
+            _run(pose=_pose(a_pose), deadline=time.monotonic() + 1)
+        assert _paths(seen) == []
+
+    def test_a_dropped_first_parse_is_tried_once_more(self, monkeypatch, a_pose):
+        drops = []
+
+        def drop_once(request):
+            if not drops:
+                drops.append(request)
+                raise httpx.ReadError("tunnel dropped it", request=request)
+            return None
+
+        seen = {}
+        fake = _fake_gpu(seen, labels=[_kameez(), _no_clothes()])
+        _patch_transport(monkeypatch, lambda request: drop_once(request) or fake(request))
+        _run(pose=_pose(a_pose))
+        assert _paths(seen) == ["parse", "tryon", "inpaint", "parse"]
+        assert len(drops) == 1
+
+    def test_a_parse_timeout_is_not_retried(self, monkeypatch, a_pose):
+        def slow(request):
+            raise httpx.ReadTimeout("busy", request=request)
+
+        seen = {}
+        _patch_transport(monkeypatch, _fake_gpu(seen, broken={"parse": slow}))
+        _run(pose=_pose(a_pose))
+        assert _paths(seen) == ["parse", "tryon"]
+
+    def test_the_gpu_is_used_by_one_try_on_at_a_time(self, monkeypatch, a_pose):
+        held = []
+        fake = _fake_gpu({})
+
+        def handler(request):
+            held.append(gpu_try_on._gpu_turn.locked())
+            return fake(request)
+
+        _patch_transport(monkeypatch, handler)
+        _run(pose=_pose(a_pose))
+        assert held and all(held)
+        assert not gpu_try_on._gpu_turn.locked()
+
+    def test_debug_mode_saves_the_masks_and_results(self, monkeypatch, a_pose, tmp_path):
+        monkeypatch.setenv(gpu_try_on.DEBUG_DIR_ENV, str(tmp_path))
+        _patch_transport(monkeypatch, _fake_gpu({}, labels=[_kameez(), _no_clothes()]))
+        _run(pose=_pose(a_pose))
+        names = sorted(path.name.split("-", 2)[2] for path in tmp_path.iterdir())
+        assert names == ["1-clothes.png", "2-masks.jpg", "3-catvton.jpg", "4-repainted.jpg"]
+
+    def test_debug_mode_is_off_by_default(self, monkeypatch, a_pose, tmp_path):
+        monkeypatch.delenv(gpu_try_on.DEBUG_DIR_ENV, raising=False)
+        monkeypatch.chdir(tmp_path)
+        _patch_transport(monkeypatch, _fake_gpu({}))
+        _run(pose=_pose(a_pose))
+        assert list(tmp_path.iterdir()) == []
 
     def test_unconfigured(self, monkeypatch, a_pose):
         monkeypatch.delenv("TRYON_GPU_URL", raising=False)

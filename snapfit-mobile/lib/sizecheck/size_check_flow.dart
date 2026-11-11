@@ -207,8 +207,8 @@ class _SizeCheckFlowState extends State<SizeCheckFlow> {
         options: Options(
           headers: {if (target.apiKey != null) 'x-api-key': target.apiKey},
           extra: {if (target.apiKey != null) 'noAuth': true},
-          // The GPU try-on can take up to a minute.
-          receiveTimeout: const Duration(seconds: 150),
+          // The GPU try-on can take two to three minutes; the backend waits 180 s.
+          receiveTimeout: const Duration(seconds: 180),
           sendTimeout: const Duration(seconds: 60),
           validateStatus: (_) => true,
         ),

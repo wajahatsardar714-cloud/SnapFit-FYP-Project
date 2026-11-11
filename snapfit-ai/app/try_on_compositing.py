@@ -71,13 +71,15 @@ GATE_FULL = 15.0
 GATE_NONE = 25.0
 # Share of the gap to the product's colour that is closed. Chroma mostly (the
 # drift is the model's; a little of its response to the scene's colour cast
-# stays). Lightness half: the product photo is studio-lit, while the
-# garment's lightness should follow the shopper's scene exposure.
+# stays). Lightness a quarter, capped low: the product photo is studio-lit,
+# while the garment's lightness should follow the shopper's scene exposure,
+# and lifting a white garment toward the photo's white flattened its shading
+# into a pasted-on look.
 CHROMA_STRENGTH = 0.8
-LIGHTNESS_STRENGTH = 0.5
+LIGHTNESS_STRENGTH = 0.25
 # Caps per correction, so a mis-measured garment cannot be repainted wholesale.
 MAX_CHROMA_SHIFT = 20.0
-MAX_LIGHTNESS_SHIFT = 15.0
+MAX_LIGHTNESS_SHIFT = 8.0
 
 
 def _resize(image, size):

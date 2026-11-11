@@ -2,9 +2,10 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 const AI_REQUEST_TIMEOUT_MS = 30000;
-// A photorealistic try-on runs on a remote GPU (10-70 s), so requests that ask
-// for one get longer. Must exceed the AI service's own GPU timeout.
-const AI_TRY_ON_TIMEOUT_MS = 150000;
+// A photorealistic try-on runs on a remote GPU (about 60-150 s with the clothes
+// check and repaint), so requests that ask for one get longer. Must exceed the
+// AI service's own GPU budget (TRY_ON_BUDGET_SECONDS, 160 s).
+const AI_TRY_ON_TIMEOUT_MS = 180000;
 
 class AiServiceError extends Error {
   // details: extra structured data some codes carry, e.g. POSE_INVALID's list of

@@ -43,7 +43,7 @@ describe('analyzeImage request', () => {
     const body = form.getBuffer().toString();
     expect(formField(body, 'try_on_product_id')).toBe('SKU-1');
     expect(formField(body, 'merchant_id')).toBe('m1');
-    expect(options.timeout).toBe(150000);
+    expect(options.timeout).toBe(180000);
   });
 });
 

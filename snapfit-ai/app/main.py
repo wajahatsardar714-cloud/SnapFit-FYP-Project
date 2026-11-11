@@ -21,7 +21,7 @@ from app.config import (
     USER_HEIGHT_MIN_CM,
 )
 from app.feature_engine import calculate_features
-from app.gpu_try_on import generate_gpu_try_on, gpu_health, gpu_try_on_config
+from app.gpu_try_on import TRY_ON_BUDGET_SECONDS, generate_gpu_try_on, gpu_health, gpu_try_on_config
 from app.measurement_engine import estimate_measurements
 from app.multi_frame import combine_landmarks
 from app.photo_quality import photo_tips
@@ -148,11 +148,13 @@ async def _usable_frame_landmarks(frames, image_dimensions):
 TRY_ON_ERROR_STATUS = {"TRYON_NOT_AVAILABLE": 404, "BACKEND_UNREACHABLE": 502, "PRODUCT_IMAGE_UNREACHABLE": 502}
 
 
-async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
+async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0, started=None):
     """{"image": data URL, "engine": "catvton" | "warp"}, plus "tip":
     "FITTED_TOP" when the GPU model's result still shows the shopper's own top
     (no "tip" key otherwise, and never for the warp). Uses the remote GPU
     model when configured and falls back to the local warp if it fails.
+    started (time.monotonic() of the request's start) starts the GPU's time
+    budget, so it counts everything the request did before.
     Raises TryOnError with a code when neither can produce an image."""
     try:
         anchor_points, product_image_url, garment_length, sleeve_length = await fetch_product_anchor_data(
@@ -170,7 +172,13 @@ async def _render_try_on(image_bytes, pose, merchant_id, product_id, ease=1.0):
     if gpu_try_on_config():
         try:
             result_bytes, tip = await generate_gpu_try_on(
-                image_bytes, product_image_bytes, pose, ease, length=garment_length, sleeves=sleeve_length
+                image_bytes,
+                product_image_bytes,
+                pose,
+                ease,
+                length=garment_length,
+                sleeves=sleeve_length,
+                deadline=started + TRY_ON_BUDGET_SECONDS if started is not None else None,
             )
             engine = "catvton"
         except TryOnError as e:
@@ -211,6 +219,7 @@ async def analyze(
     _validate_sizing_inputs(user_height, clothing_fit)
     if len(frames) > MAX_EXTRA_FRAMES:
         raise HTTPException(status_code=400, detail="TOO_MANY_FRAMES")
+    started = time.monotonic()
     image_bytes = await image.read()
 
     validation = validate_image(image_bytes)
@@ -257,7 +266,7 @@ async def analyze(
     try_on_result = None
     if try_on_product_id and merchant_id:
         try:
-            try_on_result = await _render_try_on(image_bytes, pose, merchant_id, try_on_product_id, garment_ease(match))
+            try_on_result = await _render_try_on(image_bytes, pose, merchant_id, try_on_product_id, garment_ease(match), started)
         except TryOnError as e:
             try_on_result = {"error": str(e).split(":")[0]}
 
@@ -300,6 +309,7 @@ async def try_on(
     product_id: str = Form(...),
     merchant_id: str = Form(...),
 ):
+    started = time.monotonic()
     image_bytes = await image.read()
 
     validation = validate_image(image_bytes)
@@ -314,7 +324,7 @@ async def try_on(
         raise _pose_invalid_exception(e)
 
     try:
-        return await _render_try_on(image_bytes, pose, merchant_id, product_id)
+        return await _render_try_on(image_bytes, pose, merchant_id, product_id, started=started)
     except TryOnError as e:
         code = str(e).split(":")[0]
         raise HTTPException(status_code=TRY_ON_ERROR_STATUS.get(code, 422), detail=code)

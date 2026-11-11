@@ -130,9 +130,16 @@ free-plan warning page never gets in the way.
 - GPU memory (one T4, 16 GB): CatVTON, the inpaint pipeline and SegFormer
   together use about 5–6 GB for weights and up to about 11–12 GB while a
   768x1024 job runs. Jobs run one at a time (a lock), so they never add up.
-- Time on a T4: ~15–35 s per try-on (30–40 steps), ~1 s per `/parse`,
-  ~10–20 s per `/inpaint` (30 steps). A try-on that also needs a kameez
-  repaint therefore takes about 30–55 s.
+- Measured on a Kaggle T4 through ngrok (2026-11-11): `/tryon` took 83–97 s
+  at 40 steps, `/inpaint` about 22 s at 30 steps, `/parse` a few seconds.
+  SnapFit now asks for 30 and 20 steps. All GPU calls of one size check share
+  a 160 s budget from the request's start (the backend and the phone wait
+  180 s); optional steps are skipped when it runs short, and SnapFit sends one
+  try-on at a time.
+- Tuning: set `SNAPFIT_TRYON_DEBUG_DIR=tryon-debug` in `snapfit-ai/.env` and
+  each GPU try-on saves its clothes map, masks (red: CatVTON, blue: repaint)
+  and results there. Use it with test photos only and empty the folder after:
+  the images contain the photo. Leave it unset otherwise.
 - SnapFit sends the photo letterboxed to 768x1024 (so the server's crop cuts
   nothing), then colour-corrects the generated garment toward the product
   photo and blends only the clothing region back into the shopper's own photo
