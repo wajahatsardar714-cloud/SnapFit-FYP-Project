@@ -40,7 +40,7 @@ class AuthFormScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
                 child: Column(
                   children: [
-                    const Logo(height: 44),
+                    const Logo(height: 88),
                     const SizedBox(height: 28),
                     FadeSlideIn(
                       child: Container(

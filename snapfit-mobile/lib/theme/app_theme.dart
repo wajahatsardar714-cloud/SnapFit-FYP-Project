@@ -88,7 +88,22 @@ ThemeData buildTheme(Brightness brightness) {
       titleTextStyle: snapText(size: 16, weight: FontWeight.w600, color: c.foreground),
       shape: Border(bottom: BorderSide(color: c.border)),
     ),
-    drawerTheme: DrawerThemeData(backgroundColor: c.surface, surfaceTintColor: Colors.transparent),
+    drawerTheme: DrawerThemeData(
+      // An opaque surface: the drawer floats over the page, so it must hide
+      // it. Drawers that tint their background pass it through c.solid().
+      backgroundColor: c.surface,
+      surfaceTintColor: Colors.transparent,
+      // In dark mode the drawer's shadow is invisible on the dark page, so
+      // the page behind is dimmed a little more and the drawer gets a
+      // hairline edge (the Material 3 drawer shape, plus a border).
+      scrimColor: brightness == Brightness.dark ? const Color(0x99000000) : null,
+      shape: brightness == Brightness.dark
+          ? RoundedRectangleBorder(
+              borderRadius: const BorderRadiusDirectional.horizontal(end: Radius.circular(16)),
+              side: BorderSide(color: c.border),
+            )
+          : null,
+    ),
     cardTheme: CardThemeData(
       color: c.surface,
       surfaceTintColor: Colors.transparent,

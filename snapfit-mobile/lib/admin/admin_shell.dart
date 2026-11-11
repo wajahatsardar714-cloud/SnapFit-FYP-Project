@@ -78,7 +78,9 @@ class _AdminDrawer extends StatelessWidget {
     final c = context.colors;
     final email = '${context.watch<AuthState>().merchant?['email'] ?? ''}';
     return Drawer(
-      backgroundColor: c.adminSoft,
+      // adminSoft is translucent in dark mode; made solid so the page under
+      // the drawer does not show through its menu.
+      backgroundColor: c.solid(c.adminSoft),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1,30 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../theme/snap_colors.dart';
+const _logoAsset = 'assets/images/snapfit-logo.webp';
 
-const _logoAsset = 'assets/images/snapfit-logo.png';
-
-/// The SnapFit logo (shirt mark and wordmark), the same image as the website.
-/// [height] sets its size. In dark mode it sits on a light chip so the navy
-/// wordmark stays readable.
+/// The SnapFit logo: the round navy badge with the shirt, the tape measure
+/// and the wordmark. [height] sets its size. The badge carries its own navy
+/// background, so it reads the same in light and dark mode.
 class Logo extends StatelessWidget {
-  const Logo({super.key, this.height = 36});
+  const Logo({super.key, this.height = 56});
 
   final double height;
 
   @override
   Widget build(BuildContext context) {
-    final image = Image.asset(
-      _logoAsset,
-      height: height,
-      filterQuality: FilterQuality.medium,
-      semanticLabel: 'SnapFit',
-    );
-    if (Theme.of(context).brightness == Brightness.light) return image;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: context.colors.inverse, borderRadius: BorderRadius.circular(8)),
-      child: image,
-    );
+    return Image.asset(_logoAsset, height: height, filterQuality: FilterQuality.medium, semanticLabel: 'SnapFit');
   }
 }

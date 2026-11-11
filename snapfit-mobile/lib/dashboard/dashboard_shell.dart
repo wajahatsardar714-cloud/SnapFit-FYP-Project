@@ -239,7 +239,11 @@ class _DashboardDrawer extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                 child: Row(
                   children: [
-                    Icon(nav.icon, size: 18, color: locked ? c.muted : (active ? c.primary : c.mutedForeground)),
+                    Icon(
+                      nav.icon,
+                      size: 18,
+                      color: locked ? c.muted : (active ? c.activeForeground : c.mutedForeground),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -247,7 +251,7 @@ class _DashboardDrawer extends StatelessWidget {
                         style: snapText(
                           size: 14,
                           weight: active ? FontWeight.w500 : FontWeight.w400,
-                          color: locked ? c.muted : (active ? c.primary : c.foreground),
+                          color: locked ? c.muted : (active ? c.activeForeground : c.foreground),
                         ),
                       ),
                     ),
@@ -269,7 +273,7 @@ class _DashboardDrawer extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-              child: const Align(alignment: Alignment.centerLeft, child: Logo(height: 30)),
+              child: const Align(alignment: Alignment.centerLeft, child: Logo(height: 56)),
             ),
             Expanded(child: ListView(children: [for (final nav in _navItems) item(nav)])),
             Divider(color: c.border),
@@ -304,9 +308,16 @@ class _DashboardDrawer extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                     child: Row(
                       children: [
-                        Icon(LucideIcons.settings, size: 18, color: settingsActive ? c.primary : c.mutedForeground),
+                        Icon(
+                          LucideIcons.settings,
+                          size: 18,
+                          color: settingsActive ? c.activeForeground : c.mutedForeground,
+                        ),
                         const SizedBox(width: 12),
-                        Text('Settings', style: snapText(size: 14, color: settingsActive ? c.primary : c.foreground)),
+                        Text(
+                          'Settings',
+                          style: snapText(size: 14, color: settingsActive ? c.activeForeground : c.foreground),
+                        ),
                       ],
                     ),
                   ),

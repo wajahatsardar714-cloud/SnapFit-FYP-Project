@@ -9,6 +9,7 @@ class SnapColors extends ThemeExtension<SnapColors> {
     required this.primaryHover,
     required this.primarySoft,
     required this.primaryForeground,
+    required this.activeForeground,
     required this.link,
     required this.background,
     required this.surface,
@@ -40,6 +41,11 @@ class SnapColors extends ThemeExtension<SnapColors> {
   final Color primaryHover;
   final Color primarySoft;
   final Color primaryForeground;
+
+  /// Text and icons of a selected navigation item on [primarySoft]. In dark
+  /// mode the soft fill is a translucent blue, and plain [primary] on it is
+  /// too dim to read, so the lighter link blue is used there.
+  final Color activeForeground;
   final Color link;
   final Color background;
   final Color surface;
@@ -71,6 +77,7 @@ class SnapColors extends ThemeExtension<SnapColors> {
     primaryHover: Color(0xFF1A56C7),
     primarySoft: Color(0xFFEAF2FF),
     primaryForeground: Color(0xFFFFFFFF),
+    activeForeground: Color(0xFF377DFF),
     link: Color(0xFF1F64E0),
     background: Color(0xFFF8FAFC),
     surface: Color(0xFFFFFFFF),
@@ -103,6 +110,7 @@ class SnapColors extends ThemeExtension<SnapColors> {
     primaryHover: Color(0xFF5A93FF),
     primarySoft: Color(0x29377DFF),
     primaryForeground: Color(0xFFFFFFFF),
+    activeForeground: Color(0xFF7AA7FF),
     link: Color(0xFF7AA7FF),
     background: Color(0xFF121212),
     surface: Color(0xFF1C1C1C),
@@ -142,6 +150,7 @@ class SnapColors extends ThemeExtension<SnapColors> {
       primaryHover: mix(primaryHover, other.primaryHover),
       primarySoft: mix(primarySoft, other.primarySoft),
       primaryForeground: mix(primaryForeground, other.primaryForeground),
+      activeForeground: mix(activeForeground, other.activeForeground),
       link: mix(link, other.link),
       background: mix(background, other.background),
       surface: mix(surface, other.surface),
@@ -169,6 +178,14 @@ class SnapColors extends ThemeExtension<SnapColors> {
       adminForeground: mix(adminForeground, other.adminForeground),
     );
   }
+}
+
+extension SnapColorsSolid on SnapColors {
+  /// [fill] laid over [surface] as one opaque colour. The dark "soft" tokens
+  /// are translucent (they tint whatever is under them, as on the web); a
+  /// sheet such as a drawer that floats over the page needs a solid colour,
+  /// or the page shows through it. Opaque colours come back unchanged.
+  Color solid(Color fill) => Color.alphaBlend(fill, surface);
 }
 
 extension SnapColorsContext on BuildContext {
