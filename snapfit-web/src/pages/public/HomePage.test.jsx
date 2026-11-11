@@ -26,13 +26,30 @@ describe('HomePage', () => {
   });
 
   it('has the H1 and hero buttons that link to register and login', () => {
-    const heroRegion = screen.getByRole('region', { name: hero.title });
+    const heroRegion = screen.getByRole('region', { name: `${hero.brandTitle} ${hero.title}` });
     expect(within(heroRegion).getByRole('heading', { level: 1 }).textContent).toBe(
-      'AI Clothing Size Estimation and Recommendation for Online Stores'
+      'SnapFit AI Clothing Size Estimation and Recommendation for Online Stores'
     );
     expect(within(heroRegion).getByRole('link', { name: 'Get Started' }).getAttribute('href')).toBe('/signup');
     expect(within(heroRegion).getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/signin');
     expect(within(heroRegion).getByText(meta.description)).toBeTruthy();
+  });
+
+  it('shows the hero as: name and title, logo, buttons, then the description', () => {
+    const heroRegion = screen.getByRole('region', { name: `${hero.brandTitle} ${hero.title}` });
+    const heading = within(heroRegion).getByRole('heading', { level: 1 });
+    expect(within(heading).getByText('SnapFit').className).toContain('type-h1');
+    expect(within(heading).getByText(hero.title).className).not.toContain('type-h1');
+    const order = [
+      heading,
+      within(heroRegion).getByRole('img', { name: 'SnapFit' }),
+      within(heroRegion).getByRole('link', { name: 'Get Started' }),
+      within(heroRegion).getByRole('link', { name: 'Log In' }),
+      within(heroRegion).getByText(meta.description),
+    ];
+    for (let i = 1; i < order.length; i += 1) {
+      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 
   it('renders every H2 with its eyebrow, in a section the nav can link to', () => {

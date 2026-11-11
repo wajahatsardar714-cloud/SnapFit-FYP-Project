@@ -54,7 +54,7 @@ function AccountActions({ nav, className, buttonClassName = '' }) {
 }
 
 /**
- * Sticky white site header: logo, navigation and, when signed in, the account
+ * Sticky white site header: logo and name, navigation and, when signed in, the account
  * button. Below lg the links and button move into a toggle menu (closes on
  * navigation and Escape).
  *   brand  { name, homeLabel }
@@ -79,8 +79,9 @@ function SiteHeader({ brand, nav }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface">
       <Container className="flex h-16 items-center justify-between gap-4">
-        <Link to="/" aria-label={brand.homeLabel} className="shrink-0 rounded-lg">
+        <Link to="/" aria-label={brand.homeLabel} className="flex shrink-0 items-center gap-2 rounded-lg">
           <Logo name={brand.name} />
+          <span className="text-xl font-extrabold tracking-tight text-foreground">{brand.name}</span>
         </Link>
 
         <nav aria-label={nav.navLabel} className="hidden lg:block">

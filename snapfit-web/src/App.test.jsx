@@ -43,9 +43,16 @@ describe('public routes', () => {
   it('renders the homepage at / inside the site header and footer', async () => {
     renderAt('/');
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'AI Clothing Size Estimation and Recommendation for Online Stores' })
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'SnapFit AI Clothing Size Estimation and Recommendation for Online Stores',
+      })
     ).toBeTruthy();
     expect(header()).toBeTruthy();
+    // The header shows the name beside the logo, both linking home.
+    const home = within(header()).getByRole('link', { name: 'SnapFit home' });
+    expect(within(home).getByRole('img', { name: 'SnapFit' })).toBeTruthy();
+    expect(within(home).getByText('SnapFit')).toBeTruthy();
     expect(screen.getByRole('contentinfo')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Skip to main content' }).getAttribute('href')).toBe('#main-content');
   });
@@ -225,7 +232,9 @@ describe('the two ways in', () => {
 
   it('the hero buttons open the bare forms, without the site header or footer', async () => {
     renderAt('/');
-    const hero = await screen.findByRole('region', { name: 'AI Clothing Size Estimation and Recommendation for Online Stores' });
+    const hero = await screen.findByRole('region', {
+      name: 'SnapFit AI Clothing Size Estimation and Recommendation for Online Stores',
+    });
     fireEvent.click(within(hero).getByRole('link', { name: 'Log In' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Log In' })).toBeTruthy();
     expect(screen.getByLabelText('Business email')).toBeTruthy();

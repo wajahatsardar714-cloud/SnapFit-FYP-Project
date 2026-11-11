@@ -26,7 +26,10 @@ export const meta = {
   ],
 };
 
+// The H1 reads "SnapFit AI Clothing Size Estimation and Recommendation for
+// Online Stores": the name large, the title as a smaller line under it.
 export const hero = {
+  brandTitle: 'SnapFit',
   title: 'AI Clothing Size Estimation and Recommendation for Online Stores',
   description:
     'Help shoppers find the right clothing size with SnapFit AI clothing size estimation. Integrate photo-based sizing into your online store.',

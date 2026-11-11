@@ -6,6 +6,7 @@ import CtaBanner from '../../components/public/CtaBanner';
 import FaqAccordion from '../../components/public/FaqAccordion';
 import FeatureCard from '../../components/public/FeatureCard';
 import Hero from '../../components/public/Hero';
+import Logo from '../../components/public/Logo';
 import { usePageMeta } from '../../components/public/PageMeta';
 import PricingCard from '../../components/public/PricingCard';
 import PromoBanner from '../../components/public/PromoBanner';
@@ -16,6 +17,7 @@ import SizingMock from '../../components/public/SizingMock';
 import StepList from '../../components/public/StepList';
 import TableOfContents from '../../components/public/TableOfContents';
 import { banners, hero, intro, meta, sections, tableOfContents } from '../../content/home';
+import { brand } from '../../content/site';
 
 // How each content `layout` renders inside its Section (see content/home.js).
 const LAYOUTS = {
@@ -72,7 +74,18 @@ function HomePage() {
 
   return (
     <>
-      <Hero {...hero} visual={<SizingMock labels={hero.visualLabels} />} />
+      <Hero
+        {...hero}
+        badge={
+          // A white circle behind the navy badge, so it stands out on the navy hero.
+          <span className="inline-flex h-[153px] w-[153px] items-center justify-center rounded-full bg-inverse shadow-card md:h-[170px] md:w-[170px]">
+            <Logo name={brand.name} size="xl" />
+          </span>
+        }
+        actionsFirst
+        centered
+        visual={<SizingMock labels={hero.visualLabels} />}
+      />
 
       <Section>
         <Prose paragraphs={intro} />
