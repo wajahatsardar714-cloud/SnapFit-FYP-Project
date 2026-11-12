@@ -29,6 +29,8 @@ export const contactEmailLink = { text: CONTACT_EMAIL, to: `mailto:${CONTACT_EMA
 export const brand = {
   name: 'SnapFit',
   homeLabel: 'SnapFit home',
+  // The login and sign-up screens' way back to the public site.
+  backHome: 'Back to home',
 };
 
 export const header = {
