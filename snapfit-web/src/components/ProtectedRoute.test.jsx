@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import toast from 'react-hot-toast';
 import api, { setAccountSuspendedHandler, setSubscriptionRequiredHandler } from '../services/api';
@@ -19,6 +19,12 @@ const SUSPENDED = 'This account has been suspended. Contact support.';
 const MERCHANT = { _id: 'm1', email: 'shop@test.com', businessName: 'Shop', role: 'merchant', status: 'active' };
 const ADMIN = { _id: 'a1', email: 'admin@test.com', businessName: 'SnapFit', role: 'superadmin', status: 'active' };
 
+// Where the router is, so a test can see the exact page a deep link reached.
+function Where() {
+  const { pathname, search, hash } = useLocation();
+  return <p data-testid="where">{`${pathname}${search}${hash}`}</p>;
+}
+
 function renderApp(path) {
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -31,6 +37,7 @@ function renderApp(path) {
             element={
               <ProtectedRoute role={ROLES.MERCHANT}>
                 <p>Merchant home</p>
+                <Where />
               </ProtectedRoute>
             }
           />
@@ -39,6 +46,7 @@ function renderApp(path) {
             element={
               <ProtectedRoute role={ROLES.SUPER_ADMIN}>
                 <p>Admin home</p>
+                <Where />
               </ProtectedRoute>
             }
           />
@@ -112,6 +120,40 @@ describe('ProtectedRoute roles', () => {
     renderApp('/admin');
     expect(await screen.findByRole('heading', { level: 1, name: 'Log In' })).toBeTruthy();
   });
+});
+
+describe('deep links into the signed-in areas', () => {
+  it('bring a signed-out visitor back to the exact page after logging in', async () => {
+    api.post.mockResolvedValue({ data: { token: 'jwt', merchant: MERCHANT } });
+    renderApp('/dashboard/analytics?range=30d#usage');
+    await logIn();
+    expect((await screen.findByTestId('where')).textContent).toBe('/dashboard/analytics?range=30d#usage');
+  });
+
+  it('survive a reload of the login page (the page is in ?next=)', async () => {
+    api.post.mockResolvedValue({ data: { token: 'jwt', merchant: ADMIN } });
+    renderApp(`/signin?next=${encodeURIComponent('/admin/merchants/m1')}`);
+    await logIn();
+    expect((await screen.findByTestId('where')).textContent).toBe('/admin/merchants/m1');
+  });
+
+  it("still send each role to its own area when the link is the other role's", async () => {
+    api.post.mockResolvedValue({ data: { token: 'jwt', merchant: MERCHANT } });
+    renderApp(`/signin?next=${encodeURIComponent('/admin/merchants')}`);
+    await logIn();
+    expect(await screen.findByText('Merchant home')).toBeTruthy();
+    expect(screen.queryByText('Admin home')).toBeNull();
+  });
+
+  it.each(['//evil.example/login', '/\\evil.example', 'https://evil.example', 'dashboard'])(
+    'ignore a next that is not a page on this site (%s)',
+    async (next) => {
+      api.post.mockResolvedValue({ data: { token: 'jwt', merchant: MERCHANT } });
+      renderApp(`/signin?next=${encodeURIComponent(next)}`);
+      await logIn();
+      expect((await screen.findByTestId('where')).textContent).toBe('/dashboard');
+    }
+  );
 });
 
 describe('suspension during a session', () => {

@@ -31,7 +31,7 @@ function SiteFooter({ brand, footer }) {
       </Container>
       <div className="border-t border-inverse/10">
         <Container className="py-6">
-          <p className="text-sm">{copyright}</p>
+          <p className="text-center text-sm">{copyright}</p>
         </Container>
       </div>
     </footer>

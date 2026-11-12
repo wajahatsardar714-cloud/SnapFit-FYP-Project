@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { homePathFor } from '../../utils/roles';
+import { returnPathFrom } from '../../utils/returnPath';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
@@ -12,12 +13,15 @@ const PASSWORD_HELP_ID = 'password-help';
 
 /**
  * The login form: business email, password with show/hide, remember me and a
- * forgot-password note. Sends the account to its home (dashboard or admin).
+ * forgot-password note. Sends the account back to the page it was sent here
+ * from (?next=, a deep link), else to its home (dashboard or admin); the route
+ * guards still send each role to its own area.
  *   passwordHelp  RichText shown by "Forgot password?" (see content/auth.js)
  */
 function LoginForm({ passwordHelp }) {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { search } = useLocation();
   const [form, setForm] = useState({ email: '', password: '', remember: true });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -34,7 +38,7 @@ function LoginForm({ passwordHelp }) {
     setSubmitting(true);
     try {
       const account = await login(form.email, form.password, { remember: form.remember });
-      navigate(homePathFor(account));
+      navigate(returnPathFrom(search) ?? homePathFor(account), { replace: true });
     } catch (err) {
       setFormError(err.response?.data?.message || 'Invalid email or password.');
     } finally {
