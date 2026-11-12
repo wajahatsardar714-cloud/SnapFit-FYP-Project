@@ -1,4 +1,5 @@
 import {
+  ChartColumn,
   CodeXml,
   Gauge,
   CircleHelp,
@@ -28,4 +29,5 @@ export const ICONS = {
   ruler: Ruler,
   help: CircleHelp,
   growth: TrendingUp,
+  chart: ChartColumn,
 };

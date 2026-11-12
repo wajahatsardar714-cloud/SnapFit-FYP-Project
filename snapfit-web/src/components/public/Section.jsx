@@ -11,8 +11,8 @@ const TONE_CLASSES = {
 /**
  * A page section: vertical rhythm, the full-width container and (when `title` is
  * given) a centred SectionHeading labelling the <section>.
- *   id             section id: the deep-link target (its heading gets `${id}-title`
- *                  and a "#" link to it; items inside derive their ids from it)
+ *   id             section id: the deep-link target (its heading gets `${id}-title`;
+ *                  items inside derive their ids from it)
  *   eyebrow, title, intro   passed to SectionHeading
  *   tone           'default' (page grey) | 'surface' (white), to alternate
  *   className      extra classes on the <section>
@@ -25,7 +25,7 @@ function Section({ id, eyebrow, title, intro, tone = 'default', className = '', 
         {/* Heading and content fade up as each scrolls into view. */}
         {title && (
           <Reveal>
-            <SectionHeading id={headingId} anchor={id} eyebrow={eyebrow} title={title} intro={intro} />
+            <SectionHeading id={headingId} eyebrow={eyebrow} title={title} intro={intro} />
           </Reveal>
         )}
         {children && (

@@ -71,14 +71,16 @@ describe('deep links', () => {
     expect(slugify("Use Your Store's Size Charts")).toBe('use-your-store-s-size-charts');
   });
 
-  it('gives sections a "#" link and their items their own ids', async () => {
+  it('gives sections and their items their own ids, with no "#" link beside the headings', async () => {
     renderAt('/guide');
     const main = await pageMain();
 
-    const anchor = within(main).getByRole('link', { name: 'Link to the section How SnapFit Works' });
-    const sectionId = anchor.getAttribute('href').slice(1);
-    expect(document.getElementById(sectionId).tagName).toBe('SECTION');
-    expect(document.getElementById(`${sectionId}-${slugify('Body Landmark Detection')}`)).not.toBeNull();
+    const heading = within(main).getByRole('heading', { level: 2, name: 'How SnapFit Works' });
+    const section = heading.closest('section');
+    expect(section.id).not.toBe('');
+    expect(document.getElementById(`${section.id}-${slugify('Body Landmark Detection')}`)).not.toBeNull();
+    expect(within(main).queryAllByRole('link', { name: /^Link to the section/ })).toEqual([]);
+    expect(within(main).queryAllByText('#')).toEqual([]);
   });
 
   it.each(['/', '/pricing', '/guide', '/login', '/register', '/privacy', '/terms', '/cookies'])(

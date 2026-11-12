@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import App from '../../App';
 import { paragraph } from '../../test/text';
@@ -84,7 +84,8 @@ async function renderAt(path) {
 describe.each(PAGES)('legal page at $path', (page) => {
   it('sets the SEO title and description', async () => {
     await renderAt(page.path);
-    expect(document.title).toBe(page.title);
+    // The lazy page sets them in an effect, which can run just after its H1 appears.
+    await waitFor(() => expect(document.title).toBe(page.title));
     expect(document.head.querySelector('meta[name="description"]').getAttribute('content')).toBe(page.description);
   });
 

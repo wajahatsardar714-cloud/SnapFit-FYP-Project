@@ -151,8 +151,10 @@ describe('HomePage', () => {
         expect(icon.parentElement.lastElementChild).toBe(icon);
       }
     }
-    expect(section('features').querySelectorAll('article')).toHaveLength(7);
-    expect(section('benefits').querySelectorAll('article')).toHaveLength(5);
+    expect(section('features').querySelectorAll('article')).toHaveLength(6);
+    expect(within(section('features')).queryByText('Simple Product Page Experience')).toBeNull();
+    expect(section('benefits').querySelectorAll('article')).toHaveLength(6);
+    expect(within(section('benefits')).getByRole('heading', { level: 3, name: 'Learn from Sizing Insights' })).toBeTruthy();
   });
 
   it('pairs the 8 pros and cons row by row', () => {

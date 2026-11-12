@@ -185,14 +185,6 @@ export const sections = [
           'This approach can support custom e-commerce websites and compatible platforms such as Shopify, provided the required integration is implemented. The integration process should follow the actual API documentation and the technical requirements of each store.',
         ],
       },
-      {
-        icon: 'click',
-        title: 'Simple Product Page Experience',
-        paragraphs: [
-          'Customers should be able to access sizing assistance without navigating away from the product they want to purchase.',
-          'With the appropriate integration, a Size Estimation button can appear on supported product pages. The shopper can then follow the sizing workflow and return to the purchase decision with a recommendation.',
-        ],
-      },
     ],
   },
   {
@@ -242,6 +234,14 @@ export const sections = [
         paragraphs: [
           'As an online store expands, maintaining a consistent sizing experience across products can become more complicated. An API-based sizing service can help retailers incorporate sizing assistance into their existing customer journey.',
           "SnapFit's subscription plans are intended to serve different business requirements, with plan selection based on the actual features, usage allowances, and integration needs offered.",
+        ],
+      },
+      {
+        icon: 'chart',
+        title: 'Learn from Sizing Insights',
+        paragraphs: [
+          'Each size check adds to a picture of how shoppers use sizing assistance. The SnapFit dashboard shows recommendations over time, how often each size is suggested, confidence levels, and how shoppers rate the fit.',
+          'Retailers can use these insights to spot patterns that suggest a size chart may need review, alongside their own sales, feedback, and return data.',
         ],
       },
     ],
