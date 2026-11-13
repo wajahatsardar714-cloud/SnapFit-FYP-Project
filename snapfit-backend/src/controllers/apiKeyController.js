@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const Merchant = require('../models/Merchant');
+const { notify } = require('../services/notify');
 
 const MAX_GENERATION_ATTEMPTS = 5;
 
@@ -66,6 +67,7 @@ async function regenerateApiKey(req, res) {
     }
 
     await assignUniqueApiKey(merchant);
+    await notify(merchant, 'security.api_key_regenerated');
 
     return res.status(200).json({ apiKey: merchant.apiKey });
   } catch (err) {

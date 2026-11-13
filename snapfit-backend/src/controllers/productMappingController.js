@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const ProductMapping = require('../models/ProductMapping');
 const SizeChart = require('../models/SizeChart');
+const { notify } = require('../services/notify');
 const { productImageUrlPath, removeFile, removeProductImage } = require('../utils/productImageUpload');
 
 const REQUIRED_ANCHOR_POINTS = ['shoulderLeft', 'shoulderRight', 'hipLeft', 'hipRight'];
@@ -213,6 +214,7 @@ async function saveAnchorPoints(req, res) {
       return res.status(400).json({ message: 'A product image is required' });
     }
 
+    const wasReady = tryOnStatus(mapping) === 'ready';
     const previousImage = mapping.productImage;
     if (req.file) {
       mapping.productImage = productImageUrlPath(req.file);
@@ -221,6 +223,12 @@ async function saveAnchorPoints(req, res) {
     await mapping.save();
 
     if (req.file) await removeProductImage(previousImage);
+    // Anchor points are the last step that makes a product try-on ready.
+    if (!wasReady && tryOnStatus(mapping) === 'ready') {
+      await notify(req.merchant.merchantId, 'product.tryon_ready', {
+        data: { productId: mapping.productId, productName: mapping.productName },
+      });
+    }
 
     return res.status(200).json({ mapping: serializeMapping(mapping) });
   } catch (err) {

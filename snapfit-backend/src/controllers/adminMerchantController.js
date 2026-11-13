@@ -9,6 +9,10 @@ const { assignUniqueApiKey, maskApiKey } = require('./apiKeyController');
 const { deleteMerchantWithData } = require('./merchantController');
 const { tryOnStatus } = require('./productMappingController');
 const { PLANS } = require('../config/plans');
+const { notify } = require('../services/notify');
+const { issueReceiptSafely } = require('../services/receipts');
+const { refreshAlerts } = require('../services/subscriptionAlerts');
+const { formatDate } = require('../utils/formatDate');
 
 const { MERCHANTS_ONLY } = Merchant;
 const { EXCLUDE_DEMO } = Recommendation;
@@ -184,6 +188,29 @@ async function getMerchant(req, res) {
 
 const SUBSCRIPTION_FIELDS = ['plan', 'status', 'requestsLimit', 'endDate', 'resetUsage'];
 
+function sameTime(a, b) {
+  return (a ? new Date(a).getTime() : null) === (b ? new Date(b).getTime() : null);
+}
+
+// What an admin edit changed, in words for the merchant's notification.
+function describeSubscriptionChanges(before, after, usageReset) {
+  const changes = [];
+  if (before.plan !== after.plan) changes.push(`your plan is now ${PLANS[after.plan]?.name || after.plan}`);
+  if (before.status !== after.status) changes.push(`your plan status is now ${after.status}`);
+  if (before.requestsLimit !== after.requestsLimit) {
+    changes.push(
+      after.requestsLimit == null
+        ? 'you now have unlimited requests'
+        : `your monthly request limit is now ${after.requestsLimit}`
+    );
+  }
+  if (!sameTime(before.endDate, after.endDate)) {
+    changes.push(after.endDate ? `your plan now ends on ${formatDate(after.endDate)}` : 'your plan no longer has an end date');
+  }
+  if (usageReset) changes.push('your request count was reset to 0');
+  return changes;
+}
+
 async function updateSubscription(req, res) {
   if (sendValidationError(req, res)) return undefined;
   const body = req.body;
@@ -205,13 +232,23 @@ async function updateSubscription(req, res) {
   if (has('requestsLimit')) subscription.requestsLimit = body.requestsLimit === null ? null : Number(body.requestsLimit);
   if (has('endDate')) subscription.endDate = body.endDate === null ? null : new Date(body.endDate);
   if (body.resetUsage) subscription.requestsUsed = 0;
+  // Reminders already sent may need to go out again under the new terms.
+  refreshAlerts(subscription, { endDateChanged: !sameTime(before.endDate, subscription.endDate) });
 
   try {
     await merchant.save();
-    await recordAudit(req, 'merchant.subscription.update', merchant, {
-      before,
-      after: subscriptionSnapshot(subscription),
-    });
+    const after = subscriptionSnapshot(subscription);
+    await recordAudit(req, 'merchant.subscription.update', merchant, { before, after });
+
+    // A new plan gets a receipt; the merchant hears about every change.
+    const receipt = before.plan !== after.plan ? await issueReceiptSafely(merchant, 'admin_change') : null;
+    const changes = describeSubscriptionChanges(before, after, Boolean(body.resetUsage));
+    if (changes.length) {
+      await notify(merchant, 'subscription.admin_updated', {
+        data: { changes, receiptId: receipt?._id, receiptNumber: receipt?.number },
+      });
+    }
+    if (body.resetUsage) await notify(merchant, 'usage.reset');
 
     return res.status(200).json({ merchant: await summarizeMerchant(merchant) });
   } catch (err) {
@@ -236,6 +273,11 @@ async function updateStatus(req, res) {
       previousStatus,
       ...(suspending && reason && { reason }),
     });
+    if (previousStatus !== status) {
+      await notify(merchant, suspending ? 'account.suspended' : 'account.reactivated', {
+        data: { reason: merchant.suspendedReason },
+      });
+    }
 
     return res.status(200).json({ merchant: await summarizeMerchant(merchant) });
   } catch (err) {
@@ -250,6 +292,7 @@ async function regenerateApiKey(req, res) {
   try {
     await assignUniqueApiKey(merchant);
     await recordAudit(req, 'merchant.apiKey.regenerate', merchant, { replacedExistingKey });
+    await notify(merchant, 'security.api_key_regenerated', { data: { byAdmin: true } });
 
     return res.status(200).json({ apiKey: merchant.apiKey });
   } catch (err) {
@@ -283,6 +326,7 @@ async function resetPassword(req, res) {
     merchant.password = await bcrypt.hash(req.body.password, 12);
     await merchant.save();
     await recordAudit(req, 'merchant.password.reset', merchant);
+    await notify(merchant, 'account.password_reset_by_admin');
 
     return res.status(200).json({ message: 'Password reset' });
   } catch (err) {

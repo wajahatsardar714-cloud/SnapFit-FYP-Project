@@ -34,6 +34,16 @@ const merchantSchema = new mongoose.Schema(
       endDate: { type: Date },
       requestsLimit: { type: Number },
       requestsUsed: { type: Number, default: 0 },
+      // When each one-off reminder for the current period went out (unset = not
+      // yet), so usage and expiry notifications go out once per billing month.
+      // Cleared when a plan is chosen again, usage is reset or the end date
+      // changes.
+      alerts: {
+        usage80At: { type: Date },
+        usage100At: { type: Date },
+        expiring7dAt: { type: Date },
+        expiring1dAt: { type: Date },
+      },
     },
     isVerified: { type: Boolean, default: false },
     // Accounts created before roles existed load with these defaults, so they
@@ -42,6 +52,10 @@ const merchantSchema = new mongoose.Schema(
     status: { type: String, enum: ['active', 'suspended'], default: 'active' },
     suspendedAt: { type: Date },
     suspendedReason: { type: String },
+    // Notification type -> false when the account has muted it. Mongoose maps
+    // can't hold '.' in a key, so the type's dots are stored as ':' (e.g.
+    // 'usage:80'). Important types can't be muted -- see services/notify.
+    notificationPreferences: { type: Map, of: Boolean },
   },
   { timestamps: true }
 );

@@ -1,5 +1,8 @@
 const Merchant = require('../models/Merchant');
 const { PLANS } = require('../config/plans');
+const { isSubscriptionActive } = require('../middlewares/subscriptionMiddleware');
+const { issueReceiptSafely } = require('../services/receipts');
+const { notify, notifyAdmins } = require('../services/notify');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -20,6 +23,8 @@ async function selectPlan(req, res) {
       return res.status(404).json({ message: 'Merchant not found' });
     }
 
+    // Choosing a plan while one is running is a change; otherwise a new start.
+    const wasActive = isSubscriptionActive(merchant.subscription);
     const now = new Date();
     merchant.subscription = {
       plan,
@@ -31,6 +36,20 @@ async function selectPlan(req, res) {
     };
 
     await merchant.save();
+
+    const receipt = await issueReceiptSafely(merchant, wasActive ? 'plan_changed' : 'plan_selected');
+    const data = {
+      planName: PLANS[plan].name,
+      endDate: merchant.subscription.endDate,
+      receiptId: receipt?._id,
+      receiptNumber: receipt?.number,
+    };
+    await Promise.all([
+      notify(merchant, wasActive ? 'subscription.changed' : 'subscription.activated', { data }),
+      notifyAdmins('admin.plan_selected', {
+        data: { ...data, merchantId: merchant._id, businessName: merchant.businessName, email: merchant.email },
+      }),
+    ]);
 
     return res.status(200).json({ subscription: merchant.subscription });
   } catch (err) {
@@ -70,6 +89,7 @@ async function cancelSubscription(req, res) {
 
     merchant.subscription.status = 'inactive';
     await merchant.save();
+    await notify(merchant, 'subscription.cancelled', { data: { planName: PLANS[merchant.subscription.plan]?.name } });
 
     return res.status(200).json({ subscription: merchant.subscription });
   } catch (err) {

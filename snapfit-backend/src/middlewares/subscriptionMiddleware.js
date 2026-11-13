@@ -20,4 +20,4 @@ async function requireActiveSubscription(req, res, next) {
   }
 }
 
-module.exports = { requireActiveSubscription };
+module.exports = { requireActiveSubscription, isSubscriptionActive };

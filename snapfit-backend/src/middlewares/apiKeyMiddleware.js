@@ -1,4 +1,5 @@
 const Merchant = require('../models/Merchant');
+const { checkUsageAlerts } = require('../services/subscriptionAlerts');
 
 async function resolveMerchant(req, res, { countUsage }) {
   const apiKey = req.headers['x-api-key'];
@@ -38,6 +39,8 @@ async function resolveMerchant(req, res, { countUsage }) {
     }
     subscription.requestsUsed += 1;
     await merchant.save();
+    // 80% / 100% of the monthly quota: tell the merchant (once a month).
+    await checkUsageAlerts(merchant);
   }
 
   return merchant;

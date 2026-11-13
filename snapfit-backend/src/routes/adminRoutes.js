@@ -6,6 +6,7 @@ const { getDemoProduct } = require('../controllers/adminDemoController');
 const { createHandoffSession, getHandoffStatus, getHandoffPhoto } = require('../controllers/handoffController');
 const Merchant = require('../models/Merchant');
 const { PLAN_IDS } = require('../config/plans');
+const Announcement = require('../models/Announcement');
 const { uploadShopperPhoto, MAX_EXTRA_FRAMES } = require('../utils/shopperPhotoUpload');
 const {
   listMerchants,
@@ -21,6 +22,12 @@ const {
 const { getOverview, getAnalytics, exportAnalytics } = require('../controllers/adminAnalyticsController');
 const { recommend } = require('../controllers/recommendController');
 const { tryOn } = require('../controllers/tryOnController');
+const {
+  createAnnouncement,
+  listAnnouncements,
+  cancelAnnouncement,
+} = require('../controllers/adminAnnouncementController');
+const { adminListReceipts, adminGetReceiptPdf, adminVoidReceipt } = require('../controllers/receiptController');
 
 const SUBSCRIPTION_STATUSES = Merchant.schema.path('subscription.status').enumValues;
 const ACCOUNT_STATUSES = Merchant.schema.path('status').enumValues;
@@ -99,6 +106,64 @@ const passwordValidation = [
     .withMessage('Password must be at least 8 characters'),
 ];
 
+// In-app links are paths inside the dashboard, never another site.
+const IN_APP_LINK = /^\/(?![/\\])\S*$/;
+
+const announcementValidation = [
+  body('title')
+    .isString()
+    .withMessage('title is required')
+    .trim()
+    .isLength({ min: 1, max: 120 })
+    .withMessage('title must be 1 to 120 characters'),
+  body('body')
+    .isString()
+    .withMessage('body is required')
+    .trim()
+    .isLength({ min: 1, max: 2000 })
+    .withMessage('body must be 1 to 2000 characters'),
+  body('link')
+    .optional({ values: 'falsy' })
+    .isString()
+    .withMessage('link must be an in-app path starting with "/"')
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('link must be at most 500 characters')
+    .matches(IN_APP_LINK)
+    .withMessage('link must be an in-app path starting with "/"'),
+  body('audience').isObject().withMessage('audience is required'),
+  body('audience.type')
+    .isIn(Announcement.AUDIENCE_TYPES)
+    .withMessage(`audience.type must be one of: ${Announcement.AUDIENCE_TYPES.join(', ')}`),
+  body('audience.plans')
+    .if(body('audience.type').equals('plan'))
+    .isArray({ min: 1 })
+    .withMessage('Choose at least one plan'),
+  body('audience.plans.*')
+    .if(body('audience.type').equals('plan'))
+    .isIn(PLAN_IDS)
+    .withMessage(`plans must be from: ${PLAN_IDS.join(', ')}`),
+  body('audience.merchantIds')
+    .if(body('audience.type').equals('merchants'))
+    .isArray({ min: 1, max: 1000 })
+    .withMessage('Choose at least one merchant'),
+  body('audience.merchantIds.*')
+    .if(body('audience.type').equals('merchants'))
+    .isMongoId()
+    .withMessage('merchantIds must be merchant ids'),
+  body('scheduledAt')
+    .optional({ values: 'falsy' })
+    .isISO8601({ strict: true })
+    .withMessage('scheduledAt must be an ISO 8601 date')
+    .bail()
+    .custom((value) => new Date(value).getTime() > Date.now())
+    .withMessage('scheduledAt must be in the future'),
+];
+
+const receiptListValidation = [
+  singleQuery('merchantId').optional({ values: 'falsy' }).isMongoId().withMessage('merchantId must be a merchant id'),
+];
+
 const analyticsValidation = [
   singleQuery('days').optional().isInt({ min: 1, max: 365 }).withMessage('days must be an integer between 1 and 365').toInt(),
 ];
@@ -121,6 +186,16 @@ router.get('/analytics', analyticsValidation, getAnalytics);
 router.get('/analytics/export', exportAnalytics);
 
 router.get('/audit-log', paginationValidation(100), getAuditLog);
+
+// Announcements and receipts use their own param names, so the merchant :id
+// loader above never runs for them.
+router.post('/announcements', announcementValidation, createAnnouncement);
+router.get('/announcements', listAnnouncements);
+router.post('/announcements/:announcementId/cancel', cancelAnnouncement);
+
+router.get('/receipts', receiptListValidation, adminListReceipts);
+router.get('/receipts/:receiptId/pdf', adminGetReceiptPdf);
+router.post('/receipts/:receiptId/void', adminVoidReceipt);
 
 // The demo studio: the public widget endpoints on SnapFit's own demo store and
 // product (from the server's .env), without an API key and never billed --

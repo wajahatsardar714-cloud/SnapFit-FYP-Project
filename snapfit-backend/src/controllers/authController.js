@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const Merchant = require('../models/Merchant');
 const { ACCOUNT_SUSPENDED_MESSAGE } = require('../middlewares/authMiddleware');
+const { notify, notifyAdmins } = require('../services/notify');
 
 const JWT_EXPIRY = '7d';
 
@@ -47,6 +48,13 @@ async function register(req, res) {
     });
 
     const token = generateToken(merchant);
+
+    await Promise.all([
+      notify(merchant, 'account.welcome'),
+      notifyAdmins('admin.merchant_signed_up', {
+        data: { merchantId: merchant._id, businessName: merchant.businessName, email: merchant.email },
+      }),
+    ]);
 
     return res.status(201).json({ token, merchant: sanitizeMerchant(merchant) });
   } catch (err) {

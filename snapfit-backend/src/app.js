@@ -14,6 +14,9 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const handoffRoutes = require('./routes/handoffRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const deviceRoutes = require('./routes/deviceRoutes');
+const receiptRoutes = require('./routes/receiptRoutes');
 const { PRODUCTS_DIR } = require('./utils/productImageUpload');
 
 const app = express();
@@ -65,5 +68,8 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/handoff', handoffRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/devices', deviceRoutes);
+app.use('/api/receipts', receiptRoutes);
 
 module.exports = app;

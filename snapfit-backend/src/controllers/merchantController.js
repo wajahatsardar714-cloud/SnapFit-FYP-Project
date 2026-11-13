@@ -6,6 +6,9 @@ const SizeChart = require('../models/SizeChart');
 const ProductMapping = require('../models/ProductMapping');
 const Recommendation = require('../models/Recommendation');
 const Feedback = require('../models/Feedback');
+const Notification = require('../models/Notification');
+const DeviceToken = require('../models/DeviceToken');
+const { notify } = require('../services/notify');
 const { removeProductImage } = require('../utils/productImageUpload');
 
 function sanitizeMerchant(merchant) {
@@ -14,7 +17,9 @@ function sanitizeMerchant(merchant) {
 }
 
 // Deletes a merchant together with everything they own: size charts, product
-// mappings (and their stored product photos), recommendations and feedback.
+// mappings (and their stored product photos), recommendations, feedback,
+// notifications and push device tokens. Receipts are kept: they are a record
+// of the subscription and carry their own copy of the merchant's details.
 async function deleteMerchantWithData(merchantId) {
   const productImages = (await ProductMapping.find({ merchantId, productImage: { $ne: null } }).select('productImage'))
     .map((mapping) => mapping.productImage);
@@ -26,6 +31,8 @@ async function deleteMerchantWithData(merchantId) {
       await ProductMapping.deleteMany({ merchantId }, { session });
       await Recommendation.deleteMany({ merchantId }, { session });
       await Feedback.deleteMany({ merchantId }, { session });
+      await Notification.deleteMany({ recipient: merchantId }, { session });
+      await DeviceToken.deleteMany({ merchant: merchantId }, { session });
       await Merchant.deleteOne({ _id: merchantId }, { session });
     });
   } finally {
@@ -85,6 +92,7 @@ async function changePassword(req, res) {
 
     merchant.password = await bcrypt.hash(newPassword, 12);
     await merchant.save();
+    await notify(merchant, 'account.password_changed');
 
     return res.status(200).json({ message: 'Password updated' });
   } catch (err) {

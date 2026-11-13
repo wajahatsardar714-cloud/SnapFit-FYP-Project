@@ -7,7 +7,7 @@ const auditLogSchema = new mongoose.Schema(
     adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'Merchant', required: true },
     adminEmail: { type: String, required: true },
     action: { type: String, required: true },
-    targetType: { type: String, enum: ['merchant'], required: true },
+    targetType: { type: String, enum: ['merchant', 'announcement', 'receipt'], required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
     targetLabel: { type: String },
     details: { type: mongoose.Schema.Types.Mixed },
