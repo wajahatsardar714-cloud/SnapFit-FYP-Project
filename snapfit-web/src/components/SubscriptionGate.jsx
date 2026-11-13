@@ -19,7 +19,7 @@ function SubscriptionGate({ children }) {
         variant="warning"
         title="An active subscription is required"
         description="Choose a plan to unlock size charts, products, your API key and analytics."
-        className="mb-6"
+        className="mb-6 print:hidden"
       />
       {children}
     </>

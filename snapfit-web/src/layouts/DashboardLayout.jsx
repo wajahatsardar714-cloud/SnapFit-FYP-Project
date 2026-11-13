@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, BookOpen, LogOut, Bell, Settings, ChevronDown, Moon, Sun, Lock } from 'lucide-react';
+import { LayoutDashboard, CreditCard, KeyRound, Package, BarChart3, BookOpen, LogOut, ReceiptText, Settings, ChevronDown, Moon, Sun, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Badge from '../components/ui/Badge';
 import logo from '../assets/snapfit-logo.webp';
-import { notifyInfo } from '../components/ui/toast';
+import NotificationBell from '../components/notifications/NotificationBell';
 import SubscriptionGate from '../components/SubscriptionGate';
 import { PLAN_BADGE_VARIANT, formatPlanName, isSubscribed } from '../utils/plans';
 import { isPathLockedFor } from '../utils/subscriptionAccess';
@@ -13,6 +13,7 @@ import { isPathLockedFor } from '../utils/subscriptionAccess';
 const navItems = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
   { label: 'Subscription', to: '/dashboard/subscription', icon: CreditCard },
+  { label: 'Receipts', to: '/dashboard/receipts', icon: ReceiptText },
   { label: 'API Key', to: '/dashboard/api-key', icon: KeyRound },
   { label: 'Size Charts', to: '/dashboard/size-charts', icon: Package },
   { label: 'Analytics', to: '/dashboard/analytics', icon: BarChart3 },
@@ -52,6 +53,7 @@ function getInitials(name) {
 // Dashboard item.
 function getPageTitle(pathname) {
   if (pathname.startsWith('/dashboard/settings')) return 'Settings';
+  if (pathname.startsWith('/dashboard/notifications')) return 'Notifications';
   const match = [...navItems]
     .sort((a, b) => b.to.length - a.to.length)
     .find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)));
@@ -80,8 +82,8 @@ function DashboardLayout() {
   const isSettingsActive = location.pathname.startsWith('/dashboard/settings');
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface">
+    <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
+      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface print:hidden">
         <div className="px-5 py-5">
           {/* The oval badge has a transparent surround, so it needs no chip in dark mode. */}
           <img src={logo} alt="SnapFit" width={190} height={161} className="block h-12 w-auto" />
@@ -133,8 +135,8 @@ function DashboardLayout() {
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-6">
+      <div className="flex flex-1 flex-col print:block">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-6 print:hidden">
           <h1 className="text-base font-semibold text-foreground">{pageTitle}</h1>
 
           <div className="flex items-center gap-2">
@@ -146,14 +148,7 @@ function DashboardLayout() {
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button
-              type="button"
-              onClick={() => notifyInfo("You're all caught up — no new notifications.")}
-              className="rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
-              aria-label="Notifications"
-            >
-              <Bell size={18} />
-            </button>
+            <NotificationBell basePath="/dashboard" />
 
             <div className="relative">
               <button
@@ -204,8 +199,8 @@ function DashboardLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-background">
-          <div className="mx-auto max-w-7xl p-8">
+        <main className="flex-1 overflow-y-auto bg-background print:overflow-visible print:bg-surface">
+          <div className="mx-auto max-w-7xl p-8 print:max-w-none print:p-0">
             <SubscriptionGate>
               {/* Each page fades in as it replaces the last. */}
               <div key={location.pathname} className="animate-fade-in">

@@ -9,6 +9,8 @@ import {
   setMerchantStatus,
   updateSubscription,
 } from '../../services/adminApi';
+import { downloadAdminReceiptPdf, listMerchantReceipts, voidReceipt } from '../../services/receiptsApi';
+import { saveBlob } from '../../utils/download';
 import AdminMerchantDetailPage from './AdminMerchantDetailPage';
 
 vi.mock('../../services/adminApi', () => ({
@@ -20,6 +22,12 @@ vi.mock('../../services/adminApi', () => ({
   resetMerchantPassword: vi.fn(),
   deleteMerchant: vi.fn(),
 }));
+vi.mock('../../services/receiptsApi', () => ({
+  listMerchantReceipts: vi.fn(),
+  downloadAdminReceiptPdf: vi.fn(),
+  voidReceipt: vi.fn(),
+}));
+vi.mock('../../utils/download', () => ({ saveBlob: vi.fn() }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../../components/ui/toast', () => ({ notifyInfo: vi.fn() }));
 
@@ -52,9 +60,24 @@ function renderPage() {
 
 const limitsForm = () => screen.findByRole('form', { name: 'Plan and limits' });
 
+const RECEIPT = {
+  _id: 'r1',
+  number: 'SF-2026-000003',
+  status: 'issued',
+  issuedAt: '2026-11-01T00:00:00.000Z',
+  plan: 'small',
+  planName: 'Small',
+  periodStart: '2026-11-01T00:00:00.000Z',
+  periodEnd: '2026-12-01T00:00:00.000Z',
+  currency: 'USD',
+  amount: 29,
+  total: 29,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   getMerchant.mockResolvedValue(detail());
+  listMerchantReceipts.mockResolvedValue({ receipts: [RECEIPT] });
   updateSubscription.mockImplementation(async (_id, body) => ({
     merchant: { ...MERCHANT, subscription: { ...MERCHANT.subscription, ...body } },
   }));
@@ -187,5 +210,49 @@ describe('AdminMerchantDetailPage products', () => {
     expect(old.getByText('regular')).toBeTruthy();
     expect(old.getAllByText('—')).toHaveLength(2);
     expect(screen.getByText('Sleeves')).toBeTruthy();
+  });
+});
+
+describe('AdminMerchantDetailPage receipts', () => {
+  const receiptRow = async () => within((await screen.findByText('SF-2026-000003')).closest('tr'));
+
+  it("lists the merchant's receipts", async () => {
+    renderPage();
+    const row = await receiptRow();
+    expect(listMerchantReceipts).toHaveBeenCalledWith('m1');
+    expect(row.getByText('Small')).toBeTruthy();
+    expect(row.getByText('$29.00')).toBeTruthy();
+    expect(row.getByText('Issued')).toBeTruthy();
+  });
+
+  it('downloads a receipt PDF', async () => {
+    const blob = new Blob(['%PDF']);
+    downloadAdminReceiptPdf.mockResolvedValue({ blob, filename: 'SnapFit-receipt-SF-2026-000003.pdf' });
+    renderPage();
+
+    fireEvent.click((await receiptRow()).getByRole('button', { name: 'Download PDF of SF-2026-000003' }));
+
+    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(blob, 'SnapFit-receipt-SF-2026-000003.pdf'));
+    expect(downloadAdminReceiptPdf).toHaveBeenCalledWith('r1', 'SF-2026-000003');
+  });
+
+  it('voids a receipt after confirming', async () => {
+    voidReceipt.mockResolvedValue({ receipt: { ...RECEIPT, status: 'void', voidedAt: '2026-11-13T00:00:00.000Z' } });
+    renderPage();
+
+    fireEvent.click((await receiptRow()).getByRole('button', { name: 'Void SF-2026-000003' }));
+    expect(voidReceipt).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Void receipt' }));
+
+    await waitFor(() => expect(voidReceipt).toHaveBeenCalledWith('r1'));
+    const row = await receiptRow();
+    expect(await row.findByText('Void')).toBeTruthy();
+    expect(row.queryByRole('button', { name: 'Void SF-2026-000003' })).toBeNull();
+  });
+
+  it('shows when there are no receipts', async () => {
+    listMerchantReceipts.mockResolvedValue({ receipts: [] });
+    renderPage();
+    expect(await screen.findByText('No receipts issued yet.')).toBeTruthy();
   });
 });

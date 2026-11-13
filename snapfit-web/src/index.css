@@ -69,6 +69,19 @@
   }
 }
 
+/* Printing (e.g. a receipt): plain paper margins and no page background;
+   the dashboard chrome hides itself with print:hidden. */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: transparent !important;
+  }
+}
+
 /* Type scale (mobile first, desktop from md). Used by the public site and the
    auth pages; dashboards keep their denser utility sizes. */
 @layer components {

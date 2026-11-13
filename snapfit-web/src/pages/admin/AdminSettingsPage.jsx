@@ -2,6 +2,7 @@ import { ShieldCheck } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import { useAuth } from '../../context/AuthContext';
 import { AppearanceTab } from '../dashboard/SettingsPage';
+import NotificationPreferences from '../../components/notifications/NotificationPreferences';
 
 function AdminSettingsPage() {
   const { merchant } = useAuth();
@@ -9,10 +10,12 @@ function AdminSettingsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold text-foreground">Settings</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Appearance and account details for the admin console.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Appearance, notifications and account details for the admin console.</p>
 
       <div className="mt-6 grid max-w-3xl grid-cols-1 gap-6">
         <AppearanceTab />
+
+        <NotificationPreferences />
 
         <Card>
           <Card.Header>

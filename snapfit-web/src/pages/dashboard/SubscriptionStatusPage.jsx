@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ReceiptText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -139,6 +140,11 @@ function SubscriptionStatusPage() {
           </Button>
         </div>
       </Card>
+
+      <Link to="/dashboard/receipts" className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium">
+        <ReceiptText size={16} aria-hidden="true" />
+        View your receipts
+      </Link>
 
       <ConfirmModal
         open={cancelOpen}

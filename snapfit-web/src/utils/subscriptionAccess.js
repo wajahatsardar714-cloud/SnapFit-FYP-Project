@@ -4,8 +4,9 @@ import { ROLES, roleOf } from './roles';
 export const PLAN_SELECTION_PATH = '/dashboard/subscription/plans';
 
 // The dashboard areas a merchant can use before subscribing (logout lives in
-// the header menu, so it is always reachable).
-const UNLOCKED_PATHS = ['/dashboard/subscription', '/dashboard/settings'];
+// the header menu, so it is always reachable). Receipts and notifications stay
+// open too, so a lapsed merchant can still read them.
+const UNLOCKED_PATHS = ['/dashboard/subscription', '/dashboard/settings', '/dashboard/receipts', '/dashboard/notifications'];
 
 export function isPathUnlocked(pathname) {
   return UNLOCKED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

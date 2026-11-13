@@ -2,10 +2,19 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardLayout from './DashboardLayout';
+import { getUnreadCount } from '../services/notificationsApi';
 
 const auth = { merchant: null, logout: vi.fn() };
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }));
 vi.mock('../context/ThemeContext', () => ({ useTheme: () => ({ theme: 'light', toggleTheme: vi.fn() }) }));
+vi.mock('../services/notificationsApi', () => ({
+  NOTIFICATIONS_CHANGED_EVENT: 'snapfit:notifications-changed',
+  emitNotificationsChanged: vi.fn(),
+  getUnreadCount: vi.fn(() => Promise.resolve({ unreadCount: 0 })),
+  listNotifications: vi.fn(() => Promise.resolve({ notifications: [], unreadCount: 0, page: 1, limit: 8, total: 0 })),
+  markNotificationRead: vi.fn(() => Promise.resolve({})),
+  markAllNotificationsRead: vi.fn(() => Promise.resolve({ updated: 0 })),
+}));
 
 const BANNER = 'An active subscription is required';
 
@@ -31,6 +40,8 @@ const PAGES = {
   analytics: 'Analytics page',
   docs: 'Docs page',
   settings: 'Settings page',
+  receipts: 'Receipts page',
+  notifications: 'Notifications page',
 };
 
 function renderAt(path) {
@@ -71,6 +82,8 @@ describe('subscription gate', () => {
     ['/dashboard/subscription', 'Subscription page'],
     ['/dashboard/subscription/plans', 'Plan selection page'],
     ['/dashboard/settings', 'Settings page'],
+    ['/dashboard/receipts', 'Receipts page'],
+    ['/dashboard/notifications', 'Notifications page'],
   ])('lets an unsubscribed merchant open %s', (path, text) => {
     renderAt(path);
     expect(screen.getByText(text)).toBeTruthy();
@@ -108,6 +121,7 @@ describe('sidebar', () => {
       expect(item.getAttribute('title')).toBe('Subscribe to unlock');
     }
     expect(sidebar().getByRole('link', { name: 'Subscription' }).getAttribute('href')).toBe('/dashboard/subscription');
+    expect(sidebar().getByRole('link', { name: 'Receipts' }).getAttribute('href')).toBe('/dashboard/receipts');
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.getByText('Inactive')).toBeTruthy();
   });
@@ -121,11 +135,31 @@ describe('sidebar', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/dashboard',
       '/dashboard/subscription',
+      '/dashboard/receipts',
       '/dashboard/api-key',
       '/dashboard/size-charts',
       '/dashboard/analytics',
       '/dashboard/docs',
     ]);
     expect(screen.getByText('Medium')).toBeTruthy();
+  });
+});
+
+describe('header', () => {
+  it('has the notification bell with the unread count, and titles the notifications page', async () => {
+    getUnreadCount.mockResolvedValueOnce({ unreadCount: 3 });
+    auth.merchant = SUBSCRIBED;
+    renderAt('/dashboard/notifications');
+
+    expect(await screen.findByRole('button', { name: 'Notifications, 3 unread' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Notifications' })).toBeTruthy();
+  });
+
+  it('keeps the sidebar and header off printed pages', () => {
+    auth.merchant = SUBSCRIBED;
+    renderAt('/dashboard/receipts');
+    expect(screen.getByText('Receipts page')).toBeTruthy();
+    expect(screen.getByRole('navigation').closest('aside').className).toContain('print:hidden');
+    expect(screen.getByRole('banner').className).toContain('print:hidden');
   });
 });

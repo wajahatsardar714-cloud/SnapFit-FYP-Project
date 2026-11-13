@@ -12,6 +12,7 @@ import UsageBar from './components/UsageBar';
 import LimitsEditor from './merchant/LimitsEditor';
 import ApiKeyCard from './merchant/ApiKeyCard';
 import AccountActions from './merchant/AccountActions';
+import MerchantReceipts from './merchant/MerchantReceipts';
 import { RECOMMENDATION_STATUS_VARIANT, capitalize, formatDate, formatDateTime, formatNumber, humanize } from './adminFormat';
 
 const TH = 'px-4 py-2.5';
@@ -141,6 +142,10 @@ function AdminMerchantDetailPage() {
           <ApiKeyCard merchant={merchant} apiKeyPreview={apiKeyPreview} onRegenerated={load} onRevoked={applyMerchant} />
           <AccountActions merchant={merchant} onUpdated={applyMerchant} />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <MerchantReceipts merchantId={id} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">

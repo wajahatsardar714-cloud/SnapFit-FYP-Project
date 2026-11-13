@@ -5,6 +5,7 @@ import {
   FlaskConical,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Menu,
   Moon,
   ScrollText,
@@ -16,10 +17,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import NotificationBell from '../components/notifications/NotificationBell';
 
 const navItems = [
   { label: 'Overview', to: '/admin', icon: LayoutDashboard, end: true },
   { label: 'Merchants', to: '/admin/merchants', icon: Store },
+  { label: 'Announcements', to: '/admin/announcements', icon: Megaphone },
   { label: 'Analytics', to: '/admin/analytics', icon: BarChart3 },
   { label: 'Demo Studio', to: '/admin/demo', icon: FlaskConical },
   { label: 'Audit Log', to: '/admin/audit-log', icon: ScrollText },
@@ -31,6 +34,7 @@ const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visibl
 // Longest prefix first, so /admin/merchants/:id reads "Merchants" rather than
 // falling through to the exact-match Overview item.
 function getPageTitle(pathname) {
+  if (pathname.startsWith('/admin/notifications')) return 'Notifications';
   const match = [...navItems]
     .sort((a, b) => b.to.length - a.to.length)
     .find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)));
@@ -151,14 +155,17 @@ function AdminLayout() {
             <SuperAdminBadge />
           </div>
 
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className={`rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-surface-2 ${FOCUS_RING}`}
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className={`rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-surface-2 ${FOCUS_RING}`}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <NotificationBell basePath="/admin" buttonClassName={FOCUS_RING} />
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto bg-background">

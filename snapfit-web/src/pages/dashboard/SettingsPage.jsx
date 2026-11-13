@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { AlertTriangle, KeyRound, Moon, Palette, Sun, User } from 'lucide-react';
+import { AlertTriangle, Bell, KeyRound, Moon, Palette, Sun, User } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -10,12 +11,14 @@ import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
 import Modal from '../../components/ui/Modal';
+import NotificationPreferences from '../../components/notifications/NotificationPreferences';
 
 const BUSINESS_TYPE_OPTIONS = ['clothing', 'footwear', 'accessories'];
 
 const TABS = [
   { key: 'profile', label: 'Profile', icon: User },
   { key: 'security', label: 'Security', icon: KeyRound },
+  { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'appearance', label: 'Appearance', icon: Palette },
   { key: 'danger', label: 'Danger Zone', icon: AlertTriangle },
 ];
@@ -324,13 +327,22 @@ export function AppearanceTab() {
   );
 }
 
+const isTab = (key) => TABS.some((tab) => tab.key === key);
+
 function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('profile');
+  // ?tab=notifications (e.g. from the notifications page) opens that tab.
+  const [searchParams] = useSearchParams();
+  const requested = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(isTab(requested) ? requested : 'profile');
+
+  useEffect(() => {
+    if (isTab(requested)) setActiveTab(requested);
+  }, [requested]);
 
   return (
     <div>
       <h1 className="text-xl font-semibold text-foreground">Settings</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Manage your profile, security, appearance, and account.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Manage your profile, security, notifications, appearance, and account.</p>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4">
         <Card className="h-fit lg:col-span-1">
@@ -340,6 +352,7 @@ function SettingsPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
+                aria-current={activeTab === tab.key ? 'true' : undefined}
                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150 ${
                   activeTab === tab.key ? 'bg-primary-soft font-medium text-primary' : 'text-foreground hover:bg-surface-2'
                 }`}
@@ -354,6 +367,7 @@ function SettingsPage() {
         <div className="lg:col-span-3">
           {activeTab === 'profile' && <ProfileTab />}
           {activeTab === 'security' && <SecurityTab />}
+          {activeTab === 'notifications' && <NotificationPreferences />}
           {activeTab === 'appearance' && <AppearanceTab />}
           {activeTab === 'danger' && <DangerZoneTab />}
         </div>

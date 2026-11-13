@@ -31,6 +31,9 @@ const AnchorPointsPage = lazy(() => import('./pages/dashboard/AnchorPointsPage')
 const AnalyticsDashboardPage = lazy(() => import('./pages/dashboard/AnalyticsDashboardPage'));
 const IntegrationDocsPage = lazy(() => import('./pages/dashboard/IntegrationDocsPage'));
 const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'));
+const ReceiptsPage = lazy(() => import('./pages/dashboard/ReceiptsPage'));
+const ReceiptDetailPage = lazy(() => import('./pages/dashboard/ReceiptDetailPage'));
+const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
 const SizeCheckDemo = lazy(() => import('./pages/demo/SizeCheckDemo'));
 const AiTestPage = lazy(() => import('./pages/demo/AiTestPage'));
 const MobileCapturePage = lazy(() => import('./pages/mobile/MobileCapturePage'));
@@ -41,6 +44,7 @@ const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage')
 const AdminDemoStudioPage = lazy(() => import('./pages/admin/AdminDemoStudioPage'));
 const AdminAuditLogPage = lazy(() => import('./pages/admin/AdminAuditLogPage'));
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminAnnouncementsPage = lazy(() => import('./pages/admin/AdminAnnouncementsPage'));
 
 function App() {
   return (
@@ -106,6 +110,9 @@ function App() {
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
               <Route path="docs" element={<IntegrationDocsPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="receipts" element={<ReceiptsPage />} />
+              <Route path="receipts/:id" element={<ReceiptDetailPage />} />
+              <Route path="notifications" element={<NotificationsPage basePath="/dashboard" />} />
             </Route>
 
             <Route
@@ -123,6 +130,8 @@ function App() {
               <Route path="demo" element={<AdminDemoStudioPage />} />
               <Route path="audit-log" element={<AdminAuditLogPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="announcements" element={<AdminAnnouncementsPage />} />
+              <Route path="notifications" element={<NotificationsPage basePath="/admin" />} />
             </Route>
           </Routes>
         </Suspense>
