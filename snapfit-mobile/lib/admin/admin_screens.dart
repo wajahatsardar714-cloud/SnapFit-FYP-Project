@@ -12,6 +12,7 @@ import '../core/plans.dart';
 import '../core/toast.dart';
 import '../dashboard/analytics_screen.dart' show compareSizes;
 import '../dashboard/settings_screen.dart' show AppearanceTab;
+import '../notifications/notification_preferences.dart';
 import '../core/json.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
@@ -748,7 +749,12 @@ class AdminSettingsScreen extends StatelessWidget {
     final email = '${context.watch<AuthState>().merchant?['email'] ?? ''}';
     return PageBody(
       children: [
-        const PageIntro(title: 'Settings', description: 'Appearance and account details for the admin console.'),
+        const PageIntro(
+          title: 'Settings',
+          description: 'Notifications, appearance and account details for the admin console.',
+        ),
+        gap16,
+        const NotificationPreferencesCard(),
         gap16,
         const AppearanceTab(),
         gap16,

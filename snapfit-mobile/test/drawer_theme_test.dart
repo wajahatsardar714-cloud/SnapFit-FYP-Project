@@ -50,7 +50,9 @@ void expectReadable(WidgetTester tester, List<String> labels, {required Set<Stri
 
 const merchantLabels = [
   'Dashboard',
+  'Notifications',
   'Subscription',
+  'Receipts',
   'API Key',
   'Size Charts',
   'Analytics',
@@ -58,7 +60,28 @@ const merchantLabels = [
   'Docs',
   'Settings',
 ];
-const adminLabels = ['Overview', 'Merchants', 'Analytics', 'Demo Studio', 'Audit Log', 'Settings'];
+const adminLabels = [
+  'Overview',
+  'Notifications',
+  'Merchants',
+  'Announcements',
+  'Analytics',
+  'Demo Studio',
+  'Audit Log',
+  'Settings',
+];
+
+/// The unread pill on the Notifications item reads clearly on its red fill.
+void expectReadablePill(WidgetTester tester, String count) {
+  final text = find.descendant(of: find.byType(Drawer), matching: find.text(count));
+  expect(text, findsOneWidget, reason: 'the unread pill');
+  final color = tester.widget<Text>(text).style!.color!;
+  final box = tester.widget<Container>(find.ancestor(of: text, matching: find.byType(Container)).first);
+  final fill = (box.decoration! as BoxDecoration).color!;
+  expect(fill.a, 1.0);
+  final ratio = contrast(color, fill);
+  expect(ratio, greaterThanOrEqualTo(4.5), reason: 'pill contrast is ${ratio.toStringAsFixed(2)}');
+}
 
 Future<TestApp> merchantApp(bool dark) async {
   final app = await TestApp.create(
@@ -67,6 +90,7 @@ Future<TestApp> merchantApp(bool dark) async {
     prefs: {'snapfit-theme': dark ? 'dark' : 'light'},
   );
   app.backend
+    ..on('GET /notifications/unread-count', {'unreadCount': 3})
     ..on('GET /analytics/dashboard', {
       'usage': {'requestsUsed': 0, 'requestsLimit': 5000},
       'recommendationsThisMonth': 0,
@@ -90,6 +114,7 @@ Future<TestApp> adminApp(bool dark) async {
     location: '/admin',
     prefs: {'snapfit-theme': dark ? 'dark' : 'light'},
   );
+  app.backend.on('GET /notifications/unread-count', {'unreadCount': 4});
   app.backend.on('GET /admin/overview', {
     'totals': {
       'merchants': 3,
@@ -116,6 +141,7 @@ void main() {
       expect(drawerSurface(tester), SnapColors.dark.surface);
       // Selected ("Dashboard") and unselected items alike.
       expectReadable(tester, merchantLabels, skip: {});
+      expectReadablePill(tester, '3');
     });
 
     testWidgets('the admin drawer is a solid dark surface with readable items', (tester) async {
@@ -130,6 +156,7 @@ void main() {
       expect(surface.a, 1.0);
       expect(surface.computeLuminance(), lessThan(0.05), reason: 'a dark surface');
       expectReadable(tester, adminLabels, skip: {});
+      expectReadablePill(tester, '4');
     });
   });
 
@@ -141,6 +168,7 @@ void main() {
       expect(drawerSurface(tester), SnapColors.light.surface);
       // The selected item keeps the brand blue on its soft fill, as on the web.
       expectReadable(tester, merchantLabels, skip: {'Dashboard'});
+      expectReadablePill(tester, '3');
     });
 
     testWidgets('the admin drawer keeps its soft purple with readable items', (tester) async {
@@ -149,6 +177,7 @@ void main() {
 
       expect(drawerSurface(tester), SnapColors.light.adminSoft);
       expectReadable(tester, adminLabels, skip: {});
+      expectReadablePill(tester, '4');
     });
   });
 }

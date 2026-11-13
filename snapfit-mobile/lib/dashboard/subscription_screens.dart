@@ -175,6 +175,12 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
                     loading: _cancelling,
                     onPressed: status == 'active' ? _cancel : null,
                   ),
+                  SnapButton(
+                    label: 'Receipts',
+                    icon: LucideIcons.receiptText,
+                    variant: ButtonVariant.ghost,
+                    onPressed: () => context.go('/dashboard/receipts'),
+                  ),
                 ],
               ),
             ],

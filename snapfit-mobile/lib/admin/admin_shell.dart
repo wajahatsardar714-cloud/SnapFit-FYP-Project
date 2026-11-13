@@ -5,13 +5,17 @@ import 'package:provider/provider.dart';
 
 import '../core/app_settings.dart';
 import '../core/auth_state.dart';
+import '../core/notifications_state.dart';
+import '../notifications/notification_widgets.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
 import 'admin_common.dart';
 
 const _navItems = [
   ('Overview', '/admin', LucideIcons.layoutDashboard, true),
+  ('Notifications', '/admin/notifications', LucideIcons.bell, false),
   ('Merchants', '/admin/merchants', LucideIcons.store, false),
+  ('Announcements', '/admin/announcements', LucideIcons.megaphone, false),
   ('Analytics', '/admin/analytics', LucideIcons.chartColumn, false),
   ('Demo Studio', '/admin/demo', LucideIcons.flaskConical, false),
   ('Audit Log', '/admin/audit-log', LucideIcons.scrollText, false),
@@ -42,6 +46,7 @@ class AdminShell extends StatelessWidget {
     final settings = context.watch<AppSettings>();
     return Scaffold(
       appBar: AppBar(
+        leading: const MenuButtonWithBadge(),
         shape: Border(
           top: BorderSide(color: c.admin, width: 2),
           bottom: BorderSide(color: c.border),
@@ -59,6 +64,7 @@ class AdminShell extends StatelessWidget {
             icon: Icon(settings.isDark ? LucideIcons.sun : LucideIcons.moon, size: 20, color: c.mutedForeground),
             onPressed: settings.toggleTheme,
           ),
+          NotificationsBell(onPressed: () => context.go('/admin/notifications')),
           const SizedBox(width: 4),
         ],
       ),
@@ -77,6 +83,7 @@ class _AdminDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final email = '${context.watch<AuthState>().merchant?['email'] ?? ''}';
+    final unread = context.watch<NotificationsState?>()?.unreadCount ?? 0;
     return Drawer(
       // adminSoft is translucent in dark mode; made solid so the page under
       // the drawer does not show through its menu.
@@ -136,14 +143,17 @@ class _AdminDrawer extends StatelessWidget {
                                   children: [
                                     Icon(item.$3, size: 18, color: active ? c.adminForeground : c.foreground),
                                     const SizedBox(width: 12),
-                                    Text(
-                                      item.$1,
-                                      style: snapText(
-                                        size: 14,
-                                        weight: active ? FontWeight.w500 : FontWeight.w400,
-                                        color: active ? c.adminForeground : c.foreground,
+                                    Expanded(
+                                      child: Text(
+                                        item.$1,
+                                        style: snapText(
+                                          size: 14,
+                                          weight: active ? FontWeight.w500 : FontWeight.w400,
+                                          color: active ? c.adminForeground : c.foreground,
+                                        ),
                                       ),
                                     ),
+                                    if (item.$2 == '/admin/notifications') UnreadPill(count: unread),
                                   ],
                                 ),
                               ),

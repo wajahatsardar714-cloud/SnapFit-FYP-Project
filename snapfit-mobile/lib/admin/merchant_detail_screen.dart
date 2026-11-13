@@ -11,6 +11,7 @@ import '../core/plans.dart';
 import '../core/toast.dart';
 import '../dashboard/product_mapping_screens.dart' show productImageUrl, sleeveLengthLabel;
 import '../core/json.dart';
+import '../receipts/admin_receipts_card.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
 import '../widgets/ui.dart';
@@ -157,6 +158,8 @@ class _AdminMerchantDetailScreenState extends State<AdminMerchantDetailScreen> {
         ),
         gap16,
         _AccountActions(merchant: merchant, onUpdated: _applyMerchant),
+        gap16,
+        AdminReceiptsCard(key: ValueKey('receipts-${widget.merchantId}'), merchantId: widget.merchantId),
         gap16,
         _ListCard(
           title: 'Size charts',

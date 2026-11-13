@@ -9,6 +9,7 @@ import '../core/app_settings.dart';
 import '../core/auth_state.dart';
 import '../core/format.dart';
 import '../core/toast.dart';
+import '../notifications/notification_preferences.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
 import '../widgets/ui.dart';
@@ -18,6 +19,7 @@ const _businessTypes = ['clothing', 'footwear', 'accessories'];
 const _tabs = [
   ('profile', 'Profile', LucideIcons.user),
   ('security', 'Security', LucideIcons.keyRound),
+  ('notifications', 'Notifications', LucideIcons.bell),
   ('appearance', 'Appearance', LucideIcons.palette),
   ('danger', 'Danger Zone', LucideIcons.triangleAlert),
 ];
@@ -37,7 +39,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final c = context.colors;
     return PageBody(
       children: [
-        const PageIntro(title: 'Settings', description: 'Manage your profile, security, appearance, and account.'),
+        const PageIntro(
+          title: 'Settings',
+          description: 'Manage your profile, security, notifications, appearance, and account.',
+        ),
         gap16,
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -67,6 +72,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         gap16,
         switch (_tab) {
           'security' => const _SecurityTab(),
+          'notifications' => const NotificationPreferencesCard(),
           'appearance' => const AppearanceTab(),
           'danger' => const _DangerZoneTab(),
           _ => const _ProfileTab(),

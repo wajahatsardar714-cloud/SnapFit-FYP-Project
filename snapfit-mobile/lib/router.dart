@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'admin/admin_screens.dart';
+import 'admin/announcements_screen.dart';
 import 'admin/admin_shell.dart';
 import 'admin/demo_studio_screen.dart';
 import 'admin/merchant_detail_screen.dart';
@@ -18,6 +19,8 @@ import 'dashboard/settings_screen.dart';
 import 'dashboard/size_chart_screens.dart';
 import 'dashboard/size_check_screen.dart';
 import 'dashboard/subscription_screens.dart';
+import 'notifications/notifications_screen.dart';
+import 'receipts/receipt_screens.dart';
 
 /// The app's routes: sign-in and sign-up, the merchant dashboard and the
 /// admin console, on the same paths as the web app (src/App.jsx). The public
@@ -62,6 +65,13 @@ GoRouter buildRouter(AuthState auth, {String? initialLocation}) {
           GoRoute(path: '/dashboard/size-check', builder: (context, state) => const SizeCheckScreen()),
           GoRoute(path: '/dashboard/docs', builder: (context, state) => const DocsScreen()),
           GoRoute(path: '/dashboard/settings', builder: (context, state) => const SettingsScreen()),
+          GoRoute(path: '/dashboard/notifications', builder: (context, state) => const NotificationsScreen()),
+          GoRoute(path: '/dashboard/receipts', builder: (context, state) => const ReceiptsScreen()),
+          GoRoute(
+            path: '/dashboard/receipts/:id',
+            builder: (context, state) =>
+                ReceiptDetailScreen(key: ValueKey(state.pathParameters['id']), receiptId: state.pathParameters['id']!),
+          ),
         ],
       ),
       ShellRoute(
@@ -80,6 +90,8 @@ GoRouter buildRouter(AuthState auth, {String? initialLocation}) {
           GoRoute(path: '/admin/demo', builder: (context, state) => const DemoStudioScreen()),
           GoRoute(path: '/admin/audit-log', builder: (context, state) => const AdminAuditLogScreen()),
           GoRoute(path: '/admin/settings', builder: (context, state) => const AdminSettingsScreen()),
+          GoRoute(path: '/admin/notifications', builder: (context, state) => const NotificationsScreen(admin: true)),
+          GoRoute(path: '/admin/announcements', builder: (context, state) => const AnnouncementsScreen()),
         ],
       ),
     ],
@@ -88,6 +100,24 @@ GoRouter buildRouter(AuthState auth, {String? initialLocation}) {
 
 /// Where the app opens: sign-in when signed out, else the account's home.
 String startPath(AuthState auth) => auth.isAuthenticated ? homePathFor(auth.merchant) : '/signin';
+
+/// The account's own Notifications screen.
+String notificationsPathFor(AuthState auth) => auth.isSuperAdmin ? '/admin/notifications' : '/dashboard/notifications';
+
+/// Where a notification's [link] opens: the link itself when the app has that
+/// screen, else the account's Notifications screen (links are web paths, and
+/// a newer server may send one this build does not know).
+String notificationTarget(GoRouter router, AuthState auth, String? link) {
+  final fallback = notificationsPathFor(auth);
+  final value = link?.trim() ?? '';
+  if (!value.startsWith('/')) return fallback;
+  try {
+    final match = router.configuration.findMatch(Uri.parse(value));
+    return match.isError || match.isEmpty ? fallback : value;
+  } catch (_) {
+    return fallback;
+  }
+}
 
 /// Where a request for [uri] should go instead, or null to allow it.
 String? guard(AuthState auth, Uri uri) {

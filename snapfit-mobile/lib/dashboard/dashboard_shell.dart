@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 
 import '../core/app_settings.dart';
 import '../core/auth_state.dart';
+import '../core/notifications_state.dart';
 import '../core/plans.dart';
 import '../core/toast.dart';
+import '../notifications/notification_widgets.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
 import '../widgets/logo.dart';
@@ -27,7 +29,9 @@ class _NavItem {
 // merchant can try their own widget from the phone.
 const _navItems = [
   _NavItem('Dashboard', '/dashboard', LucideIcons.layoutDashboard, exact: true),
+  _NavItem('Notifications', '/dashboard/notifications', LucideIcons.bell),
   _NavItem('Subscription', '/dashboard/subscription', LucideIcons.creditCard),
+  _NavItem('Receipts', '/dashboard/receipts', LucideIcons.receiptText),
   _NavItem('API Key', '/dashboard/api-key', LucideIcons.keyRound),
   _NavItem('Size Charts', '/dashboard/size-charts', LucideIcons.package),
   _NavItem('Analytics', '/dashboard/analytics', LucideIcons.chartColumn),
@@ -72,6 +76,7 @@ class DashboardShell extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const MenuButtonWithBadge(),
         title: Text(dashboardTitle(location)),
         actions: [
           IconButton(
@@ -79,11 +84,7 @@ class DashboardShell extends StatelessWidget {
             icon: Icon(settings.isDark ? LucideIcons.sun : LucideIcons.moon, size: 20, color: c.mutedForeground),
             onPressed: settings.toggleTheme,
           ),
-          IconButton(
-            tooltip: 'Notifications',
-            icon: Icon(LucideIcons.bell, size: 20, color: c.mutedForeground),
-            onPressed: () => showToast("You're all caught up — no new notifications."),
-          ),
+          NotificationsBell(onPressed: () => context.go('/dashboard/notifications')),
           AccountMenu(
             name: '${merchant?['businessName'] ?? ''}',
             email: '${merchant?['email'] ?? ''}',
@@ -214,6 +215,7 @@ class _DashboardDrawer extends StatelessWidget {
     final merchant = context.watch<AuthState>().merchant;
     final subscribed = isSubscribed(merchant);
     final plan = merchant?['subscription']?['plan'] as String?;
+    final unread = context.watch<NotificationsState?>()?.unreadCount ?? 0;
 
     Widget item(_NavItem nav) {
       final locked = isPathLockedFor(merchant, nav.path);
@@ -255,7 +257,10 @@ class _DashboardDrawer extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (locked) Icon(LucideIcons.lock, size: 14, color: c.muted),
+                    if (locked)
+                      Icon(LucideIcons.lock, size: 14, color: c.muted)
+                    else if (nav.path == '/dashboard/notifications')
+                      UnreadPill(count: unread),
                   ],
                 ),
               ),

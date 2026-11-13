@@ -52,8 +52,14 @@ String homePathFor(Map<String, dynamic>? account) => roleOf(account) == roleSupe
 
 const planSelectionPath = '/dashboard/subscription/plans';
 
-/// Dashboard areas a merchant can open before subscribing.
-const _unlockedPaths = ['/dashboard/subscription', '/dashboard/settings'];
+/// Dashboard areas a merchant can open before subscribing (or after the plan
+/// ends: the expiry notice and past receipts stay readable).
+const _unlockedPaths = [
+  '/dashboard/subscription',
+  '/dashboard/settings',
+  '/dashboard/notifications',
+  '/dashboard/receipts',
+];
 
 bool isPathUnlocked(String path) => _unlockedPaths.any((p) => path == p || path.startsWith('$p/'));
 

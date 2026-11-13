@@ -46,3 +46,17 @@ Color confidenceColor(BuildContext context, num? confidence) {
 /// subscribed).
 String subscriptionStatusVariant(String? status) =>
     const {'active': 'success', 'expired': 'danger', 'inactive': 'neutral'}[status] ?? 'neutral';
+
+/// "Just now", "5 min ago", "3 h ago", "Yesterday", then the date and time.
+String formatRelative(Object? value, [DateTime? now]) {
+  final date = _parse(value);
+  if (date == null) return '—';
+  final current = now ?? DateTime.now();
+  final diff = current.difference(date);
+  if (diff.inSeconds < 60) return 'Just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+  if (diff.inHours < 24) return '${diff.inHours} h ago';
+  if (diff.inDays < 2) return 'Yesterday';
+  if (diff.inDays < 7) return '${diff.inDays} days ago';
+  return formatDateTime(value);
+}

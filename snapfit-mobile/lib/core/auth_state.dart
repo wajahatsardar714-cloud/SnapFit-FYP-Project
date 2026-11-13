@@ -96,7 +96,24 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Runs at the start of [logout] while the session token still works (the
+  /// push service unregisters this device). Errors and slowness never block
+  /// signing out.
+  Future<void> Function()? beforeLogout;
+  bool _signingOut = false;
+
   Future<void> logout() async {
+    final hook = beforeLogout;
+    if (hook != null && _token != null && !_signingOut) {
+      _signingOut = true;
+      try {
+        await hook().timeout(const Duration(seconds: 5));
+      } catch (_) {
+        // Signed out anyway; the server drops stale device tokens itself.
+      } finally {
+        _signingOut = false;
+      }
+    }
     _token = null;
     merchant = null;
     await _store.clear();

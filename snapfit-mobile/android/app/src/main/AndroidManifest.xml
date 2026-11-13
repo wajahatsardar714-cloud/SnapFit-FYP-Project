@@ -4,6 +4,9 @@
     <!-- Live capture for the size check. -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Push notifications (Android 13+ asks the user after sign-in, and only
+         when the build has Firebase configured). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <!-- usesCleartextTraffic: during development the backend runs on the PC over
          plain HTTP (http://<PC Wi-Fi address>:5000/api). Serve it over HTTPS and
@@ -35,6 +38,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Pushes that arrive while the app is in the background use the
+             app's high-importance channel and its icon. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="snapfit_default" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
