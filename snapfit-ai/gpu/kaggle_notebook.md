@@ -52,7 +52,9 @@ CatVTON's AutoMasker -- and its heavy DensePose/detectron2 dependency -- is
 not needed. Setup steps: gpu/README.md.
 """
 
+import glob
 import io
+import json
 import os
 import threading
 
@@ -76,9 +78,34 @@ TRYON_WEIGHTS = "zhengchong/CatVTON"
 #   0 Background, 1 Hat, 2 Hair, 3 Sunglasses, 4 Upper-clothes, 5 Skirt,
 #   6 Pants, 7 Dress, 8 Belt, 9 Left-shoe, 10 Right-shoe, 11 Face,
 #   12 Left-leg, 13 Right-leg, 14 Left-arm, 15 Right-arm, 16 Bag, 17 Scarf
-SEGMENT_MODEL = "mattmdjaga/segformer_b2_clothes"
+BASE_SEGMENT_MODEL = "mattmdjaga/segformer_b2_clothes"
 FEATURES = ["tryon", "parse", "inpaint"]
 TOKEN = os.environ["SNAPFIT_TRYON_TOKEN"]
+
+
+def _segment_model():
+    """(model path or repo id, name for /health). SnapFit's fine-tuned parser
+    (Western + shalwar kameez, gpu/finetune/) when its training notebook's
+    output is attached (Add Input -> Your Work) and passed its quality gate;
+    otherwise the base model. SNAPFIT_SEGMENT_MODEL overrides both."""
+    override = os.environ.get("SNAPFIT_SEGMENT_MODEL", "").strip()
+    if override:
+        return override, "override"
+    for model_dir in sorted(glob.glob("/kaggle/input/**/segformer-snapfit", recursive=True)):
+        metrics = os.path.join(os.path.dirname(model_dir), "report", "metrics.json")
+        try:
+            with open(metrics) as f:
+                recommended = json.load(f).get("recommended") is True
+        except (OSError, ValueError):
+            recommended = False
+        if recommended:
+            return model_dir, "snapfit-finetuned"
+        print(f"Fine-tuned parser at {model_dir} did not pass its quality gate; using the base model")
+    return BASE_SEGMENT_MODEL, "base"
+
+
+SEGMENT_MODEL, PARSER = _segment_model()
+print(f"Clothes parser: {PARSER} ({SEGMENT_MODEL})")
 
 pipeline = CatVTONPipeline(
     base_ckpt=BASE_MODEL,
@@ -176,7 +203,7 @@ def _jpeg(image):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "gpu": torch.cuda.get_device_name(0), "features": FEATURES}
+    return {"status": "ok", "gpu": torch.cuda.get_device_name(0), "features": FEATURES, "parser": PARSER}
 
 
 @app.post("/tryon")
@@ -262,13 +289,22 @@ Prints the public URL. Put it in `snapfit-ai/.env` as `TRYON_GPU_URL`.
 
 ```python
 !pip install -q pyngrok
-from pyngrok import ngrok
-ngrok.set_auth_token("<NGROK_AUTHTOKEN>")
-print("TRYON URL:", ngrok.connect(7860, "http").public_url)
+import requests
+from pyngrok import ngrok, conf
+
+# Passed to ngrok when it starts, not saved: set_auth_token fails with
+# "Authtoken already set" when the cell is run a second time.
+conf.get_default().auth_token = "<NGROK_AUTHTOKEN>"
+ngrok.kill()
+tunnel = ngrok.connect(7860, "http")
+print("TRYON URL:", tunnel.public_url)
+print(requests.get(tunnel.public_url + "/health", headers={"ngrok-skip-browser-warning": "1"}).json())
 ```
 
 If it fails with "only one agent session", an old notebook still has a tunnel
-open: stop that session first, then run this cell again.
+open: stop that session first, then run this cell again. Run only this cell
+again if the tunnel drops; the server in cell 3 keeps running (running cell 3
+twice without restarting the session fails with "address already in use").
 
 ## Cell 4b — Backup tunnel (cloudflared, optional)
 
@@ -288,14 +324,26 @@ for _ in range(60):
 ## Cell 5 — Quick self-test
 
 Checks that the server answers and has all three features. It should print
-`features: ['tryon', 'parse', 'inpaint']`.
+`features: ['tryon', 'parse', 'inpaint']` and which clothes parser it loaded
+(`parser: base`, or `parser: snapfit-finetuned` once the fine-tuned one is
+attached, see below).
 
 ```python
 import os, requests
 reply = requests.get("http://localhost:7860/health", headers={"X-Token": os.environ["SNAPFIT_TRYON_TOKEN"]}, timeout=30)
 print(reply.status_code, reply.json())
 print("features:", reply.json().get("features"))
+print("parser:", reply.json().get("parser"))
 ```
+
+## Optional — use SnapFit's fine-tuned clothes parser
+
+After running the fine-tuning notebook (`gpu/finetune/README.md`) and saving a
+version of it: in this notebook click **Add Input → Your Work**, choose that
+notebook, then **Run → Restart session** and run the cells again. The server
+finds the model under `/kaggle/input/` and uses it only if its report says it
+passed the quality gate (`recommended: true`); otherwise it keeps the base
+parser. Cell 5 shows which one is in use.
 
 ## Then connect SnapFit
 

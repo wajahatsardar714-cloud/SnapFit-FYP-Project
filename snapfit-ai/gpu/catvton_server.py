@@ -16,7 +16,9 @@ CatVTON's AutoMasker -- and its heavy DensePose/detectron2 dependency -- is
 not needed. Setup steps: gpu/README.md.
 """
 
+import glob
 import io
+import json
 import os
 import threading
 
@@ -40,9 +42,34 @@ TRYON_WEIGHTS = "zhengchong/CatVTON"
 #   0 Background, 1 Hat, 2 Hair, 3 Sunglasses, 4 Upper-clothes, 5 Skirt,
 #   6 Pants, 7 Dress, 8 Belt, 9 Left-shoe, 10 Right-shoe, 11 Face,
 #   12 Left-leg, 13 Right-leg, 14 Left-arm, 15 Right-arm, 16 Bag, 17 Scarf
-SEGMENT_MODEL = "mattmdjaga/segformer_b2_clothes"
+BASE_SEGMENT_MODEL = "mattmdjaga/segformer_b2_clothes"
 FEATURES = ["tryon", "parse", "inpaint"]
 TOKEN = os.environ["SNAPFIT_TRYON_TOKEN"]
+
+
+def _segment_model():
+    """(model path or repo id, name for /health). SnapFit's fine-tuned parser
+    (Western + shalwar kameez, gpu/finetune/) when its training notebook's
+    output is attached (Add Input -> Your Work) and passed its quality gate;
+    otherwise the base model. SNAPFIT_SEGMENT_MODEL overrides both."""
+    override = os.environ.get("SNAPFIT_SEGMENT_MODEL", "").strip()
+    if override:
+        return override, "override"
+    for model_dir in sorted(glob.glob("/kaggle/input/**/segformer-snapfit", recursive=True)):
+        metrics = os.path.join(os.path.dirname(model_dir), "report", "metrics.json")
+        try:
+            with open(metrics) as f:
+                recommended = json.load(f).get("recommended") is True
+        except (OSError, ValueError):
+            recommended = False
+        if recommended:
+            return model_dir, "snapfit-finetuned"
+        print(f"Fine-tuned parser at {model_dir} did not pass its quality gate; using the base model")
+    return BASE_SEGMENT_MODEL, "base"
+
+
+SEGMENT_MODEL, PARSER = _segment_model()
+print(f"Clothes parser: {PARSER} ({SEGMENT_MODEL})")
 
 pipeline = CatVTONPipeline(
     base_ckpt=BASE_MODEL,
@@ -140,7 +167,7 @@ def _jpeg(image):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "gpu": torch.cuda.get_device_name(0), "features": FEATURES}
+    return {"status": "ok", "gpu": torch.cuda.get_device_name(0), "features": FEATURES, "parser": PARSER}
 
 
 @app.post("/tryon")

@@ -13,7 +13,7 @@ The full notebook, ready to paste cell by cell, is in
 
 | Endpoint | Sends | Gets back | Used for |
 |---|---|---|---|
-| `GET /health` | – | `{"status", "gpu", "features": ["tryon", "parse", "inpaint"]}` | the AI service checks the server is up and which endpoints it has |
+| `GET /health` | – | `{"status", "gpu", "features": ["tryon", "parse", "inpaint"], "parser"}` | the AI service checks the server is up and which endpoints it has |
 | `POST /tryon` | `person`, `garment`, `mask` files; `steps`, `guidance`, `seed` | JPEG, 768x1024 | the try-on itself (CatVTON) |
 | `POST /parse` | `image` file | PNG, same size, one clothes label per pixel | finding the shopper's own clothes (old long sleeves, a long kameez) so the mask covers them, not only the pose area |
 | `POST /inpaint` | `image`, `mask` files (white = repaint); `prompt`, `negative_prompt`, `steps`, `guidance`, `seed` | JPEG, same size as the input | repainting the lower part of a long kameez as trousers before a shorter shirt is tried on |
@@ -38,6 +38,12 @@ and answers `401 BAD_TOKEN` without it.
   full-body photos with only the clothing area masked.
 - **SegFormer-B2 Clothes** (`mattmdjaga/segformer_b2_clothes`, MIT licence,
   trained on the ATR dataset) — for `/parse`. A new download, about 110 MB.
+  SnapFit can fine-tune it on Western and South Asian wear (shalwar kameez,
+  kurta, dupatta) with `finetune/` (see `finetune/README.md`). When that
+  notebook's output is attached to this one and passed its quality gate, the
+  server loads it instead; `/health` reports `"parser": "base"` or
+  `"snapfit-finetuned"`. `SNAPFIT_SEGMENT_MODEL` (a path or repo id) overrides
+  both.
 
 Kaggle's GPU image already has `torch`, `diffusers` and `transformers`, so the
 setup cell only adds the web server packages. `transformers` does not need to
