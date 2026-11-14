@@ -38,16 +38,22 @@ describe('PUT /api/products/:id/image', () => {
     const res = await uploadImage(mapping._id, makePng(500, 640));
 
     expect(res.status).toBe(200);
-    expect(res.body.mapping.productImage).toMatch(/^\/uploads\/products\/.+\.png$/);
+    expect(res.body.mapping.productImage).toMatch(/^\/uploads\/products\/\d+-\d+\.webp$/);
+    expect(res.body.mapping.productImageThumb).toBe(res.body.mapping.productImage.replace(/\.webp$/, '-thumb.webp'));
     expect(res.body.mapping.tryOnStatus).toBe('anchors_missing');
     expect(fs.existsSync(diskPath(res.body.mapping.productImage))).toBe(true);
+    expect(fs.existsSync(diskPath(res.body.mapping.productImageThumb))).toBe(true);
+    expect(env.listUploads()).toHaveLength(2);
   });
 
-  it('serves the stored image', async () => {
+  it('serves the stored image and its thumbnail as WebP', async () => {
     const res = await uploadImage(mapping._id, makePng(500, 640));
     const served = await request(app).get(res.body.mapping.productImage);
     expect(served.status).toBe(200);
-    expect(served.headers['content-type']).toBe('image/png');
+    expect(served.headers['content-type']).toBe('image/webp');
+    const thumb = await request(app).get(res.body.mapping.productImageThumb);
+    expect(thumb.status).toBe(200);
+    expect(thumb.headers['content-type']).toBe('image/webp');
   });
 
   it('rejects formats other than JPEG, PNG and WebP', async () => {
@@ -107,7 +113,9 @@ describe('PUT /api/products/:id/image', () => {
 
     expect(second.status).toBe(200);
     expect(fs.existsSync(diskPath(first.body.mapping.productImage))).toBe(false);
+    expect(fs.existsSync(diskPath(first.body.mapping.productImageThumb))).toBe(false);
     expect(fs.existsSync(diskPath(second.body.mapping.productImage))).toBe(true);
+    expect(env.listUploads()).toHaveLength(2);
     expect(second.body.mapping.anchorPoints).toBeUndefined();
     expect(second.body.mapping.tryOnStatus).toBe('anchors_missing');
   });
@@ -121,8 +129,9 @@ describe('DELETE /api/products/:id/image', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.mapping.productImage).toBeUndefined();
+    expect(res.body.mapping.productImageThumb).toBeUndefined();
     expect(res.body.mapping.tryOnStatus).toBe('image_missing');
-    expect(fs.existsSync(diskPath(uploaded.body.mapping.productImage))).toBe(false);
+    expect(env.listUploads()).toEqual([]);
   });
 });
 
@@ -173,5 +182,17 @@ describe('product mappings', () => {
 
     expect(res.status).toBe(200);
     expect(fs.existsSync(diskPath(uploaded.body.mapping.productImage))).toBe(false);
+    expect(env.listUploads()).toEqual([]);
+  });
+
+  it('removes an old (pre-WebP) local image that has no thumbnail', async () => {
+    fs.writeFileSync(path.join(env.uploadDir, 'legacy.png'), makePng(500, 500));
+    await ProductMapping.updateOne({ _id: mapping._id }, { productImage: '/uploads/products/legacy.png' });
+
+    const res = await uploadImage(mapping._id, makePng(500, 500));
+
+    expect(res.status).toBe(200);
+    expect(env.listUploads()).not.toContain('legacy.png');
+    expect(env.listUploads()).toHaveLength(2);
   });
 });

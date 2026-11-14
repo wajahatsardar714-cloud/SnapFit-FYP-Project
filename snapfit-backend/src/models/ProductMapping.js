@@ -17,7 +17,11 @@ const productMappingSchema = new mongoose.Schema(
     // Optional flat-lay product image + 4 normalized (0-1) anchor points, used by
     // the virtual try-on overlay (Phase 12) to warp the product image onto a
     // customer's photo via their corresponding BlazePose landmarks.
+    // A "/uploads/products/<file>" path (local storage) or an absolute R2 URL.
     productImage: { type: String },
+    // 400px copy of productImage for lists and cards; missing on images stored
+    // before thumbnails existed (clients fall back to productImage).
+    productImageThumb: { type: String },
     anchorPoints: {
       shoulderLeft: { type: anchorPointSchema },
       shoulderRight: { type: anchorPointSchema },

@@ -17,15 +17,21 @@ const adminRoutes = require('./routes/adminRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const deviceRoutes = require('./routes/deviceRoutes');
 const receiptRoutes = require('./routes/receiptRoutes');
-const { PRODUCTS_DIR } = require('./utils/productImageUpload');
+const { getStorage } = require('./services/storage');
+
+// Built now so a bad STORAGE_DRIVER / missing R2_* variable stops the server at
+// start-up with a clear message, not on the first upload.
+const storage = getStorage();
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-// Persisted product flat-lay images (Phase 12 virtual try-on) — served by URL so
-// both the dashboard and the AI microservice can fetch them.
-app.use('/uploads/products', express.static(PRODUCTS_DIR));
+// Product flat-lay images (Phase 12 virtual try-on) on this server's disk --
+// all of them with STORAGE_DRIVER=local, and those from before the move to R2
+// -- served by URL so the dashboard and the AI microservice can fetch them.
+// With STORAGE_DRIVER=r2 new images are served from R2_PUBLIC_URL instead.
+app.use('/uploads/products', express.static(storage.local.dir));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

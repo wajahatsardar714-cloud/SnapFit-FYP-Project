@@ -9,7 +9,7 @@ const Feedback = require('../models/Feedback');
 const Notification = require('../models/Notification');
 const DeviceToken = require('../models/DeviceToken');
 const { notify } = require('../services/notify');
-const { removeProductImage } = require('../utils/productImageUpload');
+const { removeProductImages } = require('../utils/productImageUpload');
 
 function sanitizeMerchant(merchant) {
   const { password, ...rest } = merchant.toObject();
@@ -21,8 +21,12 @@ function sanitizeMerchant(merchant) {
 // notifications and push device tokens. Receipts are kept: they are a record
 // of the subscription and carry their own copy of the merchant's details.
 async function deleteMerchantWithData(merchantId) {
-  const productImages = (await ProductMapping.find({ merchantId, productImage: { $ne: null } }).select('productImage'))
-    .map((mapping) => mapping.productImage);
+  const productImages = await ProductMapping.find({
+    merchantId,
+    $or: [{ productImage: { $ne: null } }, { productImageThumb: { $ne: null } }],
+  })
+    .select('productImage productImageThumb')
+    .lean();
 
   const session = await mongoose.startSession();
   try {
@@ -41,7 +45,8 @@ async function deleteMerchantWithData(merchantId) {
 
   // Files go only once the records are gone, so a failed transaction never
   // leaves mappings pointing at missing photos.
-  await Promise.all(productImages.map(removeProductImage));
+  // Both the image and its thumbnail; old local paths and R2 URLs alike.
+  await Promise.all(productImages.map((images) => removeProductImages(images)));
 }
 
 async function updateProfile(req, res) {
