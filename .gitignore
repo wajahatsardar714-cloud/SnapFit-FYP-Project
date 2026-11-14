@@ -10,3 +10,6 @@ build/
 uploads/
 # Try-on debug images (SNAPFIT_TRYON_DEBUG_DIR) hold shoppers' photos
 tryon-debug/
+# Firebase project files; the service-account key lives outside the repo
+firebase/
+*service-account*.json
