@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { buildWidgetSnippet } from '../../utils/widgetSnippet';
 import ProductMappingPage from './ProductMappingPage';
 
 vi.mock('../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }));
@@ -63,8 +65,49 @@ describe('ProductMappingPage try-on column', () => {
 
     const noPoints = await rowFor('SKU-NOPTS');
     expect(noPoints.getByText('Anchors missing')).toBeTruthy();
-    expect(noPoints.getByText('Place points')).toBeTruthy();
+    expect(noPoints.getByText('Set anchor points')).toBeTruthy();
+    expect(noPoints.getByText('Replace image')).toBeTruthy();
     expect(noPoints.getByText('Remove image')).toBeTruthy();
+  });
+
+  it('offers the next missing step beside the badge, and nothing when try-on is ready', async () => {
+    render(
+      <MemoryRouter>
+        <ProductMappingPage />
+      </MemoryRouter>
+    );
+
+    const ready = await rowFor('SKU-READY');
+    expect(ready.queryByRole('button', { name: /Add image for/ })).toBeNull();
+    expect(ready.queryByRole('link', { name: /Set anchor points for/ })).toBeNull();
+
+    const noImage = await rowFor('SKU-NOIMG');
+    const addImage = noImage.getByRole('button', { name: 'Add image for SKU-NOIMG' });
+    const fileInput = noImage.getByLabelText('Product image for SKU-NOIMG');
+    const clickSpy = vi.spyOn(fileInput, 'click');
+    fireEvent.click(addImage);
+    expect(clickSpy).toHaveBeenCalled();
+    expect(noImage.queryByRole('link', { name: /Set anchor points for/ })).toBeNull();
+
+    const noPoints = await rowFor('SKU-NOPTS');
+    expect(noPoints.getByRole('link', { name: 'Set anchor points for SKU-NOPTS' }).getAttribute('href')).toBe(
+      '/dashboard/product-mapping/m3/anchor-points'
+    );
+    expect(noPoints.queryByRole('button', { name: /Add image for/ })).toBeNull();
+  });
+
+  it('uploads the file chosen through the "Add image" step', async () => {
+    api.put.mockResolvedValue({ data: {} });
+    render(
+      <MemoryRouter>
+        <ProductMappingPage />
+      </MemoryRouter>
+    );
+    const noImage = await rowFor('SKU-NOIMG');
+    fireEvent.change(noImage.getByLabelText('Product image for SKU-NOIMG'), {
+      target: { files: [new File(['png'], 'tee.png', { type: 'image/png' })] },
+    });
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith('/products/m2/image', expect.any(FormData)));
   });
 
   it('explains what kind of product photo works best', async () => {
@@ -184,5 +227,155 @@ describe('ProductMappingPage garment length', () => {
     await fillForm(null, 'none');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByLabelText('Sleeve length').value).toBe('short');
+  });
+});
+
+describe('ProductMappingPage setup shortcuts', () => {
+  const kurtas = { _id: 'c2', name: 'Kurtas', category: 'tops', sizes: [], isActive: true };
+  const NAMED = [
+    { ...MAPPINGS[0], productName: 'Classic Crew Tee' },
+    { ...MAPPINGS[1], productName: 'Lawn Kurta', sizeChartId: kurtas, garmentLength: 'long', sleeveLength: 'long' },
+    MAPPINGS[2],
+  ];
+
+  function renderPage() {
+    render(
+      <MemoryRouter>
+        <ProductMappingPage />
+      </MemoryRouter>
+    );
+  }
+
+  const field = (label) => screen.getByLabelText(label);
+
+  beforeEach(() => {
+    api.get.mockImplementation(async (url) =>
+      url === '/charts' ? { data: { charts: [chart, kurtas] } } : { data: { mappings: NAMED } }
+    );
+    api.post.mockReset();
+    api.post.mockResolvedValue({ data: { mapping: { _id: 'new', productId: 'SKU-NEW' } } });
+  });
+
+  it('fills the form from a mapping on Edit and posts the same upsert on save', async () => {
+    renderPage();
+    const row = await rowFor('SKU-NOIMG');
+    fireEvent.click(row.getByRole('button', { name: 'Edit mapping for SKU-NOIMG' }));
+
+    expect(screen.getByRole('heading', { name: 'Edit mapping for SKU-NOIMG' })).toBeTruthy();
+    expect(field('Product ID').value).toBe('SKU-NOIMG');
+    expect(field('Product ID').readOnly).toBe(true);
+    expect(field('Product Name (optional)').value).toBe('Lawn Kurta');
+    expect(field('Size Chart').value).toBe('c2');
+    expect(field('Garment length').value).toBe('long');
+    expect(field('Sleeve length').value).toBe('long');
+    expect(document.activeElement).toBe(field('Product Name (optional)'));
+    expect(screen.queryByRole('button', { name: 'Map' })).toBeNull();
+
+    fireEvent.change(field('Product Name (optional)'), { target: { value: 'Lawn Kurta 2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    expect(api.post).toHaveBeenCalledWith('/products/map', {
+      productId: 'SKU-NOIMG',
+      productName: 'Lawn Kurta 2',
+      sizeChartId: 'c2',
+      garmentLength: 'long',
+      sleeveLength: 'long',
+    });
+    // Saving an edit resets the form fully.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Map' })).toBeTruthy());
+    expect(field('Product ID').value).toBe('');
+    expect(field('Size Chart').value).toBe('');
+    expect(field('Garment length').value).toBe('regular');
+  });
+
+  it('Cancel edit leaves edit mode and resets every field', async () => {
+    renderPage();
+    fireEvent.click((await rowFor('SKU-READY')).getByRole('button', { name: 'Edit mapping for SKU-READY' }));
+    expect(field('Garment length').value).toBe('long');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel edit' }));
+
+    expect(screen.getByRole('heading', { name: 'Map a product' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Map' })).toBeTruthy();
+    expect(field('Product ID').value).toBe('');
+    expect(field('Product ID').readOnly).toBe(false);
+    expect(field('Product Name (optional)').value).toBe('');
+    expect(field('Size Chart').value).toBe('');
+    expect(field('Garment length').value).toBe('regular');
+    expect(field('Sleeve length').value).toBe('short');
+  });
+
+  it('filters the mappings by product ID or name, ignoring case', async () => {
+    renderPage();
+    await rowFor('SKU-READY');
+    const search = screen.getByRole('searchbox', { name: 'Search mappings' });
+
+    fireEvent.change(search, { target: { value: 'kurta' } });
+    expect(screen.getByText('SKU-NOIMG')).toBeTruthy();
+    expect(screen.queryByText('SKU-READY')).toBeNull();
+    expect(screen.queryByText('SKU-NOPTS')).toBeNull();
+
+    fireEvent.change(search, { target: { value: 'sku-nop' } });
+    expect(screen.getByText('SKU-NOPTS')).toBeTruthy();
+    expect(screen.queryByText('SKU-NOIMG')).toBeNull();
+
+    fireEvent.change(search, { target: { value: 'jacket' } });
+    expect(screen.getByText(/No mappings match/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(screen.getByText('SKU-READY')).toBeTruthy();
+  });
+
+  it('keeps the chart and lengths after a new mapping, clearing only ID, name and image', async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText('Product ID'), { target: { value: 'SKU-NEW' } });
+    fireEvent.change(field('Product Name (optional)'), { target: { value: 'New Kurta' } });
+    fireEvent.change(field('Size Chart'), { target: { value: 'c2' } });
+    fireEvent.change(field('Garment length'), { target: { value: 'long' } });
+    fireEvent.change(field('Sleeve length'), { target: { value: 'none' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    await waitFor(() => expect(field('Product ID').value).toBe(''));
+    expect(field('Product Name (optional)').value).toBe('');
+    expect(field('Size Chart').value).toBe('c2');
+    expect(field('Garment length').value).toBe('long');
+    expect(field('Sleeve length').value).toBe('none');
+    expect(screen.getByText('Choose a flat-lay photo')).toBeTruthy();
+  });
+
+  it('explains the product ID and warns when it is already mapped, with a switch to edit it', async () => {
+    renderPage();
+    const productId = await screen.findByLabelText('Product ID');
+    expect(screen.getByText('Use the same product ID or SKU as in your store.')).toBeTruthy();
+    expect(productId.getAttribute('aria-describedby')).toBe('mapping-productId-hint');
+
+    fireEvent.change(productId, { target: { value: 'SKU-NEW' } });
+    expect(screen.queryByText(/already mapped/)).toBeNull();
+
+    fireEvent.change(productId, { target: { value: 'SKU-NOIMG' } });
+    expect(screen.getByText(/This product is already mapped — saving will update it\./)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit it instead' }));
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeTruthy();
+    expect(field('Product Name (optional)').value).toBe('Lawn Kurta');
+    expect(field('Size Chart').value).toBe('c2');
+    expect(screen.queryByText(/already mapped/)).toBeNull();
+  });
+
+  it('copies the widget snippet with this product ID and a placeholder key', async () => {
+    const writeText = vi.fn().mockResolvedValue();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderPage();
+
+    fireEvent.click((await rowFor('SKU-NOPTS')).getByRole('button', { name: 'Copy widget code for SKU-NOPTS' }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const snippet = writeText.mock.calls[0][0];
+    expect(snippet).toBe(buildWidgetSnippet('SKU-NOPTS'));
+    expect(snippet).toContain('productId="SKU-NOPTS"');
+    expect(snippet).toContain('apiKey="sk_live_..."');
+    expect(snippet).toContain('<SnapFitWidget');
+    expect(toast.success).toHaveBeenCalledWith('Widget code copied');
   });
 });

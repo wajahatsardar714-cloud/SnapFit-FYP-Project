@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ChevronLeft, ChevronRight, Pencil, Plus, Ruler, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, Pencil, Plus, Ruler, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -12,6 +12,17 @@ import { ListSkeleton } from '../../components/ui/Skeleton';
 const CATEGORY_OPTIONS = ['tops', 'bottoms', 'dresses', 'footwear', 'outerwear'];
 const PAGE_SIZE = 10;
 
+// The fields POST /charts accepts, copied from a saved chart (ids and owner left behind).
+function toChartCopy(chart) {
+  return {
+    name: `${chart.name} (copy)`,
+    category: chart.category,
+    gender: chart.gender || undefined,
+    unit: chart.unit,
+    sizes: chart.sizes.map(({ label, measurements }) => ({ label, measurements })),
+  };
+}
+
 function SizeChartsPage() {
   const navigate = useNavigate();
   const [charts, setCharts] = useState([]);
@@ -20,6 +31,7 @@ function SizeChartsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   const load = useCallback((page, categoryFilter) => {
     setLoading(true);
@@ -38,6 +50,22 @@ function SizeChartsPage() {
   useEffect(() => {
     load(1, category);
   }, [load, category]);
+
+  async function duplicateChart(chart) {
+    setDuplicatingId(chart._id);
+    try {
+      const { data } = await api.get(`/charts/${chart._id}`);
+      const copy = toChartCopy(data.chart);
+      const res = await api.post('/charts', copy);
+      toast.success(`Created "${copy.name}"`);
+      navigate(`/dashboard/size-charts/${res.data.chart._id}/edit`);
+    } catch (err) {
+      const data = err.response?.data;
+      toast.error(data?.errors ? data.errors.join(' • ') : data?.message || 'Failed to duplicate size chart');
+    } finally {
+      setDuplicatingId(null);
+    }
+  }
 
   async function confirmDelete() {
     if (!deleteTarget) return;
@@ -142,6 +170,16 @@ function SizeChartsPage() {
                           icon={<Pencil size={15} />}
                           onClick={() => navigate(`/dashboard/size-charts/${chart._id}/edit`)}
                           aria-label={`Edit ${chart.name}`}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Copy size={15} />}
+                          onClick={() => duplicateChart(chart)}
+                          loading={duplicatingId === chart._id}
+                          disabled={Boolean(duplicatingId)}
+                          title="Duplicate"
+                          aria-label={`Duplicate ${chart.name}`}
                         />
                         <Button
                           variant="ghost"

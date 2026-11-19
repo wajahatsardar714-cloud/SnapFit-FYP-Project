@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ImageOff, ImagePlus, Link2, Loader2, MapPin, Trash2 } from 'lucide-react';
+import { Code2, ImageOff, ImagePlus, Link2, Loader2, MapPin, Pencil, Search, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -19,6 +19,7 @@ import {
   resolveProductImageUrl,
   validateProductImageFile,
 } from '../../utils/productImage';
+import { buildWidgetSnippet } from '../../utils/widgetSnippet';
 
 // Matches the backend's mapping.garmentLength values (default regular).
 const GARMENT_LENGTHS = {
@@ -36,6 +37,12 @@ const SLEEVE_LENGTHS = {
 
 const initialForm = { productId: '', productName: '', sizeChartId: '', garmentLength: 'regular', sleeveLength: 'short' };
 
+function matchesSearch(mapping, query) {
+  return (
+    mapping.productId.toLowerCase().includes(query) || (mapping.productName || '').toLowerCase().includes(query)
+  );
+}
+
 function validateMappingForm({ productId, sizeChartId }) {
   const errors = {};
   if (!productId.trim()) errors.productId = 'Product ID is required';
@@ -45,8 +52,21 @@ function validateMappingForm({ productId, sizeChartId }) {
 
 const anchorPointsPath = (mapping) => `/dashboard/product-mapping/${mapping._id}/anchor-points`;
 
+// The one thing still stopping try-on for this product, if any.
+function nextTryOnStep(statusKey) {
+  if (statusKey === 'image_missing') return 'image';
+  if (statusKey === 'anchors_missing') return 'anchors';
+  return null;
+}
+
+const NEXT_STEP_CLASSES =
+  'inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50';
+
 function TryOnCell({ mapping, busy, onUpload, onRemoveImage }) {
-  const status = TRY_ON_STATUS[mapping.tryOnStatus] || TRY_ON_STATUS.image_missing;
+  const fileInputRef = useRef(null);
+  const statusKey = TRY_ON_STATUS[mapping.tryOnStatus] ? mapping.tryOnStatus : 'image_missing';
+  const status = TRY_ON_STATUS[statusKey];
+  const nextStep = nextTryOnStep(statusKey);
   const imageUrl = resolveProductImageUrl(mapping.productImage);
 
   return (
@@ -59,32 +79,63 @@ function TryOnCell({ mapping, busy, onUpload, onRemoveImage }) {
         )}
       </div>
       <div className="space-y-1">
-        <Badge variant={status.variant}>{status.label}</Badge>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium">
-          <label
-            className={`inline-flex items-center gap-1 text-primary underline ${busy ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
-          >
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
-            {imageUrl ? 'Replace image' : 'Add image'}
-            <input
-              type="file"
-              accept={PRODUCT_IMAGE_ACCEPT}
-              className="hidden"
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={status.variant}>{status.label}</Badge>
+          {nextStep === 'image' && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
               disabled={busy}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) onUpload(mapping, file);
-              }}
-            />
-          </label>
-          {imageUrl && (
-            <Link to={anchorPointsPath(mapping)} className="inline-flex items-center gap-1 text-primary underline">
+              className={NEXT_STEP_CLASSES}
+              aria-label={`Add image for ${mapping.productId}`}
+            >
+              {busy ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+              Add image
+            </button>
+          )}
+          {nextStep === 'anchors' && (
+            <Link
+              to={anchorPointsPath(mapping)}
+              className={NEXT_STEP_CLASSES}
+              aria-label={`Set anchor points for ${mapping.productId}`}
+            >
               <MapPin size={13} />
-              {mapping.tryOnStatus === 'ready' ? 'Edit points' : 'Place points'}
+              Set anchor points
             </Link>
           )}
-          {imageUrl && (
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={PRODUCT_IMAGE_ACCEPT}
+          className="hidden"
+          disabled={busy}
+          aria-label={`Product image for ${mapping.productId}`}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) onUpload(mapping, file);
+          }}
+        />
+        {imageUrl && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium">
+            {nextStep !== 'image' && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={busy}
+                className="inline-flex items-center gap-1 text-primary underline disabled:pointer-events-none disabled:opacity-50"
+              >
+                {busy ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+                Replace image
+              </button>
+            )}
+            {!nextStep && (
+              <Link to={anchorPointsPath(mapping)} className="inline-flex items-center gap-1 text-primary underline">
+                <MapPin size={13} />
+                Edit points
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => onRemoveImage(mapping)}
@@ -93,8 +144,8 @@ function TryOnCell({ mapping, busy, onUpload, onRemoveImage }) {
             >
               Remove image
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -113,6 +164,9 @@ function ProductMappingPage() {
   const [removing, setRemoving] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [busyImageId, setBusyImageId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [search, setSearch] = useState('');
+  const formRef = useRef(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -137,9 +191,37 @@ function ProductMappingPage() {
 
   function resetForm() {
     setForm(initialForm);
+    setEditingId(null);
     setImageFile(null);
     setFieldErrors({});
     setFormError('');
+  }
+
+  function startEdit(mapping) {
+    const chartId = mapping.sizeChartId?._id || mapping.sizeChartId || '';
+    setForm({
+      productId: mapping.productId,
+      productName: mapping.productName || '',
+      // A deleted (inactive) chart is not in the list, so the merchant picks a live one.
+      sizeChartId: charts.some((c) => c._id === chartId) ? chartId : '',
+      garmentLength: mapping.garmentLength || 'regular',
+      sleeveLength: mapping.sleeveLength || 'short',
+    });
+    setEditingId(mapping._id);
+    setImageFile(null);
+    setFieldErrors({});
+    setFormError('');
+    formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    document.getElementById('mapping-productName')?.focus();
+  }
+
+  async function copyWidgetCode(mapping) {
+    try {
+      await navigator.clipboard.writeText(buildWidgetSnippet(mapping.productId));
+      toast.success('Widget code copied');
+    } catch {
+      toast.error('Could not copy the widget code');
+    }
   }
 
   function handleImageSelected(e) {
@@ -206,14 +288,22 @@ function ProductMappingPage() {
         payload.append('image', imageFile);
       }
       const res = await api.post('/products/map', payload);
-      setForm(initialForm);
-      setImageFile(null);
+      const wasEditing = Boolean(editingId);
+      if (wasEditing) {
+        resetForm();
+      } else {
+        // Keep the chart and lengths so the next similar product is quick to map.
+        const { sizeChartId, garmentLength, sleeveLength } = form;
+        setForm({ ...initialForm, sizeChartId, garmentLength, sleeveLength });
+        setImageFile(null);
+      }
+      const saved = wasEditing ? 'Changes saved' : 'Product mapped';
       if (imageFile) {
-        toast.success('Product mapped — now place the 4 anchor points');
+        toast.success(`${saved} — now place the 4 anchor points`);
         navigate(anchorPointsPath(res.data.mapping));
         return;
       }
-      toast.success('Product mapped');
+      toast.success(saved);
       await load();
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to map product';
@@ -230,6 +320,7 @@ function ProductMappingPage() {
     try {
       await api.delete(`/products/map/${removeTarget._id}`);
       toast.success('Mapping removed');
+      if (editingId === removeTarget._id) resetForm();
       setRemoveTarget(null);
       await load();
     } catch (err) {
@@ -245,6 +336,12 @@ function ProductMappingPage() {
     );
   }
 
+  const trimmedProductId = form.productId.trim();
+  const existingMapping =
+    !editingId && trimmedProductId ? mappings.find((m) => m.productId === trimmedProductId) : null;
+  const query = search.trim().toLowerCase();
+  const visibleMappings = query ? mappings.filter((m) => matchesSearch(m, query)) : mappings;
+
   return (
     <div>
       <h1 className="text-xl font-semibold text-foreground">Product Mapping</h1>
@@ -256,20 +353,48 @@ function ProductMappingPage() {
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <Card.Header>
-              <h2 className="text-sm font-semibold text-foreground">Map a product</h2>
+              <h2 className="text-sm font-semibold text-foreground">
+                {editingId ? `Edit mapping for ${form.productId}` : 'Map a product'}
+              </h2>
             </Card.Header>
             <Card.Body>
               {formError && <Alert variant="danger" description={formError} className="mb-4" />}
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  id="mapping-productId"
-                  name="productId"
-                  label="Product ID"
-                  value={form.productId}
-                  onChange={handleChange}
-                  placeholder="e.g. SKU-1029"
-                  error={fieldErrors.productId}
-                />
+              <form
+                ref={formRef}
+                onSubmit={handleSubmit}
+                aria-label={editingId ? 'Edit product mapping' : 'Map a product'}
+                className="grid scroll-mt-6 grid-cols-1 gap-4 sm:grid-cols-2"
+              >
+                <div>
+                  <Input
+                    id="mapping-productId"
+                    name="productId"
+                    label="Product ID"
+                    value={form.productId}
+                    onChange={handleChange}
+                    placeholder="e.g. SKU-1029"
+                    error={fieldErrors.productId}
+                    readOnly={Boolean(editingId)}
+                    className="read-only:bg-surface-2 read-only:text-muted-foreground"
+                    hint={
+                      editingId
+                        ? 'The product ID cannot be changed while editing.'
+                        : 'Use the same product ID or SKU as in your store.'
+                    }
+                  />
+                  {existingMapping && (
+                    <p role="status" className="mt-1 text-xs font-medium text-warning">
+                      This product is already mapped — saving will update it.{' '}
+                      <button
+                        type="button"
+                        onClick={() => startEdit(existingMapping)}
+                        className="font-semibold text-primary underline"
+                      >
+                        Edit it instead
+                      </button>
+                    </p>
+                  )}
+                </div>
                 <Input
                   id="mapping-productName"
                   name="productName"
@@ -361,10 +486,10 @@ function ProductMappingPage() {
                 </div>
                 <div className="flex justify-end gap-3 sm:col-span-2">
                   <Button type="button" variant="secondary" onClick={resetForm} disabled={submitting}>
-                    Cancel
+                    {editingId ? 'Cancel edit' : 'Cancel'}
                   </Button>
                   <Button type="submit" loading={submitting} disabled={charts.length === 0}>
-                    Map
+                    {editingId ? 'Save changes' : 'Map'}
                   </Button>
                 </div>
               </form>
@@ -373,13 +498,43 @@ function ProductMappingPage() {
 
           <Card>
             <Card.Header>
-              <h2 className="text-sm font-semibold text-foreground">Existing mappings</h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-foreground">Existing mappings</h2>
+                {mappings.length > 0 && (
+                  <div className="relative w-full sm:w-64">
+                    <Search
+                      size={15}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      id="mapping-search"
+                      type="search"
+                      aria-label="Search mappings"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search by product ID or name"
+                      className="pl-9"
+                    />
+                  </div>
+                )}
+              </div>
             </Card.Header>
             {mappings.length === 0 ? (
               <Card.Body>
                 <div className="flex flex-col items-center gap-3 py-8 text-center">
                   <Link2 size={36} className="text-muted" />
                   <p className="text-sm text-muted-foreground">No products mapped yet.</p>
+                </div>
+              </Card.Body>
+            ) : visibleMappings.length === 0 ? (
+              <Card.Body>
+                <div className="flex flex-col items-center gap-3 py-8 text-center">
+                  <Search size={36} className="text-muted" aria-hidden="true" />
+                  <p className="text-sm text-muted-foreground">No mappings match &ldquo;{search.trim()}&rdquo;.</p>
+                  <Button variant="secondary" size="sm" onClick={() => setSearch('')}>
+                    Clear search
+                  </Button>
                 </div>
               </Card.Body>
             ) : (
@@ -397,7 +552,7 @@ function ProductMappingPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {mappings.map((mapping) => (
+                    {visibleMappings.map((mapping) => (
                       <tr
                         key={mapping._id}
                         className="text-sm text-foreground transition-colors duration-150 hover:bg-surface-2"
@@ -422,7 +577,23 @@ function ProductMappingPage() {
                           />
                         </td>
                         <td className="px-6 py-3">
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={<Pencil size={15} />}
+                              onClick={() => startEdit(mapping)}
+                              title="Edit"
+                              aria-label={`Edit mapping for ${mapping.productId}`}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={<Code2 size={15} />}
+                              onClick={() => copyWidgetCode(mapping)}
+                              title="Copy widget code"
+                              aria-label={`Copy widget code for ${mapping.productId}`}
+                            />
                             <Button
                               variant="ghost"
                               size="sm"

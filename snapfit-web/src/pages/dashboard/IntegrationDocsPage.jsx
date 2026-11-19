@@ -10,8 +10,8 @@ import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import Alert from '../../components/ui/Alert';
 import { formatLimit, formatPlanPrice } from '../../utils/plans';
+import { API_BASE, buildWidgetSnippet } from '../../utils/widgetSnippet';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://your-api-domain.com/api';
 
 const SECTIONS = [
   { id: 'getting-started', label: 'Getting Started' },
@@ -572,15 +572,7 @@ else:
   -F "userHeight=178" \\
   -F "clothingFit=fitted"`;
 
-  const widgetExample = `import SnapFitWidget from './SnapFitWidget';
-
-<SnapFitWidget
-  apiKey="sk_live_..."
-  productId="SKU-1029"
-  apiUrl="${API_BASE}"
-  buttonLabel="Check My Size"
-  autoCapture={true} // optional — false turns off the 2s auto-capture countdown (manual button only)
-/>`;
+  const widgetExample = buildWidgetSnippet();
 
   const iframeExample = `<iframe
   src="https://your-storefront.com/product/123"
