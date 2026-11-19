@@ -16,6 +16,7 @@ import '../core/json.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
 import '../widgets/ui.dart';
+import 'widget_snippet.dart';
 
 const _sections = [
   ('getting-started', 'Getting Started'),
@@ -349,16 +350,7 @@ else:
   -F "productId=SKU-1029" \\
   -F "userHeight=178" \\
   -F "clothingFit=fitted"''';
-    final widgetExample =
-        '''import SnapFitWidget from './SnapFitWidget';
-
-<SnapFitWidget
-  apiKey="sk_live_..."
-  productId="SKU-1029"
-  apiUrl="$api"
-  buttonLabel="Check My Size"
-  autoCapture={true} // optional — false turns off the 2s auto-capture countdown (manual button only)
-/>''';
+    final widgetExample = widgetSnippet(apiUrl: api);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),

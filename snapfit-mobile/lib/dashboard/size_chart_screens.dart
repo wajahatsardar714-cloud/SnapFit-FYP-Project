@@ -36,6 +36,7 @@ class _SizeChartsScreenState extends State<SizeChartsScreen> {
   Map _pagination = const {'page': 1, 'totalPages': 1, 'total': 0};
   String _category = '';
   bool _loading = true;
+  String? _duplicatingId;
 
   @override
   void initState() {
@@ -76,6 +77,33 @@ class _SizeChartsScreenState extends State<SizeChartsScreen> {
       await _load((_pagination['page'] as num? ?? 1).toInt());
     } catch (e) {
       showToast(errorMessage(e, 'Failed to delete size chart'), kind: ToastKind.error);
+    }
+  }
+
+  /// Copies [chart] as "`<name>` (copy)" and opens the copy in the editor.
+  Future<void> _duplicate(Map chart) async {
+    if (_duplicatingId != null) return;
+    setState(() => _duplicatingId = '${chart['_id']}');
+    final api = context.read<ApiClient>();
+    try {
+      final source = (await api.get('/charts/${chart['_id']}'))['chart'] as Map;
+      final res = await api.post('/charts', duplicateChartPayload(source));
+      final copy = res['chart'] as Map?;
+      showToast('Size chart duplicated', kind: ToastKind.success);
+      if (!mounted) return;
+      if (copy?['_id'] != null) {
+        context.go('/dashboard/size-charts/${copy!['_id']}/edit');
+      } else {
+        await _load(1);
+      }
+    } catch (e) {
+      final errorsList = errorBody(e)?['errors'];
+      showToast(
+        errorsList is List ? errorsList.join(' • ') : errorMessage(e, 'Failed to duplicate size chart'),
+        kind: ToastKind.error,
+      );
+    } finally {
+      if (mounted) setState(() => _duplicatingId = null);
     }
   }
 
@@ -137,7 +165,15 @@ class _SizeChartsScreenState extends State<SizeChartsScreen> {
                   ),
           )
         else
-          for (final chart in _charts) ...[_ChartCard(chart as Map, onDelete: () => _delete(chart)), gap12],
+          for (final chart in _charts) ...[
+            _ChartCard(
+              chart as Map,
+              onDelete: () => _delete(chart),
+              onDuplicate: () => _duplicate(chart),
+              duplicating: _duplicatingId == '${chart['_id']}',
+            ),
+            gap12,
+          ],
         if (totalPages > 1) ...[
           gap4,
           Row(
@@ -170,11 +206,33 @@ class _SizeChartsScreenState extends State<SizeChartsScreen> {
   }
 }
 
+/// The body that creates a copy of [chart] named "`<name>` (copy)": the same
+/// category, gender, unit and size ranges, without the server's ids.
+Map<String, dynamic> duplicateChartPayload(Map chart) => {
+  'name': '${chart['name'] ?? ''} (copy)',
+  'category': chart['category'],
+  if (chart['gender'] != null && chart['gender'] != '') 'gender': chart['gender'],
+  'unit': chart['unit'] ?? 'cm',
+  'sizes': [
+    for (final size in asList(chart['sizes']))
+      {
+        'label': size['label'],
+        'measurements': {
+          for (final (key, _) in measurementFields)
+            if (size['measurements']?[key]?['min'] != null && size['measurements']?[key]?['max'] != null)
+              key: {'min': size['measurements'][key]['min'], 'max': size['measurements'][key]['max']},
+        },
+      },
+  ],
+};
+
 class _ChartCard extends StatelessWidget {
-  const _ChartCard(this.chart, {required this.onDelete});
+  const _ChartCard(this.chart, {required this.onDelete, required this.onDuplicate, this.duplicating = false});
 
   final Map chart;
   final VoidCallback onDelete;
+  final VoidCallback onDuplicate;
+  final bool duplicating;
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +269,13 @@ class _ChartCard extends StatelessWidget {
             tooltip: 'Edit ${chart['name']}',
             icon: Icon(LucideIcons.pencil, size: 18, color: c.link),
             onPressed: () => context.go('/dashboard/size-charts/${chart['_id']}/edit'),
+          ),
+          IconButton(
+            tooltip: 'Duplicate ${chart['name']}',
+            icon: duplicating
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(LucideIcons.copy, size: 18, color: c.link),
+            onPressed: duplicating ? null : onDuplicate,
           ),
           IconButton(
             tooltip: 'Delete ${chart['name']}',

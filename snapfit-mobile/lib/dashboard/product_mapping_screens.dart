@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -14,6 +15,7 @@ import '../core/json.dart';
 import '../theme/app_theme.dart';
 import '../theme/snap_colors.dart';
 import '../widgets/ui.dart';
+import 'widget_snippet.dart';
 
 // Matches the backend's mapping.garmentLength values (default regular).
 const _garmentLengths = {
@@ -92,6 +94,11 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
   bool _submitting = false;
   String? _busyImageId;
 
+  /// The mapping being edited in the form, or null when mapping a new product.
+  Map? _editing;
+  final _formKey = GlobalKey();
+  final _search = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -102,7 +109,58 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
   void dispose() {
     _productId.dispose();
     _productName.dispose();
+    _search.dispose();
     super.dispose();
+  }
+
+  /// The existing mapping with the typed product ID, when mapping a new product.
+  Map? get _alreadyMapped {
+    if (_editing != null) return null;
+    final id = _productId.text.trim();
+    if (id.isEmpty) return null;
+    return _mappings.cast<Map?>().firstWhere((m) => '${m?['productId']}' == id, orElse: () => null);
+  }
+
+  List<dynamic> get _filteredMappings {
+    final q = _search.text.trim().toLowerCase();
+    if (q.isEmpty) return _mappings;
+    return _mappings
+        .where(
+          (m) =>
+              '${m['productId'] ?? ''}'.toLowerCase().contains(q) ||
+              '${m['productName'] ?? ''}'.toLowerCase().contains(q),
+        )
+        .toList();
+  }
+
+  /// Fills the form with [mapping] for editing and scrolls up to it.
+  void _startEdit(Map mapping) {
+    final chartId = '${(mapping['sizeChartId'] as Map?)?['_id'] ?? ''}';
+    _productId.text = '${mapping['productId'] ?? ''}';
+    _productName.text = '${mapping['productName'] ?? ''}';
+    setState(() {
+      _editing = mapping;
+      _sizeChartId = _charts.any((c) => '${c['_id']}' == chartId) ? chartId : '';
+      _garmentLength = _garmentLengths.containsKey(mapping['garmentLength'])
+          ? '${mapping['garmentLength']}'
+          : 'regular';
+      _sleeveLength = _sleeveLengths.containsKey(mapping['sleeveLength']) ? '${mapping['sleeveLength']}' : 'short';
+      _imageFile = null;
+      _fieldErrors = {};
+      _formError = '';
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _formKey.currentContext;
+      if (target != null && target.mounted) {
+        Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 300));
+      }
+    });
+  }
+
+  Future<void> _copyWidgetCode(Map mapping) async {
+    final code = widgetSnippet(apiUrl: context.read<ApiClient>().baseUrl, productId: '${mapping['productId']}');
+    await Clipboard.setData(ClipboardData(text: code));
+    showToast('Widget code copied', kind: ToastKind.success);
   }
 
   Future<void> _load() async {
@@ -124,13 +182,18 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
     }
   }
 
-  void _resetForm() {
+  /// Clears the form. [keepChoices] keeps the chart and lengths, so mapping
+  /// several products of the same kind in a row needs fewer taps.
+  void _resetForm({bool keepChoices = false}) {
     _productId.clear();
     _productName.clear();
     setState(() {
-      _sizeChartId = '';
-      _garmentLength = 'regular';
-      _sleeveLength = 'short';
+      if (!keepChoices) {
+        _sizeChartId = '';
+        _garmentLength = 'regular';
+        _sleeveLength = 'short';
+      }
+      _editing = null;
       _imageFile = null;
       _fieldErrors = {};
       _formError = '';
@@ -163,17 +226,21 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
       'sleeveLength': _sleeveLength,
     };
     final image = _imageFile;
+    final editing = _editing != null;
     final api = context.read<ApiClient>();
     try {
       final payload = image == null ? fields : FormData.fromMap({...fields, 'image': await multipartOf(image)});
       final res = await api.post('/products/map', payload);
-      _resetForm();
+      _resetForm(keepChoices: !editing);
       if (image != null) {
-        showToast('Product mapped — now place the 4 anchor points', kind: ToastKind.success);
+        showToast(
+          '${editing ? 'Changes saved' : 'Product mapped'} — now place the 4 anchor points',
+          kind: ToastKind.success,
+        );
         if (mounted) context.go(_anchorPointsPath(res['mapping'] as Map));
         return;
       }
-      showToast('Product mapped', kind: ToastKind.success);
+      showToast(editing ? 'Changes saved' : 'Product mapped', kind: ToastKind.success);
       await _load();
     } catch (e) {
       final message = errorMessage(e, 'Failed to map product');
@@ -225,6 +292,7 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
     if (!ok || !mounted) return;
     try {
       await context.read<ApiClient>().delete('/products/map/${mapping['_id']}');
+      if (_editing?['_id'] == mapping['_id']) _resetForm();
       showToast('Mapping removed', kind: ToastKind.success);
       await _load();
     } catch (e) {
@@ -236,6 +304,9 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     if (_loading) return const PageLoader();
+    final editing = _editing != null;
+    final alreadyMapped = _alreadyMapped;
+    final shown = _filteredMappings;
     return PageBody(
       onRefresh: _load,
       children: [
@@ -246,7 +317,8 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
         ),
         gap16,
         SectionCard(
-          title: 'Map a product',
+          key: _formKey,
+          title: editing ? 'Edit mapping' : 'Map a product',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -255,8 +327,24 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
                 label: 'Product ID',
                 controller: _productId,
                 hint: 'e.g. SKU-1029',
+                helper: 'Use the same product ID or SKU as in your store.',
+                enabled: !editing,
                 error: _fieldErrors['productId'],
+                onChanged: (_) => setState(() {}),
               ),
+              if (alreadyMapped != null) ...[
+                gap8,
+                SnapAlert(
+                  variant: AlertVariant.warning,
+                  description: 'This product is already mapped — saving will update it.',
+                  action: SnapButton(
+                    label: 'Edit it instead',
+                    variant: ButtonVariant.secondary,
+                    size: ButtonSize.sm,
+                    onPressed: () => _startEdit(alreadyMapped),
+                  ),
+                ),
+              ],
               gap16,
               SnapField(label: 'Product Name (optional)', controller: _productName, hint: 'e.g. Classic Crew Tee'),
               gap16,
@@ -346,16 +434,21 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
               gap4,
               Text(productImageHint, style: snapText(size: 12, color: c.mutedForeground, height: 1.45)),
               gap16,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   SnapButton(
-                    label: 'Cancel',
+                    label: editing ? 'Cancel edit' : 'Cancel',
                     variant: ButtonVariant.secondary,
                     onPressed: _submitting ? null : _resetForm,
                   ),
-                  const SizedBox(width: 12),
-                  SnapButton(label: 'Map', loading: _submitting, onPressed: _charts.isEmpty ? null : _submit),
+                  SnapButton(
+                    label: editing ? 'Save changes' : 'Map',
+                    loading: _submitting,
+                    onPressed: _charts.isEmpty ? null : _submit,
+                  ),
                 ],
               ),
             ],
@@ -376,15 +469,35 @@ class _ProductMappingScreenState extends State<ProductMappingScreen> {
                   ),
                 )
               : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (var i = 0; i < _mappings.length; i++) ...[
+                    SnapField(
+                      controller: _search,
+                      hint: 'Search by product ID or name',
+                      textInputAction: TextInputAction.search,
+                      suffix: Icon(LucideIcons.search, size: 16, color: c.mutedForeground),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    gap16,
+                    if (shown.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'No mappings match "${_search.text.trim()}".',
+                          textAlign: TextAlign.center,
+                          style: snapText(size: 14, color: c.mutedForeground),
+                        ),
+                      ),
+                    for (var i = 0; i < shown.length; i++) ...[
                       if (i > 0) Divider(height: 24, color: c.border),
                       _MappingTile(
-                        mapping: _mappings[i] as Map,
-                        busy: _busyImageId == '${_mappings[i]['_id']}',
-                        onUpload: () => _uploadImage(_mappings[i] as Map),
-                        onRemoveImage: () => _removeImage(_mappings[i] as Map),
-                        onRemove: () => _removeMapping(_mappings[i] as Map),
+                        mapping: shown[i] as Map,
+                        busy: _busyImageId == '${shown[i]['_id']}',
+                        onUpload: () => _uploadImage(shown[i] as Map),
+                        onRemoveImage: () => _removeImage(shown[i] as Map),
+                        onRemove: () => _removeMapping(shown[i] as Map),
+                        onEdit: () => _startEdit(shown[i] as Map),
+                        onCopyCode: () => _copyWidgetCode(shown[i] as Map),
                       ),
                     ],
                   ],
@@ -450,6 +563,8 @@ class _MappingTile extends StatelessWidget {
     required this.onUpload,
     required this.onRemoveImage,
     required this.onRemove,
+    required this.onEdit,
+    required this.onCopyCode,
   });
 
   final Map mapping;
@@ -457,12 +572,18 @@ class _MappingTile extends StatelessWidget {
   final VoidCallback onUpload;
   final VoidCallback onRemoveImage;
   final VoidCallback onRemove;
+  final VoidCallback onEdit;
+  final VoidCallback onCopyCode;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final status = _tryOnStatus[mapping['tryOnStatus']] ?? _tryOnStatus['image_missing']!;
     final imageUrl = productImageUrl(context, mapping['productImage']);
+    // The next step towards try-on, for a mapping that isn't ready yet.
+    final ready = mapping['tryOnStatus'] == 'ready';
+    final needsImage = !ready && (imageUrl == null || mapping['tryOnStatus'] == 'image_missing');
+    final needsAnchors = !ready && !needsImage;
     final chartName = (mapping['sizeChartId'] as Map?)?['name'];
     final length = (_garmentLengths[mapping['garmentLength']] ?? _garmentLengths['regular']!).$1;
     final sleeves = sleeveLengthLabel(mapping['sleeveLength']);
@@ -537,7 +658,30 @@ class _MappingTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              SnapBadge(status.$1, variant: status.$2),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  SnapBadge(status.$1, variant: status.$2),
+                  if (needsImage)
+                    SnapButton(
+                      label: 'Add image',
+                      icon: LucideIcons.imagePlus,
+                      size: ButtonSize.sm,
+                      variant: ButtonVariant.secondary,
+                      onPressed: busy ? null : onUpload,
+                    ),
+                  if (needsAnchors)
+                    SnapButton(
+                      label: 'Set anchor points',
+                      icon: LucideIcons.mapPin,
+                      size: ButtonSize.sm,
+                      variant: ButtonVariant.secondary,
+                      onPressed: busy ? null : () => context.go(_anchorPointsPath(mapping)),
+                    ),
+                ],
+              ),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 12,
@@ -547,23 +691,39 @@ class _MappingTile extends StatelessWidget {
                       padding: EdgeInsets.symmetric(vertical: 4),
                       child: SizedBox(width: 13, height: 13, child: CircularProgressIndicator(strokeWidth: 2)),
                     ),
-                  link(imageUrl == null ? 'Add image' : 'Replace image', busy ? null : LucideIcons.imagePlus, onUpload),
-                  if (imageUrl != null)
+                  // "Add image" is the next-step button above when it applies.
+                  if (!needsImage)
                     link(
-                      mapping['tryOnStatus'] == 'ready' ? 'Edit points' : 'Place points',
+                      imageUrl == null ? 'Add image' : 'Replace image',
+                      busy ? null : LucideIcons.imagePlus,
+                      onUpload,
+                    ),
+                  if (imageUrl != null && !needsAnchors)
+                    link(
+                      ready ? 'Edit points' : 'Place points',
                       LucideIcons.mapPin,
                       () => context.go(_anchorPointsPath(mapping)),
                     ),
                   if (imageUrl != null) link('Remove image', null, onRemoveImage, color: c.mutedForeground),
+                  link('Copy widget code', LucideIcons.copy, onCopyCode),
                 ],
               ),
             ],
           ),
         ),
-        IconButton(
-          tooltip: 'Remove mapping for ${mapping['productId']}',
-          icon: Icon(LucideIcons.trash2, size: 18, color: c.danger),
-          onPressed: onRemove,
+        Column(
+          children: [
+            IconButton(
+              tooltip: 'Edit mapping for ${mapping['productId']}',
+              icon: Icon(LucideIcons.pencil, size: 18, color: c.link),
+              onPressed: onEdit,
+            ),
+            IconButton(
+              tooltip: 'Remove mapping for ${mapping['productId']}',
+              icon: Icon(LucideIcons.trash2, size: 18, color: c.danger),
+              onPressed: onRemove,
+            ),
+          ],
         ),
       ],
     );
@@ -794,10 +954,11 @@ class _AnchorPointsScreenState extends State<AnchorPointsScreen> {
           ),
         ],
         gap16,
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
             SnapButton(label: 'Save anchor points', loading: _saving, onPressed: image == null ? null : _save),
-            const SizedBox(width: 12),
             SnapButton(
               label: 'Back',
               variant: ButtonVariant.secondary,
